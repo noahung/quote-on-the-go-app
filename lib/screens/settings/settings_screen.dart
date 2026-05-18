@@ -1,12 +1,95 @@
+import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import '../../providers/providers.dart';
 
-class SettingsScreen extends ConsumerWidget {
+const String _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
+
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  bool _isSubscriptionLoading = false;
+
+  Future<void> _manageSubscription(BuildContext context) async {
+    final company = ref.read(companyProvider);
+    final user = FirebaseAuth.instance.currentUser;
+    if (company == null || user == null) return;
+
+    setState(() => _isSubscriptionLoading = true);
+
+    try {
+      final bool isPremium = company.tier == 'premium' &&
+          (company.subscriptionStatus == 'active' ||
+              company.subscriptionStatus == 'referral_trial');
+
+      String? redirectUrl;
+
+      if (isPremium) {
+        // Open Stripe Customer Portal
+        if (company.stripeCustomerId == null) {
+          throw Exception(
+              'Stripe customer ID not found. Please contact support.');
+        }
+        final response = await http.post(
+          Uri.parse(
+              '$_webAppBaseUrl/api/stripe/create-customer-portal-session'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'stripeCustomerId': company.stripeCustomerId}),
+        );
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        if (response.statusCode != 200) {
+          throw Exception(data['error'] ?? 'Failed to open customer portal.');
+        }
+        redirectUrl = data['url'] as String?;
+      } else {
+        // Open Stripe Checkout (upgrade)
+        final response = await http.post(
+          Uri.parse('$_webAppBaseUrl/api/stripe/create-checkout-session'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'companyId': company.id,
+            'userEmail': user.email,
+          }),
+        );
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        if (response.statusCode != 200) {
+          throw Exception(
+              data['error'] ?? 'Failed to create checkout session.');
+        }
+        redirectUrl = data['url'] as String?;
+      }
+
+      if (redirectUrl != null) {
+        final uri = Uri.parse(redirectUrl);
+        if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+          throw Exception('Could not open browser.');
+        }
+      } else {
+        throw Exception('No redirect URL returned from server.');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubscriptionLoading = false);
+    }
+  }
 
   Future<void> _showChangePasswordDialog(BuildContext context) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -95,7 +178,7 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final userProfile = ref.watch(userProfileProvider);
     final company = ref.watch(companyProvider);
@@ -222,28 +305,12 @@ class SettingsScreen extends ConsumerWidget {
 
           // Subscription Section
           const _SectionHeader(title: 'Subscription'),
-          ListTile(
-            leading: const Icon(Icons.credit_card),
-            title: const Text('Manage Subscription'),
-            subtitle: Text(
-              company?.tier == 'premium' ? 'Pro Plan — Active' : 'Free Plan',
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () async {
-              if (company?.tier == 'premium') {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text(
-                          'Subscription management is available on the web app.')),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text(
-                          'Upgrade to Pro from the web app to unlock all features.')),
-                );
-              }
-            },
+          _SubscriptionTile(
+            tier: company?.tier ?? 'free',
+            subscriptionStatus: company?.subscriptionStatus,
+            trialEndsAt: company?.trialEndsAt,
+            isLoading: _isSubscriptionLoading,
+            onTap: () => _manageSubscription(context),
           ),
 
           const Divider(),
@@ -379,12 +446,81 @@ class SettingsScreen extends ConsumerWidget {
                 final authService = ref.read(authServiceProvider);
                 await authService.signOut();
               }
+              // ignore: use_build_context_synchronously
             },
           ),
 
           const SizedBox(height: 32),
         ],
       ),
+    );
+  }
+}
+
+class _SubscriptionTile extends StatelessWidget {
+  final String tier;
+  final String? subscriptionStatus;
+  final DateTime? trialEndsAt;
+  final bool isLoading;
+  final VoidCallback onTap;
+
+  const _SubscriptionTile({
+    required this.tier,
+    required this.isLoading,
+    required this.onTap,
+    this.subscriptionStatus,
+    this.trialEndsAt,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isPremium = tier == 'premium';
+    final isActive = isPremium &&
+        (subscriptionStatus == 'active' ||
+            subscriptionStatus == 'referral_trial');
+    final isReferralTrial = subscriptionStatus == 'referral_trial';
+
+    String subtitle;
+    if (isReferralTrial && trialEndsAt != null) {
+      final end =
+          '${trialEndsAt!.day}/${trialEndsAt!.month}/${trialEndsAt!.year}';
+      subtitle = 'Pro Trial — ends $end';
+    } else if (isActive) {
+      subtitle = 'Pro Plan — Active';
+    } else if (isPremium) {
+      subtitle = 'Pro Plan (${subscriptionStatus ?? 'inactive'})';
+    } else {
+      subtitle = 'Free Plan — Tap to upgrade to Pro (£29/mo)';
+    }
+
+    return ListTile(
+      leading: Icon(
+        Icons.credit_card,
+        color: isActive ? colorScheme.primary : null,
+      ),
+      title: Text(
+        isActive ? 'Manage Subscription' : 'Upgrade to Pro',
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: isActive ? null : colorScheme.primary,
+        ),
+      ),
+      subtitle: Text(subtitle),
+      trailing: isLoading
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(
+              isActive
+                  ? Icons.manage_accounts_outlined
+                  : Icons.rocket_launch_outlined,
+              color: isActive ? null : colorScheme.primary,
+              size: 20,
+            ),
+      onTap: isLoading ? null : onTap,
     );
   }
 }
