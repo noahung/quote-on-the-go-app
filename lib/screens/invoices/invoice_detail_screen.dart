@@ -48,7 +48,10 @@ class InvoiceDetailScreen extends ConsumerWidget {
                 content: Text('Invoice sent successfully via email')),
           );
         } else {
-          final err = jsonDecode(response.body)['error'] ?? 'Send failed';
+          String err = 'Send failed (${response.statusCode})';
+          try {
+            err = jsonDecode(response.body)['error'] ?? err;
+          } catch (_) {}
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error: $err'),

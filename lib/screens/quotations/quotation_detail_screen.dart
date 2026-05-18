@@ -48,7 +48,10 @@ class QuotationDetailScreen extends ConsumerWidget {
                 content: Text('Quotation sent successfully via email')),
           );
         } else {
-          final err = jsonDecode(response.body)['error'] ?? 'Send failed';
+          String err = 'Send failed (${response.statusCode})';
+          try {
+            err = jsonDecode(response.body)['error'] ?? err;
+          } catch (_) {}
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error: $err'),
