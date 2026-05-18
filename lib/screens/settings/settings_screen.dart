@@ -267,15 +267,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ListTile(
             leading: const Icon(Icons.business),
             title: Text(company?.name ?? 'Company'),
-            subtitle: Text(company?.email ?? 'No email'),
+            subtitle: Text(company?.email ?? 'Tap to edit branding'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content:
-                        Text('Company branding is managed from the web app.')),
-              );
-            },
+            onTap: () => context.push('/company-branding'),
           ),
 
           const Divider(),

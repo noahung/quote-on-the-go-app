@@ -25,6 +25,7 @@ import '../screens/customers/add_edit_customer_screen.dart';
 import '../screens/quotations/create_quotation_screen.dart';
 import '../screens/invoices/create_invoice_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import '../screens/settings/company_branding_screen.dart';
 import '../screens/expenses/expenses_screen.dart';
 import '../screens/expenses/log_expense_screen.dart';
 import '../screens/services/services_screen.dart';
@@ -256,6 +257,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/team',
         builder: (context, state) => const TeamManagementScreen(),
+      ),
+      GoRoute(
+        path: '/company-branding',
+        builder: (context, state) => const CompanyBrandingScreen(),
       ),
     ],
   );

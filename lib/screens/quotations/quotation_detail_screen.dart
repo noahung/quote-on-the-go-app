@@ -39,12 +39,11 @@ class QuotationDetailScreen extends ConsumerWidget {
         'mailto:${quotation.customerEmail}?subject=$subject&body=$body');
 
     await repo.updateQuotationStatus(quotation.id, 'Sent');
-    if (await canLaunchUrl(mailUri)) {
+    try {
+      await launchUrl(mailUri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // fallback: try without mode
       await launchUrl(mailUri);
-    } else if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open email app')),
-      );
     }
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

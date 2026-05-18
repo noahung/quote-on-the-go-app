@@ -39,12 +39,10 @@ class InvoiceDetailScreen extends ConsumerWidget {
         'mailto:${invoice.customerEmail}?subject=$subject&body=$body');
 
     await repo.updateInvoiceStatus(invoice.id, 'Sent');
-    if (await canLaunchUrl(mailUri)) {
+    try {
+      await launchUrl(mailUri, mode: LaunchMode.externalApplication);
+    } catch (_) {
       await launchUrl(mailUri);
-    } else if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open email app')),
-      );
     }
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

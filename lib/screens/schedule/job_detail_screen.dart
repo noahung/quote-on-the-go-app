@@ -9,7 +9,7 @@ import '../../models/models.dart';
 final jobDetailProvider =
     StreamProvider.family<CalendarEvent?, String>((ref, id) {
   return FirebaseFirestore.instance
-      .collection('calendarEvents')
+      .collection('events')
       .doc(id)
       .snapshots()
       .map((doc) => doc.exists ? CalendarEvent.fromFirestore(doc) : null);
@@ -290,7 +290,7 @@ class _JobDetailView extends ConsumerWidget {
     if (confirmed == true) {
       try {
         await FirebaseFirestore.instance
-            .collection('calendarEvents')
+            .collection('events')
             .doc(job.id)
             .delete();
         if (context.mounted) context.pop();
