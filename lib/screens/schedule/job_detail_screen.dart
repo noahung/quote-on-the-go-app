@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/models.dart';
+import 'create_event_screen.dart';
 
 // Provider for a single calendar event by ID
 final jobDetailProvider =
@@ -83,11 +84,11 @@ class _JobDetailView extends ConsumerWidget {
             actions: [
               IconButton(
                 icon: const Icon(Icons.edit_outlined),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Edit job — coming soon')),
-                  );
-                },
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => CreateEventScreen(event: job),
+                  ),
+                ),
               ),
               PopupMenuButton<String>(
                 iconColor: Colors.white,

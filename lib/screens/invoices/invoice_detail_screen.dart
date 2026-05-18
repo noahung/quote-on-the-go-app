@@ -1,10 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../providers/providers.dart';
+
+const _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
 
 class InvoiceDetailScreen extends ConsumerWidget {
   final String invoiceId;
@@ -28,26 +31,41 @@ class InvoiceDetailScreen extends ConsumerWidget {
 
   Future<void> _sendByEmail(
       BuildContext context, WidgetRef ref, invoice) async {
-    final repo = ref.read(invoiceRepositoryProvider);
-    final portalLink =
-        'https://app.quoteonthego.co.uk/portal/invoices/${invoice.id}';
-    final subject = Uri.encodeComponent(
-        'Invoice ${invoice.invoiceNumber} from ${invoice.company?.name ?? 'Us'}');
-    final body = Uri.encodeComponent(
-        'Dear ${invoice.customerName},\n\nPlease find your invoice attached.\n\nView it online: $portalLink\n\nTotal: £${invoice.total.toStringAsFixed(2)}\nDue: ${invoice.dueDate}\n\nKind regards');
-    final mailUri = Uri.parse(
-        'mailto:${invoice.customerEmail}?subject=$subject&body=$body');
-
-    await repo.updateInvoiceStatus(invoice.id, 'Sent');
     try {
-      await launchUrl(mailUri, mode: LaunchMode.externalApplication);
-    } catch (_) {
-      await launchUrl(mailUri);
-    }
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Status updated to Sent')),
+      final response = await http.post(
+        Uri.parse('$_webAppBaseUrl/api/send-invoice'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'invoiceId': invoice.id,
+          'customerEmail': invoice.customerEmail,
+          'customerName': invoice.customerName,
+        }),
       );
+      if (context.mounted) {
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Invoice sent successfully via email')),
+          );
+        } else {
+          final err = jsonDecode(response.body)['error'] ?? 'Send failed';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $err'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
     }
   }
 

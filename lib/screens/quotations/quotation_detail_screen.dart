@@ -1,10 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../providers/providers.dart';
+
+const _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
 
 class QuotationDetailScreen extends ConsumerWidget {
   final String quotationId;
@@ -28,27 +31,41 @@ class QuotationDetailScreen extends ConsumerWidget {
 
   Future<void> _sendByEmail(
       BuildContext context, WidgetRef ref, quotation) async {
-    final repo = ref.read(quotationRepositoryProvider);
-    final portalLink =
-        'https://app.quoteonthego.co.uk/portal/quotations/${quotation.id}';
-    final subject = Uri.encodeComponent(
-        'Quotation ${quotation.quotationNumber} from ${quotation.company?.name ?? 'Us'}');
-    final body = Uri.encodeComponent(
-        'Dear ${quotation.customerName},\n\nPlease find your quotation attached.\n\nView it online: $portalLink\n\nTotal: £${quotation.total.toStringAsFixed(2)}\n\nKind regards');
-    final mailUri = Uri.parse(
-        'mailto:${quotation.customerEmail}?subject=$subject&body=$body');
-
-    await repo.updateQuotationStatus(quotation.id, 'Sent');
     try {
-      await launchUrl(mailUri, mode: LaunchMode.externalApplication);
-    } catch (_) {
-      // fallback: try without mode
-      await launchUrl(mailUri);
-    }
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Status updated to Sent')),
+      final response = await http.post(
+        Uri.parse('$_webAppBaseUrl/api/send-quotation'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'quotationId': quotation.id,
+          'customerEmail': quotation.customerEmail,
+          'customerName': quotation.customerName,
+        }),
       );
+      if (context.mounted) {
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Quotation sent successfully via email')),
+          );
+        } else {
+          final err = jsonDecode(response.body)['error'] ?? 'Send failed';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $err'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
     }
   }
 

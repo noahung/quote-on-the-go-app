@@ -8,7 +8,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/schedule_provider.dart';
 
 class CreateEventScreen extends ConsumerStatefulWidget {
-  const CreateEventScreen({super.key});
+  final CalendarEvent? event;
+  const CreateEventScreen({super.key, this.event});
 
   @override
   ConsumerState<CreateEventScreen> createState() => _CreateEventScreenState();
@@ -28,6 +29,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   bool _allDay = false;
   bool _isLoading = false;
   String _selectedColor = '#4285F4';
+  CalendarEvent? _editingEvent;
 
   final List<Map<String, String>> _colorOptions = [
     {'label': 'Blue', 'value': '#4285F4'},
@@ -37,6 +39,28 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     {'label': 'Purple', 'value': '#A142F4'},
     {'label': 'Teal', 'value': '#24C1E0'},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _editingEvent = widget.event;
+    if (_editingEvent != null) {
+      _titleController.text = _editingEvent!.title;
+      _descriptionController.text = _editingEvent!.description ?? '';
+      _allDay = _editingEvent!.allDay ?? false;
+      _selectedColor = _editingEvent!.color ?? '#4285F4';
+      final start = DateTime.tryParse(_editingEvent!.start);
+      final end = DateTime.tryParse(_editingEvent!.end);
+      if (start != null) {
+        _startDate = start;
+        _startTime = TimeOfDay(hour: start.hour, minute: start.minute);
+      }
+      if (end != null) {
+        _endDate = end;
+        _endTime = TimeOfDay(hour: end.hour, minute: end.minute);
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -117,8 +141,10 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         return;
       }
 
+      final isEditing = _editingEvent != null;
+
       final event = CalendarEvent(
-        id: '',
+        id: isEditing ? _editingEvent!.id : '',
         companyId: companyId,
         userId: user.uid,
         title: _titleController.text.trim(),
@@ -131,18 +157,23 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         color: _selectedColor,
       );
 
-      await repository.createEvent(event);
+      if (isEditing) {
+        await repository.updateEvent(event);
+      } else {
+        await repository.createEvent(event);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Event created successfully')),
+          SnackBar(
+              content: Text(isEditing ? 'Event updated' : 'Event created')),
         );
         context.pop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create event: $e')),
+          SnackBar(content: Text('Failed to save event: $e')),
         );
       }
     } finally {
@@ -159,7 +190,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'New Event',
+          _editingEvent != null ? 'Edit Event' : 'New Event',
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
       ),
@@ -200,11 +231,12 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Start', style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.onSurfaceVariant,
-                    )),
+                    Text('Start',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurfaceVariant,
+                        )),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -240,11 +272,12 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('End', style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.onSurfaceVariant,
-                    )),
+                    Text('End',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurfaceVariant,
+                        )),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -274,11 +307,12 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             const SizedBox(height: 16),
 
             // Color picker
-            Text('Color', style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onSurfaceVariant,
-            )),
+            Text('Color',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurfaceVariant,
+                )),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -331,7 +365,9 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                       ),
                     )
                   : const Icon(Icons.save),
-              label: Text(_isLoading ? 'Creating...' : 'Create Event'),
+              label: Text(_isLoading
+                  ? (_editingEvent != null ? 'Saving...' : 'Creating...')
+                  : (_editingEvent != null ? 'Save Changes' : 'Create Event')),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),

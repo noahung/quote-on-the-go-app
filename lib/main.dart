@@ -56,7 +56,12 @@ class MyApp extends ConsumerWidget {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: _brandOrange,
       brightness: Brightness.light,
-    ).copyWith(primary: _brandOrange, onPrimary: Colors.white);
+    ).copyWith(
+      primary: _brandOrange,
+      onPrimary: Colors.white,
+      primaryContainer: const Color(0xFFFFDBC8),
+      onPrimaryContainer: const Color(0xFF5A1A00),
+    );
 
     return ThemeData(
       useMaterial3: true,
@@ -142,7 +147,12 @@ class MyApp extends ConsumerWidget {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: _brandOrange,
       brightness: Brightness.dark,
-    ).copyWith(primary: _brandOrange, onPrimary: Colors.white);
+    ).copyWith(
+      primary: _brandOrange,
+      onPrimary: Colors.white,
+      primaryContainer: const Color(0xFF7A3010),
+      onPrimaryContainer: const Color(0xFFFFDBC8),
+    );
 
     return ThemeData(
       useMaterial3: true,
