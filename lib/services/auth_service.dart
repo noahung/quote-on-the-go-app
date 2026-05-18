@@ -3,6 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/models.dart';
 import 'firebase_service.dart';
+import 'notification_service.dart';
 
 class AuthService {
   final FirebaseService _firebaseService = FirebaseService();
@@ -17,10 +18,12 @@ class AuthService {
     String email,
     String password,
   ) async {
-    return await _firebaseService.auth.signInWithEmailAndPassword(
+    final credential = await _firebaseService.auth.signInWithEmailAndPassword(
       email: email,
       password: password,
     );
+    await NotificationService().refreshTokenForCurrentUser();
+    return credential;
   }
 
   Future<UserCredential> createUserWithEmailAndPassword(
@@ -46,7 +49,10 @@ class AuthService {
         idToken: googleAuth.idToken,
       );
 
-      return await _firebaseService.auth.signInWithCredential(credential);
+      final result =
+          await _firebaseService.auth.signInWithCredential(credential);
+      await NotificationService().refreshTokenForCurrentUser();
+      return result;
     } catch (e) {
       throw Exception('Google sign-in failed: $e');
     }
@@ -64,12 +70,14 @@ class AuthService {
   }
 
   Future<void> signOut() async {
+    await NotificationService().clearToken();
     await _googleSignIn.signOut();
     await _firebaseService.signOut();
   }
 
   Future<UserProfile?> getUserProfile(String uid) async {
-    final doc = await _firebaseService.firestore.collection('users').doc(uid).get();
+    final doc =
+        await _firebaseService.firestore.collection('users').doc(uid).get();
     if (!doc.exists) return null;
     return UserProfile.fromFirestore(doc);
   }
@@ -83,10 +91,7 @@ class AuthService {
   }
 
   Future<void> createUserProfile(UserProfile profile) async {
-    await _firebaseService.firestore
-        .collection('users')
-        .doc(profile.uid)
-        .set({
+    await _firebaseService.firestore.collection('users').doc(profile.uid).set({
       ...profile.toJson(),
       'createdAt': FieldValue.serverTimestamp(),
     });

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'router/app_router.dart';
 import 'services/firebase_service.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,6 +12,9 @@ void main() async {
   // Initialize Firebase
   final firebaseService = FirebaseService();
   await firebaseService.initialize();
+
+  // Initialize FCM / local notifications
+  await NotificationService().initialize();
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
