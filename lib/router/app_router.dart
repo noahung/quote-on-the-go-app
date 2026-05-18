@@ -32,7 +32,6 @@ import '../screens/services/create_service_screen.dart';
 import '../screens/services/service_detail_screen.dart';
 import '../screens/schedule/schedule_screen.dart';
 import '../screens/schedule/create_event_screen.dart';
-import '../screens/schedule/monthly_schedule_screen.dart';
 import '../screens/schedule/job_detail_screen.dart';
 import '../screens/workflows/workflows_screen.dart';
 
@@ -234,10 +233,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/schedule/new',
         builder: (context, state) => const CreateEventScreen(),
-      ),
-      GoRoute(
-        path: '/schedule/monthly',
-        builder: (context, state) => const MonthlyScheduleScreen(),
       ),
       GoRoute(
         path: '/schedule/:id',
