@@ -52,7 +52,7 @@ class MyApp extends ConsumerWidget {
 
   ThemeData _buildLightTheme() {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFFF57C00),
+      seedColor: const Color(0xFFF4781F),
       brightness: Brightness.light,
     );
 
@@ -138,7 +138,7 @@ class MyApp extends ConsumerWidget {
 
   ThemeData _buildDarkTheme() {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFFF57C00),
+      seedColor: const Color(0xFFF4781F),
       brightness: Brightness.dark,
     );
 
