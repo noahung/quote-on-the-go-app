@@ -55,7 +55,7 @@ class _JobDetailView extends ConsumerWidget {
         return Color(int.parse(job.color!.replaceFirst('#', '0xff')));
       }
     } catch (_) {}
-    return const Color(0xFFF57C00);
+    return const Color(0xFFF4781F);
   }
 
   @override
