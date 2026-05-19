@@ -30,23 +30,48 @@ class ScheduleRepository {
 
   ScheduleRepository(this._firestore);
 
-  Future<void> createEvent(CalendarEvent event) async {
-    await _firestore.collection('events').add({
+  Future<String> createEvent(CalendarEvent event) async {
+    final data = {
       ...event.toJson()..remove('id'),
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    };
+    // Ensure job fields are persisted if present
+    if (event.customerId != null) data['customerId'] = event.customerId;
+    if (event.customerName != null) data['customerName'] = event.customerName;
+    if (event.customerAddress != null)
+      data['customerAddress'] = event.customerAddress;
+    if (event.status != null) data['status'] = event.status;
+    final doc = await _firestore.collection('events').add(data);
+    return doc.id;
   }
 
   Future<void> updateEvent(CalendarEvent event) async {
-    await _firestore.collection('events').doc(event.id).update({
+    final data = {
       ...event.toJson()..remove('id'),
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    };
+    if (event.customerId != null) data['customerId'] = event.customerId;
+    if (event.customerName != null) data['customerName'] = event.customerName;
+    if (event.customerAddress != null)
+      data['customerAddress'] = event.customerAddress;
+    if (event.status != null) data['status'] = event.status;
+    await _firestore.collection('events').doc(event.id).update(data);
   }
 
   Future<void> deleteEvent(String eventId) async {
     await _firestore.collection('events').doc(eventId).delete();
+  }
+
+  Stream<List<CalendarEvent>> watchJobsByCustomer(
+      String companyId, String customerId) {
+    return _firestore
+        .collection('events')
+        .where('companyId', isEqualTo: companyId)
+        .where('customerId', isEqualTo: customerId)
+        .snapshots()
+        .map((snap) =>
+            snap.docs.map((doc) => CalendarEvent.fromFirestore(doc)).toList());
   }
 }
 

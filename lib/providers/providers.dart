@@ -7,3 +7,4 @@ export 'service_provider.dart';
 export 'schedule_provider.dart';
 export 'workflow_provider.dart';
 export 'notification_provider.dart';
+export 'theme_provider.dart';

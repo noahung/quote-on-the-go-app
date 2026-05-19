@@ -20,6 +20,8 @@ class Expense with _$Expense {
     @TimestampConverter() DateTime? createdAt,
     @TimestampConverter() DateTime? updatedAt,
     String? createdBy,
+    // Job linking
+    String? jobId,
   }) = _Expense;
 
   factory Expense.fromJson(Map<String, dynamic> json) =>

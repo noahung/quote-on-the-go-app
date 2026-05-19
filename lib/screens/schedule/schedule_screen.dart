@@ -184,18 +184,18 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen>
                       events: today,
                       emptyTitle:
                           'No events on ${DateFormat('MMM d').format(_selectedDay)}',
-                      emptySubtitle: 'Tap + to schedule something.',
+                      emptySubtitle: 'Tap + to create a new job.',
                       onAddTap: () => context.push('/schedule/new'),
                     ),
                     _EventList(
                       events: upcoming,
                       emptyTitle: 'No upcoming events',
-                      emptySubtitle: 'Your future jobs will appear here.',
+                      emptySubtitle: 'Scheduled jobs will appear here.',
                       onAddTap: () => context.push('/schedule/new'),
                     ),
                     _EventList(
                       events: past,
-                      emptyTitle: 'No past events',
+                      emptyTitle: 'No past jobs',
                       emptySubtitle: 'Completed jobs will appear here.',
                       onAddTap: null,
                     ),

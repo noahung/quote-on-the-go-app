@@ -6,11 +6,46 @@ import 'package:intl/intl.dart';
 import '../../providers/providers.dart';
 import '../../models/models.dart';
 
-class QuotationsScreen extends ConsumerWidget {
+class QuotationsScreen extends ConsumerStatefulWidget {
   const QuotationsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<QuotationsScreen> createState() => _QuotationsScreenState();
+}
+
+class _QuotationsScreenState extends ConsumerState<QuotationsScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  final List<_StatusTab> _tabs = const [
+    _StatusTab(label: 'All', status: null),
+    _StatusTab(label: 'Draft', status: 'Draft'),
+    _StatusTab(label: 'Sent', status: 'Sent'),
+    _StatusTab(label: 'Accepted', status: 'Accepted'),
+    _StatusTab(label: 'Declined', status: 'Declined'),
+    _StatusTab(label: 'Amended', status: 'Amended'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: _tabs.length, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  List<Quotation> _filterByStatus(List<Quotation> quotations, String? status) {
+    if (status == null) return quotations;
+    return quotations.where((q) => q.status == status).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final quotationsAsync = ref.watch(quotationsStreamProvider);
 
     return Scaffold(
@@ -25,6 +60,36 @@ class QuotationsScreen extends ConsumerWidget {
             onPressed: () => context.push('/quotations/new'),
           ),
         ],
+        bottom: quotationsAsync.when(
+          loading: () => null,
+          error: (_, __) => null,
+          data: (quotations) => TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            labelStyle: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+            unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
+            tabs: _tabs.map((tab) {
+              final count = tab.status == null
+                  ? quotations.length
+                  : quotations.where((q) => q.status == tab.status).length;
+              return Tab(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(tab.label),
+                    if (count > 0) ...[
+                      const SizedBox(width: 6),
+                      _CountBadge(count: count, color: colorScheme.primary),
+                    ],
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
       ),
       body: quotationsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -59,19 +124,37 @@ class QuotationsScreen extends ConsumerWidget {
             ),
           ),
         ),
-        data: (quotations) => quotations.isEmpty
-            ? _EmptyState()
-            : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: quotations.length,
-                itemBuilder: (context, index) {
-                  final quotation = quotations[index];
-                  return _QuotationCard(quotation: quotation);
-                },
-              ),
+        data: (quotations) {
+          if (quotations.isEmpty) {
+            return _EmptyState();
+          }
+          return TabBarView(
+            controller: _tabController,
+            children: _tabs.map((tab) {
+              final filtered = _filterByStatus(quotations, tab.status);
+              return _QuotationList(
+                quotations: filtered,
+                emptyTitle: tab.status == null
+                    ? 'No Quotations Yet'
+                    : 'No ${tab.label} Quotations',
+                emptySubtitle: tab.status == null
+                    ? 'Create your first quotation to get started'
+                    : 'Quotations with ${tab.label.toLowerCase()} status will appear here',
+                onAddTap: () => context.push('/quotations/new'),
+              );
+            }).toList(),
+          );
+        },
       ),
     );
   }
+}
+
+class _StatusTab {
+  final String label;
+  final String? status;
+
+  const _StatusTab({required this.label, this.status});
 }
 
 class _EmptyState extends StatelessWidget {
@@ -106,6 +189,67 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
+class _QuotationList extends StatelessWidget {
+  final List<Quotation> quotations;
+  final String emptyTitle;
+  final String emptySubtitle;
+  final VoidCallback onAddTap;
+
+  const _QuotationList({
+    required this.quotations,
+    required this.emptyTitle,
+    required this.emptySubtitle,
+    required this.onAddTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (quotations.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.description_outlined,
+              size: 64,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              emptyTitle,
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              emptySubtitle,
+              style: TextStyle(color: Colors.grey.shade500),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onAddTap,
+              icon: const Icon(Icons.add),
+              label: const Text('Create Quotation'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: quotations.length,
+      itemBuilder: (context, index) {
+        final quotation = quotations[index];
+        return _QuotationCard(quotation: quotation);
+      },
+    );
+  }
+}
+
 class _QuotationCard extends StatelessWidget {
   final Quotation quotation;
 
@@ -119,6 +263,8 @@ class _QuotationCard extends StatelessWidget {
         return Colors.blue;
       case 'Declined':
         return Colors.red;
+      case 'Amended':
+        return Colors.purple;
       case 'Draft':
         return Colors.orange;
       default:
@@ -204,6 +350,32 @@ class _QuotationCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CountBadge extends StatelessWidget {
+  final int count;
+  final Color color;
+
+  const _CountBadge({required this.count, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '$count',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: color,
         ),
       ),
     );

@@ -32,7 +32,7 @@ import '../screens/services/services_screen.dart';
 import '../screens/services/create_service_screen.dart';
 import '../screens/services/service_detail_screen.dart';
 import '../screens/schedule/schedule_screen.dart';
-import '../screens/schedule/create_event_screen.dart';
+import '../screens/schedule/create_job_screen.dart';
 import '../screens/schedule/job_detail_screen.dart';
 import '../screens/workflows/workflows_screen.dart';
 
@@ -233,13 +233,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/schedule/new',
-        builder: (context, state) => const CreateEventScreen(),
+        builder: (context, state) => const CreateJobScreen(),
       ),
       GoRoute(
         path: '/schedule/:id',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return JobDetailScreen(jobId: id);
+        },
+      ),
+      GoRoute(
+        path: '/schedule/:id/edit',
+        builder: (context, state) {
+          final event = state.extra as CalendarEvent?;
+          return CreateJobScreen(event: event);
         },
       ),
       GoRoute(

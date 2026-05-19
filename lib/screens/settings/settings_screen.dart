@@ -388,15 +388,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ListTile(
             leading: const Icon(Icons.dark_mode),
             title: const Text('Dark Mode'),
-            subtitle: const Text('Follows system setting'),
+            subtitle: Text(
+              ref.watch(themeModeProvider) == ThemeMode.system
+                  ? 'Following system setting'
+                  : ref.watch(themeModeProvider) == ThemeMode.dark
+                      ? 'Always dark'
+                      : 'Always light',
+            ),
             trailing: Switch(
-              value: Theme.of(context).brightness == Brightness.dark,
+              value: ref.watch(themeModeProvider) == ThemeMode.dark ||
+                  (ref.watch(themeModeProvider) == ThemeMode.system &&
+                      Theme.of(context).brightness == Brightness.dark),
               onChanged: (value) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text(
-                          'Theme follows your system setting. Change it in your device settings.')),
-                );
+                ref.read(themeModeProvider.notifier).setThemeMode(
+                      value ? ThemeMode.dark : ThemeMode.light,
+                    );
               },
             ),
           ),

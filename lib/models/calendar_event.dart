@@ -19,6 +19,11 @@ class CalendarEvent with _$CalendarEvent {
     @TimestampConverter() DateTime? createdAt,
     @TimestampConverter() DateTime? updatedAt,
     String? googleEventId,
+    // Job-related fields (optional for backward compatibility)
+    String? customerId,
+    String? customerName,
+    String? customerAddress,
+    String? status,
   }) = _CalendarEvent;
 
   factory CalendarEvent.fromJson(Map<String, dynamic> json) =>

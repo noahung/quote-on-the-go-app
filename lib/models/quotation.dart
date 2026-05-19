@@ -33,6 +33,8 @@ class Quotation with _$Quotation {
     @Default(false) bool isArchived,
     @TimestampConverter() DateTime? scheduledSendAt,
     String? brevoMessageId,
+    // Job linking
+    String? jobId,
     // Monday.com Integration
     String? mondayItemId,
     String? mondayBoardId,

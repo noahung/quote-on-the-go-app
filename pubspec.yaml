@@ -49,9 +49,13 @@ dependencies:
   cached_network_image: ^3.4.1
   connectivity_plus: ^6.1.3
   flutter_local_notifications: ^18.0.1
+  webview_flutter: ^4.10.0
 
   # Environment
   flutter_dotenv: ^5.2.1
+
+  # Persistence
+  shared_preferences: ^2.3.3
 
 dev_dependencies:
   flutter_test:

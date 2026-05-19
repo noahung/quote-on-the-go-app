@@ -36,6 +36,8 @@ class Invoice with _$Invoice {
     String? stripePaymentIntentId,
     String? stripePaymentStatus,
     String? brevoMessageId,
+    // Job linking
+    String? jobId,
     // Monday.com Integration
     String? mondayItemId,
     String? mondayBoardId,
