@@ -1,0 +1,221 @@
+import * as functions from 'firebase-functions';
+import * as admin from 'firebase-admin';
+import { GoogleGenAI } from '@google/genai';
+
+// Initialize Firebase Admin
+admin.initializeApp();
+
+// Initialize Google GenAI with Firebase config
+const getGenAI = () => {
+  const apiKey = functions.config().googleai?.key;
+  if (!apiKey) {
+    throw new Error('Google AI API key not configured. Run: firebase functions:config:set googleai.key="YOUR_KEY"');
+  }
+  return new GoogleGenAI({ apiKey });
+};
+
+// AI Line Items Generation Function - Simple HTTP endpoint
+export const generateLineItems = functions.https.onRequest(async (req, res) => {
+  // Set CORS headers
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
+
+  // Only accept POST
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  const { prompt, companyId, idToken } = req.body;
+
+  // Verify authentication via ID token
+  if (!idToken) {
+    res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
+
+  // Verify Firebase Auth token
+  let decodedToken;
+  try {
+    decodedToken = await admin.auth().verifyIdToken(idToken);
+  } catch (e) {
+    res.status(401).json({ error: 'Invalid authentication token' });
+    return;
+  }
+  const userId = decodedToken.uid;
+
+  // Validate input
+  if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Please provide a valid job description.'
+    );
+  }
+
+  if (!companyId || typeof companyId !== 'string') {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Company ID is required.'
+    );
+  }
+
+  try {
+    // Verify user's company access and premium status
+    const userDoc = await admin.firestore().collection('users').doc(userId).get();
+    const userData = userDoc.data();
+
+    if (!userData || userData.companyId !== companyId) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'You do not have access to this company.'
+      );
+    }
+
+    // Check company tier
+    const companyDoc = await admin.firestore().collection('companies').doc(companyId).get();
+    const companyData = companyDoc.data();
+
+    if (!companyData || companyData.tier !== 'premium') {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'AI generation is only available for premium users.'
+      );
+    }
+
+    // Get GenAI instance with API key
+    const genAI = getGenAI();
+
+    // Call Google GenAI API
+    const model = genAI.models;
+    const response = await model.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: [{
+        role: 'user',
+        parts: [{
+          text: `Generate a list of line items for a quotation based on this description: "${prompt}".
+
+Return a JSON object with an "items" array.
+Each item should have:
+- "description" (string): Professional description of the work/material
+- "itemDetails" (string, optional): Extended specifications or scope details
+- "quantity" (number): Amount of units
+- "unitPrice" (number): Price per unit in GBP
+
+Guidelines:
+- Keep descriptions professional and concise
+- Use British English spelling (e.g. "labour", "colour", "centre")
+- Assume currency is GBP
+- Use realistic market rates for UK trade work
+- Break down complex jobs into logical line items
+- Include labour and materials as separate items when appropriate
+
+Example output format:
+{
+  "items": [
+    {
+      "description": "Split-system air conditioning unit - 2.5kW",
+      "itemDetails": "Supply and installation of wall-mounted unit including refrigerant lines",
+      "quantity": 5,
+      "unitPrice": 450.00
+    },
+    {
+      "description": "Electrical labour - AC installation",
+      "itemDetails": "Running power from distribution board to each unit location",
+      "quantity": 5,
+      "unitPrice": 180.00
+    }
+  ]
+}`
+        }]
+      }],
+      config: {
+        temperature: 0.2,
+        maxOutputTokens: 2048,
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const responseText = response.text;
+
+    if (!responseText) {
+      throw new functions.https.HttpsError(
+        'internal',
+        'AI service returned empty response.'
+      );
+    }
+
+    // Parse the JSON response
+    let parsedResponse;
+    try {
+      parsedResponse = JSON.parse(responseText);
+    } catch (e) {
+      // Try to extract JSON from markdown code block if present
+      const jsonMatch = responseText.match(/```(?:json)?\n?([\s\S]*?)```/);
+      if (jsonMatch) {
+        parsedResponse = JSON.parse(jsonMatch[1]);
+      } else {
+        throw new Error('Failed to parse AI response');
+      }
+    }
+
+    const items = parsedResponse?.items || [];
+
+    // Validate items structure
+    const validatedItems = items.filter((item: any) => {
+      return item &&
+        typeof item.description === 'string' &&
+        typeof item.quantity === 'number' &&
+        typeof item.unitPrice === 'number';
+    }).map((item: any) => ({
+      description: item.description,
+      itemDetails: item.itemDetails || '',
+      quantity: Math.max(1, item.quantity),
+      unitPrice: Math.max(0, item.unitPrice),
+    }));
+
+    if (validatedItems.length === 0) {
+      throw new functions.https.HttpsError(
+        'internal',
+        'AI did not generate any valid items. Please try again with a more detailed description.'
+      );
+    }
+
+    res.json({
+      success: true,
+      items: validatedItems,
+    });
+    return;
+
+  } catch (error: any) {
+    console.error('AI Generation Error:', error);
+
+    // Handle GenAI API errors
+    if (error.message?.includes('API key')) {
+      res.status(500).json({ error: 'AI service configuration error' });
+      return;
+    }
+
+    if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
+      res.status(429).json({ error: 'AI quota exceeded. Please try again later.' });
+      return;
+    }
+
+    res.status(500).json({ error: 'Failed to generate items' });
+  }
+});
+
+// Health check function for testing
+export const healthCheck = functions.https.onCall(async (_request) => {
+  return {
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0',
+  };
+});

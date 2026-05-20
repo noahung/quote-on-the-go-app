@@ -491,114 +491,28 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
     );
   }
 
-  void _showAddLineItemSheet(BuildContext context) {
-    final descriptionController = TextEditingController();
-    final quantityController = TextEditingController(text: '1');
-    final priceController = TextEditingController();
-
-    showModalBottomSheet(
+  void _showAddLineItemSheet(BuildContext context) async {
+    final result = await showModalBottomSheet<dynamic>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 16,
-            right: 16,
-            top: 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Add Line Item',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description *',
-                  prefixIcon: Icon(Icons.description_outlined),
-                ),
-                textCapitalization: TextCapitalization.sentences,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: TextFormField(
-                      controller: quantityController,
-                      decoration: const InputDecoration(
-                        labelText: 'Qty *',
-                        prefixIcon: Icon(Icons.numbers),
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 3,
-                    child: TextFormField(
-                      controller: priceController,
-                      decoration: const InputDecoration(
-                        labelText: 'Unit Price *',
-                        prefixIcon: Icon(Icons.attach_money),
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: () {
-                  final description = descriptionController.text.trim();
-                  final quantity =
-                      double.tryParse(quantityController.text) ?? 1;
-                  final price = double.tryParse(priceController.text) ?? 0;
-
-                  if (description.isEmpty || price <= 0) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text('Please enter a valid description and price'),
-                      ),
-                    );
-                    return;
-                  }
-
-                  final item = LineItem(
-                    id: const Uuid().v4(),
-                    description: description,
-                    quantity: quantity,
-                    unitPrice: price,
-                    total: quantity * price,
-                  );
-
-                  _addLineItem(item);
-                  Navigator.pop(context);
-                },
-                child: const Text('Add Item'),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
+        return const _AddItemBottomSheet();
       },
     );
+
+    // Handle returned items
+    if (result != null) {
+      if (result is LineItem) {
+        _addLineItem(result);
+      } else if (result is List<LineItem>) {
+        for (final item in result) {
+          _addLineItem(item);
+        }
+      }
+    }
   }
 
   Widget _buildReviewStep() {
@@ -733,6 +647,436 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
           textCapitalization: TextCapitalization.sentences,
         ),
       ],
+    );
+  }
+}
+
+enum _ItemAddMode { manual, ai }
+
+class _AddItemBottomSheet extends ConsumerStatefulWidget {
+  const _AddItemBottomSheet();
+
+  @override
+  ConsumerState<_AddItemBottomSheet> createState() =>
+      _AddItemBottomSheetState();
+}
+
+class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
+  _ItemAddMode _mode = _ItemAddMode.manual;
+
+  // Manual entry controllers
+  final _descriptionController = TextEditingController();
+  final _quantityController = TextEditingController(text: '1');
+  final _priceController = TextEditingController();
+
+  // AI prompt controller
+  final _aiPromptController = TextEditingController();
+
+  @override
+  void dispose() {
+    _descriptionController.dispose();
+    _quantityController.dispose();
+    _priceController.dispose();
+    _aiPromptController.dispose();
+    super.dispose();
+  }
+
+  void _addManualItem() {
+    final description = _descriptionController.text.trim();
+    final quantity = double.tryParse(_quantityController.text) ?? 1;
+    final price = double.tryParse(_priceController.text) ?? 0;
+
+    if (description.isEmpty || price <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid description and price'),
+        ),
+      );
+      return;
+    }
+
+    final item = LineItem(
+      id: const Uuid().v4(),
+      description: description,
+      quantity: quantity,
+      unitPrice: price,
+      total: quantity * price,
+    );
+
+    Navigator.pop(context, item);
+  }
+
+  Future<void> _generateAIItems() async {
+    final companyId = ref.read(companyIdProvider);
+    if (companyId == null) return;
+
+    await ref.read(aiGenerationStateProvider.notifier).generateItems(
+          prompt: _aiPromptController.text.trim(),
+          companyId: companyId,
+        );
+  }
+
+  void _addGeneratedItems(List<LineItem> items) {
+    Navigator.pop(context, items);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isPremium = ref.watch(isPremiumProvider);
+    final aiState = ref.watch(aiGenerationStateProvider);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 16,
+        right: 16,
+        top: 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Add Items',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Mode Toggle
+          Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _ModeButton(
+                    icon: Icons.edit_outlined,
+                    label: 'Manual',
+                    isSelected: _mode == _ItemAddMode.manual,
+                    onTap: () => setState(() => _mode = _ItemAddMode.manual),
+                  ),
+                ),
+                Expanded(
+                  child: _ModeButton(
+                    icon: isPremium ? Icons.auto_fix_high : Icons.lock_outline,
+                    label: 'AI Generate',
+                    isSelected: _mode == _ItemAddMode.ai,
+                    isPremium: isPremium,
+                    onTap: () {
+                      if (!isPremium) {
+                        _showPremiumUpgradeDialog(context);
+                        return;
+                      }
+                      setState(() => _mode = _ItemAddMode.ai);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Content based on mode
+          if (_mode == _ItemAddMode.manual)
+            _buildManualEntryForm()
+          else
+            _buildAIGenerationForm(aiState, colorScheme),
+
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManualEntryForm() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextFormField(
+          controller: _descriptionController,
+          decoration: const InputDecoration(
+            labelText: 'Description *',
+            prefixIcon: Icon(Icons.description_outlined),
+          ),
+          textCapitalization: TextCapitalization.sentences,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: TextFormField(
+                controller: _quantityController,
+                decoration: const InputDecoration(
+                  labelText: 'Qty *',
+                  prefixIcon: Icon(Icons.numbers),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 3,
+              child: TextFormField(
+                controller: _priceController,
+                decoration: const InputDecoration(
+                  labelText: 'Unit Price *',
+                  prefixIcon: Icon(Icons.attach_money),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        FilledButton(
+          onPressed: _addManualItem,
+          child: const Text('Add Item'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAIGenerationForm(
+      AIGenerationState aiState, ColorScheme colorScheme) {
+    // Show generated items if available
+    if (aiState.generatedItems != null && aiState.generatedItems!.isNotEmpty) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Generated Items (${aiState.generatedItems!.length})',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () {
+                  ref.read(aiGenerationStateProvider.notifier).clear();
+                },
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Start Over'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 250),
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: aiState.generatedItems!.length,
+              itemBuilder: (context, index) {
+                final item = aiState.generatedItems![index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    dense: true,
+                    title: Text(
+                      item.description,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    subtitle: Text(
+                      '${item.quantity} x \u00A3${item.unitPrice.toStringAsFixed(2)}',
+                    ),
+                    trailing: Text(
+                      '\u00A3${item.total.toStringAsFixed(2)}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {
+                    ref.read(aiGenerationStateProvider.notifier).clear();
+                  },
+                  child: const Text('Back'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: FilledButton.icon(
+                  onPressed: () => _addGeneratedItems(aiState.generatedItems!),
+                  icon: const Icon(Icons.add),
+                  label: Text('Add ${aiState.generatedItems!.length} Items'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    // Show generation form
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextFormField(
+          controller: _aiPromptController,
+          decoration: InputDecoration(
+            labelText: 'Describe the job...',
+            hintText:
+                'E.g., Install 5 split-system air conditioners in a 2-story office building. Include labor, copper piping, and electrical work.',
+            prefixIcon: const Icon(Icons.auto_fix_high),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          maxLines: 4,
+          textCapitalization: TextCapitalization.sentences,
+          enabled: !aiState.isLoading,
+        ),
+        if (aiState.error != null) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.error_outline, color: colorScheme.error, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    aiState.error!,
+                    style: TextStyle(
+                      color: colorScheme.error,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          onPressed:
+              aiState.isLoading || _aiPromptController.text.trim().isEmpty
+                  ? null
+                  : _generateAIItems,
+          icon: aiState.isLoading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.auto_fix_high),
+          label: Text(aiState.isLoading ? 'Generating...' : 'Generate Items'),
+        ),
+      ],
+    );
+  }
+
+  void _showPremiumUpgradeDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.auto_fix_high, color: Colors.amber, size: 48),
+        title: const Text('Unlock AI Superpowers'),
+        content: const Text(
+          'Generate detailed quotes in seconds with AI. Save time and win more work with professional, accurate estimates.\n\nUpgrade to Premium to access this feature.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Maybe Later'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.push('/settings');
+            },
+            child: const Text('Upgrade Now'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModeButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final bool isPremium;
+  final VoidCallback onTap;
+
+  const _ModeButton({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    this.isPremium = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? colorScheme.primaryContainer : null,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected
+                  ? colorScheme.primary
+                  : !isPremium
+                      ? Colors.grey
+                      : null,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                color: isSelected
+                    ? colorScheme.primary
+                    : !isPremium
+                        ? Colors.grey
+                        : null,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

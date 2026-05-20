@@ -1,1 +1,21 @@
-{"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"adverto-invoice","configurations":{"android":"1:903193567239:android:9d8570f326b13724e74aa2","ios":"1:903193567239:ios:f89bdb0424c68781e74aa2"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "adverto-invoice",
+          "configurations": {
+            "android": "1:903193567239:android:9d8570f326b13724e74aa2",
+            "ios": "1:903193567239:ios:f89bdb0424c68781e74aa2"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default"
+    }
+  ]
+}
