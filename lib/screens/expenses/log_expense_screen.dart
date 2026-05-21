@@ -208,7 +208,7 @@ class _LogExpenseScreenState extends ConsumerState<LogExpenseScreen> {
 
             // Category
             DropdownButtonFormField<String>(
-              value: _selectedCategory,
+              initialValue: _selectedCategory,
               decoration: InputDecoration(
                 labelText: 'Category',
                 prefixIcon: const Icon(Icons.category_outlined),

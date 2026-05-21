@@ -173,7 +173,7 @@ class TeamManagementScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               StatefulBuilder(builder: (ctx2, setState2) {
                 return DropdownButtonFormField<String>(
-                  value: selectedRole,
+                  initialValue: selectedRole,
                   decoration: InputDecoration(
                     labelText: 'Role',
                     prefixIcon: const Icon(Icons.manage_accounts_outlined),

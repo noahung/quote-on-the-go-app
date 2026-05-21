@@ -39,8 +39,9 @@ class ScheduleRepository {
     // Ensure job fields are persisted if present
     if (event.customerId != null) data['customerId'] = event.customerId;
     if (event.customerName != null) data['customerName'] = event.customerName;
-    if (event.customerAddress != null)
+    if (event.customerAddress != null) {
       data['customerAddress'] = event.customerAddress;
+    }
     if (event.status != null) data['status'] = event.status;
     final doc = await _firestore.collection('events').add(data);
     return doc.id;
@@ -53,8 +54,9 @@ class ScheduleRepository {
     };
     if (event.customerId != null) data['customerId'] = event.customerId;
     if (event.customerName != null) data['customerName'] = event.customerName;
-    if (event.customerAddress != null)
+    if (event.customerAddress != null) {
       data['customerAddress'] = event.customerAddress;
+    }
     if (event.status != null) data['status'] = event.status;
     await _firestore.collection('events').doc(event.id).update(data);
   }

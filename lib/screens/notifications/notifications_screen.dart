@@ -144,7 +144,10 @@ class NotificationsScreen extends ConsumerWidget {
         case 'quotation_amended':
           context.push('/quotations/${n.relatedDocumentId}');
         case 'invoice_paid':
+        case 'invoice_reminder':
           context.push('/invoices/${n.relatedDocumentId}');
+        case 'team_invitation':
+          context.push('/team');
         default:
           break;
       }
@@ -191,6 +194,10 @@ class _NotificationTile extends StatelessWidget {
         return Icons.edit_note_outlined;
       case 'invoice_paid':
         return Icons.payments_outlined;
+      case 'invoice_reminder':
+        return Icons.alarm_outlined;
+      case 'team_invitation':
+        return Icons.person_add_outlined;
       default:
         return Icons.info_outlined;
     }
@@ -206,6 +213,10 @@ class _NotificationTile extends StatelessWidget {
         return cs.secondaryContainer;
       case 'invoice_paid':
         return cs.tertiaryContainer;
+      case 'invoice_reminder':
+        return cs.errorContainer;
+      case 'team_invitation':
+        return cs.primaryContainer;
       default:
         return cs.surfaceContainerHighest;
     }
@@ -221,6 +232,10 @@ class _NotificationTile extends StatelessWidget {
         return cs.secondary;
       case 'invoice_paid':
         return cs.tertiary;
+      case 'invoice_reminder':
+        return cs.error;
+      case 'team_invitation':
+        return cs.primary;
       default:
         return cs.onSurfaceVariant;
     }

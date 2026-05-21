@@ -10,8 +10,10 @@ import '../../widgets/widgets.dart';
 
 class CreateInvoiceScreen extends ConsumerStatefulWidget {
   final Invoice? existingInvoice;
+  final Customer? prefilledCustomer;
 
-  const CreateInvoiceScreen({super.key, this.existingInvoice});
+  const CreateInvoiceScreen(
+      {super.key, this.existingInvoice, this.prefilledCustomer});
 
   @override
   ConsumerState<CreateInvoiceScreen> createState() =>
@@ -59,6 +61,14 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
       _taxRateController.text = _taxRate.toStringAsFixed(1);
       _date = inv.date;
       _dueDate = inv.dueDate;
+    } else if (widget.prefilledCustomer != null) {
+      final c = widget.prefilledCustomer!;
+      // Don't set _selectedCustomer — it may not be in the dropdown list
+      // and would cause a value mismatch assertion. Just prefill the text fields.
+      _customerNameController.text = c.name;
+      _customerEmailController.text = c.email;
+      _customerPhoneController.text = c.phone ?? '';
+      _customerAddressController.text = c.address ?? '';
     }
   }
 
@@ -303,7 +313,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
       children: [
         if (customers.isNotEmpty) ...[
           DropdownButtonFormField<Customer?>(
-            value: _selectedCustomer,
+            initialValue: _selectedCustomer,
             decoration: const InputDecoration(
               labelText: 'Select Existing Customer',
               prefixIcon: Icon(Icons.person_search),

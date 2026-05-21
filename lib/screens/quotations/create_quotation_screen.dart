@@ -10,8 +10,10 @@ import '../../widgets/widgets.dart';
 
 class CreateQuotationScreen extends ConsumerStatefulWidget {
   final Quotation? existingQuotation;
+  final Customer? prefilledCustomer;
 
-  const CreateQuotationScreen({super.key, this.existingQuotation});
+  const CreateQuotationScreen(
+      {super.key, this.existingQuotation, this.prefilledCustomer});
 
   @override
   ConsumerState<CreateQuotationScreen> createState() =>
@@ -59,6 +61,14 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
       _taxRateController.text = (_taxRate).toStringAsFixed(1);
       _date = q.date;
       _expiryDate = q.expiryDate;
+    } else if (widget.prefilledCustomer != null) {
+      final c = widget.prefilledCustomer!;
+      // Don't set _selectedCustomer — it may not be in the dropdown list
+      // and would cause a value mismatch assertion. Just prefill the text fields.
+      _customerNameController.text = c.name;
+      _customerEmailController.text = c.email;
+      _customerPhoneController.text = c.phone ?? '';
+      _customerAddressController.text = c.address ?? '';
     }
   }
 
@@ -303,7 +313,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
       children: [
         if (customers.isNotEmpty) ...[
           DropdownButtonFormField<Customer?>(
-            value: _selectedCustomer,
+            initialValue: _selectedCustomer,
             decoration: const InputDecoration(
               labelText: 'Select Existing Customer',
               prefixIcon: Icon(Icons.person_search),

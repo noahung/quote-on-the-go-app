@@ -181,7 +181,6 @@ class MyApp extends ConsumerWidget {
       surfaceContainerHigh: Color(0xFF2A2A2A),
       surfaceContainerHighest: Color(0xFF353534),
       onSurfaceVariant: Color(0xFFDEC1AF),
-      surfaceVariant: Color(0xFF353534),
       // Outlines
       outline: Color(0xFFA68B7C),
       outlineVariant: Color(0xFF574235),

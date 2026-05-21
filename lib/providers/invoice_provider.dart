@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -133,6 +134,48 @@ class InvoiceRepository {
     }
 
     await _firestore.collection('invoices').doc(id).update(updateData);
+
+    // Write an in-app notification for owner/admin users when marked Paid
+    if (status == 'Paid') {
+      try {
+        final invoiceSnap =
+            await _firestore.collection('invoices').doc(id).get();
+        final data = invoiceSnap.data();
+        if (data != null) {
+          final companyId = data['companyId'] as String?;
+          final invoiceNumber = data['invoiceNumber'] as String? ?? id;
+          final customerName = data['customerName'] as String? ?? 'Customer';
+          if (companyId != null) {
+            final usersSnap = await _firestore
+                .collection('users')
+                .where('companyId', isEqualTo: companyId)
+                .where('role', whereIn: ['owner', 'admin'])
+                .limit(5)
+                .get();
+            final batch = _firestore.batch();
+            for (final userDoc in usersSnap.docs) {
+              final notifRef =
+                  _firestore.collection('user_notifications').doc();
+              batch.set(notifRef, {
+                'userId': userDoc.id,
+                'companyId': companyId,
+                'title': 'Invoice Paid',
+                'message': '$customerName paid invoice $invoiceNumber',
+                'type': 'invoice_paid',
+                'relatedDocumentId': id,
+                'link': '/invoices/$id',
+                'isRead': false,
+                'createdAt': FieldValue.serverTimestamp(),
+              });
+            }
+            await batch.commit();
+          }
+        }
+      } catch (e) {
+        // Non-fatal — status was already updated
+        debugPrint('[InvoiceRepo] Failed to write paid notification: $e');
+      }
+    }
   }
 }
 

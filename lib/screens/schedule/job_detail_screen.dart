@@ -14,7 +14,10 @@ import '../../providers/job_media_provider.dart';
 import '../../providers/quotation_provider.dart';
 import '../../providers/invoice_provider.dart';
 import '../../providers/expense_provider.dart';
+import '../../providers/customer_provider.dart';
 import 'create_job_screen.dart';
+import '../quotations/create_quotation_screen.dart';
+import '../invoices/create_invoice_screen.dart';
 
 // Provider for a single calendar event by ID
 final jobDetailProvider =
@@ -407,14 +410,32 @@ class _QuotesTab extends ConsumerWidget {
                   },
                 ),
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => context.push(
-              '/quotations/new',
-              extra: {
-                'jobId': jobId,
-                'customerName': job.customerName,
-                'customerAddress': job.customerAddress,
-              },
-            ),
+            onPressed: () {
+              Customer? customer;
+              if (job.customerId != null) {
+                final customers =
+                    ref.read(customersStreamProvider).valueOrNull ?? [];
+                customer = customers.cast<Customer?>().firstWhere(
+                    (c) => c?.id == job.customerId,
+                    orElse: () => null);
+              }
+              // Fallback: build a Customer from job fields if lookup failed
+              customer ??= (job.customerName != null)
+                  ? Customer(
+                      id: job.customerId ?? '',
+                      companyId: '',
+                      name: job.customerName!,
+                      email: '',
+                      address: job.customerAddress,
+                    )
+                  : null;
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      CreateQuotationScreen(prefilledCustomer: customer),
+                ),
+              );
+            },
             icon: const Icon(Icons.add),
             label: const Text('New Quote'),
           ),
@@ -461,14 +482,32 @@ class _InvoicesTab extends ConsumerWidget {
                   },
                 ),
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => context.push(
-              '/invoices/new',
-              extra: {
-                'jobId': jobId,
-                'customerName': job.customerName,
-                'customerAddress': job.customerAddress,
-              },
-            ),
+            onPressed: () {
+              Customer? customer;
+              if (job.customerId != null) {
+                final customers =
+                    ref.read(customersStreamProvider).valueOrNull ?? [];
+                customer = customers.cast<Customer?>().firstWhere(
+                    (c) => c?.id == job.customerId,
+                    orElse: () => null);
+              }
+              // Fallback: build a Customer from job fields if lookup failed
+              customer ??= (job.customerName != null)
+                  ? Customer(
+                      id: job.customerId ?? '',
+                      companyId: '',
+                      name: job.customerName!,
+                      email: '',
+                      address: job.customerAddress,
+                    )
+                  : null;
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      CreateInvoiceScreen(prefilledCustomer: customer),
+                ),
+              );
+            },
             icon: const Icon(Icons.add),
             label: const Text('New Invoice'),
           ),

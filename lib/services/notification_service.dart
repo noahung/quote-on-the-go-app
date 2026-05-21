@@ -56,12 +56,23 @@ class NotificationService {
     // 5. Register background handler
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-    // 6. Handle notification tap when app is in background (not terminated)
+    // 6. Handle notification tap when app was in background (not terminated)
     FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
 
-    // 7. Save token immediately and on refresh
-    final token = await _fcm.getToken();
-    if (token != null) await _saveToken(token);
+    // Handle notification tap when app was terminated (initial message)
+    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+    if (initialMessage != null) {
+      _onMessageOpenedApp(initialMessage);
+    }
+
+    // 7. Save token once auth is confirmed, then keep refreshed
+    // Listen to auth state so the token is saved even on a fresh install
+    // where persistent auth restores the user asynchronously after initialize().
+    FirebaseAuth.instance.authStateChanges().listen((user) async {
+      if (user == null) return;
+      final token = await _fcm.getToken();
+      if (token != null) await _saveToken(token);
+    });
     _fcm.onTokenRefresh.listen(_saveToken);
   }
 
@@ -73,7 +84,10 @@ class NotificationService {
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
-          .update({'fcmToken': token, 'fcmTokenUpdatedAt': FieldValue.serverTimestamp()});
+          .update({
+        'fcmToken': token,
+        'fcmTokenUpdatedAt': FieldValue.serverTimestamp()
+      });
     } catch (e) {
       debugPrint('[FCM] Error saving token: $e');
     }

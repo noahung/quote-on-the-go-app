@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/models.dart';
 import '../providers/auth_provider.dart';
+import '../services/notification_service.dart';
 import '../screens/shell_scaffold.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
@@ -76,6 +77,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/login';
       }
 
+      // If authenticated, consume any pending deep-link from a terminated-app
+      // notification tap before falling through to normal routing.
+      if (isAuthenticated) {
+        final pending = NotificationService().consumePendingRoute();
+        if (pending != null &&
+            pending.isNotEmpty &&
+            pending != state.matchedLocation) {
+          return pending;
+        }
+      }
+
       // If authenticated but on auth pages, redirect to home
       if (isAuthenticated && isLoggingIn) {
         return '/';
@@ -111,10 +123,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const QuotationsScreen(),
             routes: [
               GoRoute(
-                path: 'new',
-                builder: (context, state) => const CreateQuotationScreen(),
-              ),
-              GoRoute(
                 path: ':id',
                 builder: (context, state) {
                   final id = state.pathParameters['id']!;
@@ -144,10 +152,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/invoices',
             builder: (context, state) => const InvoicesScreen(),
             routes: [
-              GoRoute(
-                path: 'new',
-                builder: (context, state) => const CreateInvoiceScreen(),
-              ),
               GoRoute(
                 path: ':id',
                 builder: (context, state) {
