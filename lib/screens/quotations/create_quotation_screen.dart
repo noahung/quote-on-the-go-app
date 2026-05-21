@@ -12,8 +12,11 @@ class CreateQuotationScreen extends ConsumerStatefulWidget {
   final Quotation? existingQuotation;
   final Customer? prefilledCustomer;
 
-  const CreateQuotationScreen(
-      {super.key, this.existingQuotation, this.prefilledCustomer});
+  const CreateQuotationScreen({
+    super.key,
+    this.existingQuotation,
+    this.prefilledCustomer,
+  });
 
   @override
   ConsumerState<CreateQuotationScreen> createState() =>
@@ -22,6 +25,7 @@ class CreateQuotationScreen extends ConsumerStatefulWidget {
 
 class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
   int _currentStep = 0;
+  bool _showPreviewInReview = false;
   bool _isLoading = false;
 
   // Step 1: Customer
@@ -41,8 +45,9 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
 
   // Dates
   String _date = DateFormat('yyyy-MM-dd').format(DateTime.now());
-  String _expiryDate = DateFormat('yyyy-MM-dd')
-      .format(DateTime.now().add(const Duration(days: 30)));
+  String _expiryDate = DateFormat(
+    'yyyy-MM-dd',
+  ).format(DateTime.now().add(const Duration(days: 30)));
 
   bool get _isEditing => widget.existingQuotation != null;
 
@@ -176,9 +181,9 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save quotation: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save quotation: $e')));
       }
     } finally {
       if (mounted) {
@@ -206,6 +211,12 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
   void _removeLineItem(int index) {
     setState(() {
       _lineItems.removeAt(index);
+    });
+  }
+
+  void _editLineItem(int index, LineItem updated) {
+    setState(() {
+      _lineItems[index] = updated;
     });
   }
 
@@ -261,9 +272,11 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : Text(_currentStep == 2
-                            ? (_isEditing ? 'Save Changes' : 'Create Quote')
-                            : 'Next'),
+                        : Text(
+                            _currentStep == 2
+                                ? (_isEditing ? 'Save Changes' : 'Create Quote')
+                                : 'Next',
+                          ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -478,8 +491,15 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       IconButton(
-                        icon:
-                            const Icon(Icons.delete_outline, color: Colors.red),
+                        icon: const Icon(Icons.edit_outlined),
+                        onPressed: () =>
+                            _showEditLineItemSheet(context, index, item),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                        ),
                         onPressed: () => _removeLineItem(index),
                       ),
                     ],
@@ -524,138 +544,299 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
     }
   }
 
-  Widget _buildReviewStep() {
-    final currencyFormat = NumberFormat.currency(symbol: '£');
+  void _showEditLineItemSheet(
+      BuildContext context, int index, LineItem item) async {
+    final result = await showModalBottomSheet<LineItem>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return _AddItemBottomSheet(existingItem: item);
+      },
+    );
+    if (result != null) {
+      _editLineItem(index, result);
+    }
+  }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Customer Summary
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildReviewStep() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return SizedBox(
+      height: 560,
+      child: Column(
+        children: [
+          // Edit/Preview Tabs
+          Container(
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: colorScheme.outlineVariant),
+              ),
+            ),
+            child: Row(
               children: [
-                Text(
-                  'Customer',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                Expanded(
+                  child: InkWell(
+                    onTap: () => setState(() => _showPreviewInReview = false),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: !_showPreviewInReview
+                                ? colorScheme.primary
+                                : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        'Edit',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: !_showPreviewInReview
+                              ? colorScheme.primary
+                              : colorScheme.onSurfaceVariant,
+                          fontWeight: !_showPreviewInReview
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(_customerNameController.text),
-                Text(
-                  _customerEmailController.text,
-                  style: TextStyle(color: Colors.grey.shade600),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => setState(() => _showPreviewInReview = true),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: _showPreviewInReview
+                                ? colorScheme.primary
+                                : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        'Preview',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: _showPreviewInReview
+                              ? colorScheme.primary
+                              : colorScheme.onSurfaceVariant,
+                          fontWeight: _showPreviewInReview
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 16),
 
-        // Items Summary
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Items',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ..._lineItems.map((item) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${item.quantity}x ${item.description}',
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                        ),
-                        Text(
-                          currencyFormat.format(item.total),
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                      ],
+          // Content based on selected tab
+          Expanded(
+            child: _showPreviewInReview
+                ? _buildPreviewContent()
+                : _buildEditReviewContent(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreviewContent() {
+    final company = ref.watch(companyProvider);
+    final companyProfile = company != null
+        ? CompanyProfile(
+            name: company.name,
+            address: company.address,
+            phone: company.phone,
+            email: company.email,
+            website: company.website,
+            logoUrl: company.logoUrl,
+            bankAccounts: company.bankAccounts,
+            defaultTaxRate: company.defaultTaxRate,
+          )
+        : null;
+    final quotation = _buildQuotationFromState(companyProfile);
+    return DocumentPreview(
+      document: quotation,
+      company: companyProfile,
+      isDraft: true,
+    );
+  }
+
+  Quotation _buildQuotationFromState(CompanyProfile? company) {
+    return Quotation(
+      id: 'preview',
+      companyId: 'preview',
+      createdBy: 'preview',
+      quotationNumber: 'PREVIEW-Q-001',
+      customerName: _customerNameController.text,
+      customerEmail: _customerEmailController.text,
+      customerPhone: _customerPhoneController.text.isEmpty
+          ? null
+          : _customerPhoneController.text,
+      customerAddress: _customerAddressController.text.isEmpty
+          ? null
+          : _customerAddressController.text,
+      date: _date,
+      expiryDate: _expiryDate,
+      items: _lineItems,
+      subtotal: _subtotal,
+      taxRate: double.tryParse(_taxRateController.text),
+      taxAmount: _taxAmount,
+      total: _total,
+      status: 'Draft',
+      notes: _notesController.text.isEmpty ? null : _notesController.text,
+      company: company,
+    );
+  }
+
+  Widget _buildEditReviewContent() {
+    final currencyFormat = NumberFormat.currency(symbol: '£');
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Customer Summary
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Customer',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
                     ),
-                  );
-                }),
-                const Divider(),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Subtotal'),
-                    Text(currencyFormat.format(_subtotal)),
-                  ],
-                ),
-                if (_taxRate > 0) ...[
-                  const SizedBox(height: 4),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(_customerNameController.text),
+                  Text(
+                    _customerEmailController.text,
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Items Summary
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Items',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ..._lineItems.map((item) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${item.quantity}x ${item.description}',
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          Text(
+                            currencyFormat.format(item.total),
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                  const Divider(),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Tax (${_taxRate.toStringAsFixed(1)}%)'),
-                      Text(currencyFormat.format(_taxAmount)),
+                      const Text('Subtotal'),
+                      Text(currencyFormat.format(_subtotal)),
+                    ],
+                  ),
+                  if (_taxRate > 0) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Tax (${_taxRate.toStringAsFixed(1)}%)'),
+                        Text(currencyFormat.format(_taxAmount)),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total',
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        currencyFormat.format(_total),
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                      ),
                     ],
                   ),
                 ],
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                    ),
-                    Text(
-                      currencyFormat.format(_total),
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-        // Tax Rate
-        TextFormField(
-          controller: _taxRateController,
-          decoration: const InputDecoration(
-            labelText: 'Tax Rate (%)',
-            prefixIcon: Icon(Icons.percent),
+          // Tax Rate
+          TextFormField(
+            controller: _taxRateController,
+            decoration: const InputDecoration(
+              labelText: 'Tax Rate (%)',
+              prefixIcon: Icon(Icons.percent),
+            ),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            onChanged: (value) {
+              setState(() {
+                _taxRate = double.tryParse(value) ?? 0;
+              });
+            },
           ),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          onChanged: (value) {
-            setState(() {
-              _taxRate = double.tryParse(value) ?? 0;
-            });
-          },
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 12),
 
-        // Notes
-        TextFormField(
-          controller: _notesController,
-          decoration: const InputDecoration(
-            labelText: 'Notes',
-            prefixIcon: Icon(Icons.notes),
+          // Notes
+          TextFormField(
+            controller: _notesController,
+            decoration: const InputDecoration(
+              labelText: 'Notes',
+              prefixIcon: Icon(Icons.notes),
+            ),
+            maxLines: 3,
+            textCapitalization: TextCapitalization.sentences,
           ),
-          maxLines: 3,
-          textCapitalization: TextCapitalization.sentences,
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -663,7 +844,9 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
 enum _ItemAddMode { manual, ai }
 
 class _AddItemBottomSheet extends ConsumerStatefulWidget {
-  const _AddItemBottomSheet();
+  final LineItem? existingItem;
+
+  const _AddItemBottomSheet({this.existingItem});
 
   @override
   ConsumerState<_AddItemBottomSheet> createState() =>
@@ -674,12 +857,26 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
   _ItemAddMode _mode = _ItemAddMode.manual;
 
   // Manual entry controllers
-  final _descriptionController = TextEditingController();
-  final _quantityController = TextEditingController(text: '1');
-  final _priceController = TextEditingController();
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _quantityController;
+  late final TextEditingController _priceController;
 
   // AI prompt controller
   final _aiPromptController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existingItem;
+    _descriptionController =
+        TextEditingController(text: existing?.description ?? '');
+    _quantityController = TextEditingController(
+      text: existing != null ? existing.quantity.toString() : '1',
+    );
+    _priceController = TextEditingController(
+      text: existing != null ? existing.unitPrice.toString() : '',
+    );
+  }
 
   @override
   void dispose() {
@@ -705,7 +902,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
     }
 
     final item = LineItem(
-      id: const Uuid().v4(),
+      id: widget.existingItem?.id ?? const Uuid().v4(),
       description: description,
       quantity: quantity,
       unitPrice: price,
@@ -747,7 +944,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Add Items',
+            widget.existingItem != null ? 'Edit Item' : 'Add Items',
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -839,7 +1036,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
                 controller: _priceController,
                 decoration: const InputDecoration(
                   labelText: 'Unit Price *',
-                  prefixIcon: Icon(Icons.attach_money),
+                  prefixIcon: Icon(Icons.currency_pound),
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
@@ -851,14 +1048,17 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
         const SizedBox(height: 24),
         FilledButton(
           onPressed: _addManualItem,
-          child: const Text('Add Item'),
+          child:
+              Text(widget.existingItem != null ? 'Save Changes' : 'Add Item'),
         ),
       ],
     );
   }
 
   Widget _buildAIGenerationForm(
-      AIGenerationState aiState, ColorScheme colorScheme) {
+    AIGenerationState aiState,
+    ColorScheme colorScheme,
+  ) {
     // Show generated items if available
     if (aiState.generatedItems != null && aiState.generatedItems!.isNotEmpty) {
       return Column(
@@ -870,9 +1070,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
             children: [
               Text(
                 'Generated Items (${aiState.generatedItems!.length})',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
               ),
               TextButton.icon(
                 onPressed: () {
@@ -949,9 +1147,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
             hintText:
                 'E.g., Install 5 split-system air conditioners in a 2-story office building. Include labor, copper piping, and electrical work.',
             prefixIcon: const Icon(Icons.auto_fix_high),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
           maxLines: 4,
           textCapitalization: TextCapitalization.sentences,
@@ -972,10 +1168,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
                 Expanded(
                   child: Text(
                     aiState.error!,
-                    style: TextStyle(
-                      color: colorScheme.error,
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: colorScheme.error, fontSize: 13),
                   ),
                 ),
               ],

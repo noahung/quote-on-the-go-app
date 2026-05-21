@@ -92,6 +92,7 @@ class QuotationRepository {
     final docRef = _firestore.collection('quotations').doc();
     final data = {
       ...quotation.toJson(),
+      'items': quotation.items.map((i) => i.toJson()).toList(),
       'id': docRef.id,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),

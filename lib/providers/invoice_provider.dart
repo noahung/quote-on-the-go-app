@@ -104,6 +104,7 @@ class InvoiceRepository {
     final docRef = _firestore.collection('invoices').doc();
     final data = {
       ...invoice.toJson(),
+      'items': invoice.items.map((i) => i.toJson()).toList(),
       'id': docRef.id,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
