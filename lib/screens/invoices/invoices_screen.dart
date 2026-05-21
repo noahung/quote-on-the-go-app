@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../providers/providers.dart';
 import '../../models/models.dart';
+import '../../widgets/premium_empty_state.dart';
 
 class InvoicesScreen extends ConsumerStatefulWidget {
   const InvoicesScreen({super.key});
@@ -46,6 +47,12 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final invoicesAsync = ref.watch(invoicesStreamProvider);
+    final company = ref.watch(companyProvider);
+    final isPremium = company?.tier == 'premium';
+    final activeCount = invoicesAsync.valueOrNull
+            ?.where((i) => i.status != 'Paid' && i.status != 'Void')
+            .length ??
+        0;
 
     return Scaffold(
       appBar: AppBar(
@@ -125,7 +132,10 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
         ),
         data: (invoices) {
           if (invoices.isEmpty) {
-            return _EmptyState();
+            return _EmptyState(
+              isPremium: isPremium,
+              currentCount: activeCount,
+            );
           }
           return TabBarView(
             controller: _tabController,
@@ -140,6 +150,8 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
                     ? 'Create your first invoice to get started'
                     : 'Invoices with ${tab.label.toLowerCase()} status will appear here',
                 onAddTap: () => context.push('/invoices/new'),
+                isPremium: isPremium,
+                currentCount: activeCount,
               );
             }).toList(),
           );
@@ -157,33 +169,28 @@ class _StatusTab {
 }
 
 class _EmptyState extends StatelessWidget {
+  final bool isPremium;
+  final int currentCount;
+
+  const _EmptyState({
+    required this.isPremium,
+    required this.currentCount,
+  });
+
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.receipt_long_outlined,
-            size: 64,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No Invoices Yet',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Create your first invoice to get started',
-            style: TextStyle(color: Colors.grey.shade500),
-          ),
-        ],
-      ),
+    return PremiumEmptyState(
+      icon: Icons.receipt_long_outlined,
+      title: 'No Invoices Yet',
+      subtitle: 'Create your first invoice to get started',
+      actionLabel: 'Create Invoice',
+      onAction: () => context.push('/invoices/new'),
+      isPremium: isPremium,
+      currentCount: currentCount,
+      limit: 5,
+      itemName: 'invoices',
+      showUpgradeCta: !isPremium,
+      onUpgrade: () => context.push('/settings'),
     );
   }
 }
@@ -193,48 +200,33 @@ class _InvoiceList extends StatelessWidget {
   final String emptyTitle;
   final String emptySubtitle;
   final VoidCallback onAddTap;
+  final bool isPremium;
+  final int currentCount;
 
   const _InvoiceList({
     required this.invoices,
     required this.emptyTitle,
     required this.emptySubtitle,
     required this.onAddTap,
+    required this.isPremium,
+    required this.currentCount,
   });
 
   @override
   Widget build(BuildContext context) {
     if (invoices.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.receipt_long_outlined,
-              size: 64,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              emptyTitle,
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              emptySubtitle,
-              style: TextStyle(color: Colors.grey.shade500),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: onAddTap,
-              icon: const Icon(Icons.add),
-              label: const Text('Create Invoice'),
-            ),
-          ],
-        ),
+      return PremiumEmptyState(
+        icon: Icons.receipt_long_outlined,
+        title: emptyTitle,
+        subtitle: emptySubtitle,
+        actionLabel: 'Create Invoice',
+        onAction: onAddTap,
+        isPremium: isPremium,
+        currentCount: currentCount,
+        limit: 5,
+        itemName: 'invoices',
+        showUpgradeCta: !isPremium,
+        onUpgrade: () => context.push('/settings'),
       );
     }
 

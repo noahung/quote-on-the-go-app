@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 
@@ -27,7 +29,8 @@ class TeamManagementScreen extends ConsumerWidget {
     final currentUser = ref.watch(userProfileProvider);
     final teamAsync = ref.watch(teamMembersProvider);
 
-    final isOwner = currentUser?.role == 'owner' || currentUser?.role == 'admin';
+    final isOwner =
+        currentUser?.role == 'owner' || currentUser?.role == 'admin';
 
     return Scaffold(
       appBar: AppBar(
@@ -51,7 +54,9 @@ class TeamManagementScreen extends ConsumerWidget {
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (members) {
           if (members.isEmpty) {
-            return _EmptyTeam(isOwner: isOwner, onInvite: () => _showInviteDialog(context, ref));
+            return _EmptyTeam(
+                isOwner: isOwner,
+                onInvite: () => _showInviteDialog(context, ref));
           }
 
           // Sort: owners first, then admins, then members
@@ -113,8 +118,7 @@ class TeamManagementScreen extends ConsumerWidget {
                     canManage: isOwner && member.uid != currentUser?.uid,
                     onRoleChange: (newRole) =>
                         _updateRole(context, ref, member.uid, newRole),
-                    onRemove: () =>
-                        _confirmRemove(context, ref, member),
+                    onRemove: () => _confirmRemove(context, ref, member),
                   )),
             ],
           );
@@ -150,8 +154,7 @@ class TeamManagementScreen extends ConsumerWidget {
               const SizedBox(height: 4),
               Text('They\'ll receive an email invitation to join.',
                   style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                      color:
-                          Theme.of(ctx).colorScheme.onSurfaceVariant)),
+                      color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
               const SizedBox(height: 20),
               TextFormField(
                 controller: emailController,
@@ -184,22 +187,67 @@ class TeamManagementScreen extends ConsumerWidget {
                     DropdownMenuItem(value: 'member', child: Text('Member')),
                     DropdownMenuItem(value: 'admin', child: Text('Admin')),
                   ],
-                  onChanged: (v) => setState2(() => selectedRole = v ?? 'member'),
+                  onChanged: (v) =>
+                      setState2(() => selectedRole = v ?? 'member'),
                 );
               }),
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (formKey.currentState!.validate()) {
                       Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                              'Invitation sent to ${emailController.text.trim()}'),
-                        ),
-                      );
+                      final email = emailController.text.trim();
+                      final companyId = ref.read(companyIdProvider);
+                      final currentUser = ref.read(userProfileProvider);
+                      final inviterName = currentUser?.displayName ??
+                          currentUser?.email ??
+                          'Admin';
+
+                      if (companyId == null) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Company not found')),
+                          );
+                        }
+                        return;
+                      }
+
+                      try {
+                        const apiUrl =
+                            'https://app.quoteonthego.co.uk/api/invite-team-member';
+                        final response = await http.post(
+                          Uri.parse(apiUrl),
+                          headers: {'Content-Type': 'application/json'},
+                          body: jsonEncode({
+                            'companyId': companyId,
+                            'email': email,
+                            'role': selectedRole,
+                            'inviterName': inviterName,
+                          }),
+                        );
+                        final result =
+                            jsonDecode(response.body) as Map<String, dynamic>;
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                result['success'] == true
+                                    ? 'Invitation sent to $email'
+                                    : 'Error: ${result['error'] ?? 'Unknown error'}',
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text('Error sending invitation: $e')),
+                          );
+                        }
+                      }
                     }
                   },
                   child: const Text('Send Invitation'),
@@ -312,15 +360,12 @@ class _MemberTile extends StatelessWidget {
 
     return Card(
       elevation: 0,
-      color: isCurrentUser
-          ? colorScheme.surfaceContainerLow
-          : colorScheme.surface,
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color:
+          isCurrentUser ? colorScheme.surfaceContainerLow : colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
           radius: 22,
           backgroundColor: colorScheme.primaryContainer,
@@ -333,23 +378,22 @@ class _MemberTile extends StatelessWidget {
             Expanded(
               child: Text(
                 member.displayName ?? member.email ?? 'Unknown',
-                style: textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                style:
+                    textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             if (isCurrentUser) ...[
               const SizedBox(width: 4),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text('You',
-                    style: textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant)),
+                    style: textTheme.labelSmall
+                        ?.copyWith(color: colorScheme.onSurfaceVariant)),
               ),
             ],
           ],
@@ -363,8 +407,7 @@ class _MemberTile extends StatelessWidget {
                       ?.copyWith(color: colorScheme.onSurfaceVariant)),
             const SizedBox(height: 4),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                 color: _roleBg(colorScheme),
                 borderRadius: BorderRadius.circular(20),
@@ -392,12 +435,10 @@ class _MemberTile extends StatelessWidget {
                 itemBuilder: (_) => [
                   if (member.role != 'admin')
                     const PopupMenuItem(
-                        value: 'admin',
-                        child: Text('Make Admin')),
+                        value: 'admin', child: Text('Make Admin')),
                   if (member.role != 'member')
                     const PopupMenuItem(
-                        value: 'member',
-                        child: Text('Make Member')),
+                        value: 'member', child: Text('Make Member')),
                   const PopupMenuDivider(),
                   PopupMenuItem(
                     value: 'remove',

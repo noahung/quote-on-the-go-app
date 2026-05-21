@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'providers/providers.dart';
@@ -9,6 +10,9 @@ import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load .env file if present (optional — service falls back to production URL)
+  await dotenv.load(fileName: '.env', mergeWith: {}).catchError((_) {});
 
   // Initialize Firebase
   final firebaseService = FirebaseService();

@@ -30,6 +30,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     super.dispose();
   }
 
+  String _friendlyAuthError(dynamic e) {
+    final code = (e is Exception) ? e.toString() : e?.toString() ?? '';
+    if (code.contains('email-already-in-use')) {
+      return 'An account with this email already exists. Try signing in instead.';
+    } else if (code.contains('invalid-email')) {
+      return 'The email address is not valid.';
+    } else if (code.contains('weak-password')) {
+      return 'Password is too weak. Use at least 6 characters.';
+    } else if (code.contains('network-request-failed')) {
+      return 'No internet connection. Please check your network.';
+    }
+    return 'Registration failed. Please try again.';
+  }
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -45,18 +59,40 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         _passwordController.text.trim(),
       );
 
-      // Update display name
+      // Update display name so it is available on the onboarding screen
       await userCredential.user?.updateDisplayName(_nameController.text.trim());
 
-      // Send email verification
-      await authService.sendEmailVerification();
+      // The router detects no Firestore user profile and redirects to /onboarding
     } catch (e) {
       setState(() {
-        _errorMessage = 'Registration failed. Please try again.';
+        _errorMessage = _friendlyAuthError(e);
       });
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final authService = ref.read(authServiceProvider);
+      final result = await authService.signInWithGoogle();
+      if (result == null && mounted) {
+        setState(() => _isLoading = false);
+      }
+      // Router handles redirect to /onboarding or / depending on profile existence
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Google sign-in failed. Please try again.';
+          _isLoading = false;
+        });
       }
     }
   }
@@ -231,6 +267,35 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Text('Create Account'),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Divider
+              Row(
+                children: [
+                  const Expanded(child: Divider()),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      'or',
+                      style: TextStyle(
+                          color: colorScheme.onSurfaceVariant, fontSize: 13),
+                    ),
+                  ),
+                  const Expanded(child: Divider()),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Google Sign Up Button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton.icon(
+                  onPressed: _isLoading ? null : _signInWithGoogle,
+                  icon: const Icon(Icons.g_mobiledata),
+                  label: const Text('Continue with Google'),
                 ),
               ),
               const SizedBox(height: 16),

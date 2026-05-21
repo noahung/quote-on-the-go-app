@@ -116,6 +116,65 @@ class QuotationRepository {
       'status': status,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+
+    // Write in-app notification for owner/admin users (mirrors portalActions.ts)
+    if (status == 'Accepted' || status == 'Declined' || status == 'Amended') {
+      try {
+        final snap = await _firestore.collection('quotations').doc(id).get();
+        final data = snap.data();
+        if (data != null) {
+          final companyId = data['companyId'] as String?;
+          final quotationNumber = data['quotationNumber'] as String? ?? id;
+          final customerName = data['customerName'] as String? ?? 'A customer';
+          if (companyId != null) {
+            final usersSnap = await _firestore
+                .collection('users')
+                .where('companyId', isEqualTo: companyId)
+                .where('role', whereIn: ['owner', 'admin'])
+                .limit(5)
+                .get();
+            final typeMap = {
+              'Accepted': 'quotation_accepted',
+              'Declined': 'quotation_declined',
+              'Amended': 'quotation_amended',
+            };
+            final titleMap = {
+              'Accepted': 'Quotation Accepted',
+              'Declined': 'Quotation Declined',
+              'Amended': 'Amendment Requested',
+            };
+            final messageMap = {
+              'Accepted': '$customerName accepted quotation $quotationNumber',
+              'Declined': '$customerName declined quotation $quotationNumber',
+              'Amended':
+                  '$customerName requested changes to quotation $quotationNumber',
+            };
+            final type = typeMap[status]!;
+            final title = titleMap[status]!;
+            final message = messageMap[status]!;
+            final batch = _firestore.batch();
+            for (final userDoc in usersSnap.docs) {
+              final notifRef =
+                  _firestore.collection('user_notifications').doc();
+              batch.set(notifRef, {
+                'userId': userDoc.id,
+                'companyId': companyId,
+                'title': title,
+                'message': message,
+                'type': type,
+                'relatedDocumentId': id,
+                'link': '/quotations/$id',
+                'isRead': false,
+                'createdAt': FieldValue.serverTimestamp(),
+              });
+            }
+            await batch.commit();
+          }
+        }
+      } catch (e) {
+        debugPrint('[QuotationRepo] Failed to write status notification: $e');
+      }
+    }
   }
 }
 

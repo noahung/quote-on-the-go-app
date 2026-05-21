@@ -36,16 +36,18 @@ import '../screens/schedule/schedule_screen.dart';
 import '../screens/schedule/create_job_screen.dart';
 import '../screens/schedule/job_detail_screen.dart';
 import '../screens/workflows/workflows_screen.dart';
+import '../screens/auth/onboarding_screen.dart';
+import '../screens/auth/email_verification_screen.dart';
 
 /// Converts a Firebase auth stream into a [Listenable] for GoRouter's
 /// refreshListenable, so the router re-evaluates redirects without being
 /// destroyed and recreated.
 class GoRouterRefreshStream extends ChangeNotifier {
-  GoRouterRefreshStream(Stream<User?> stream) {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
     _subscription = stream.listen((_) => notifyListeners());
   }
 
-  late final StreamSubscription<User?> _subscription;
+  late final StreamSubscription<dynamic> _subscription;
 
   @override
   void dispose() {
@@ -65,25 +67,43 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     debugLogDiagnostics: true,
     refreshListenable: refreshListenable,
-    redirect: (context, state) {
+    redirect: (context, state) async {
       // Use FirebaseAuth directly — the Riverpod provider chain may not
       // have processed the stream event yet when refreshListenable fires.
-      final isAuthenticated = FirebaseAuth.instance.currentUser != null;
-      final isLoggingIn = state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register';
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      final isAuthenticated = firebaseUser != null;
+      final location = state.matchedLocation;
+      final isLoggingIn = location == '/login' || location == '/register';
+      final isOnboarding = location == '/onboarding';
+      final isVerifyingEmail = location == '/verify-email';
 
       // If not authenticated, redirect to login (unless already on login/register)
       if (!isAuthenticated && !isLoggingIn) {
         return '/login';
       }
 
-      // If authenticated, consume any pending deep-link from a terminated-app
-      // notification tap before falling through to normal routing.
-      if (isAuthenticated) {
+      // If authenticated, check email verification and profile existence.
+      if (isAuthenticated && !isLoggingIn) {
+        final isEmailVerified = firebaseUser.emailVerified;
+        final userProfile = await authService.getUserProfile(firebaseUser.uid);
+        final hasProfile = userProfile != null;
+
+        // Unverified email-based users must verify before proceeding
+        if (!isEmailVerified && !hasProfile && !isVerifyingEmail) {
+          return '/verify-email';
+        }
+
+        // Once verified, send to onboarding if no profile yet
+        if ((isEmailVerified || hasProfile) && !hasProfile && !isOnboarding) {
+          return '/onboarding';
+        }
+        if (hasProfile && (isOnboarding || isVerifyingEmail)) {
+          return '/';
+        }
+
+        // Consume any pending deep-link from a terminated-app notification tap.
         final pending = NotificationService().consumePendingRoute();
-        if (pending != null &&
-            pending.isNotEmpty &&
-            pending != state.matchedLocation) {
+        if (pending != null && pending.isNotEmpty && pending != location) {
           return pending;
         }
       }
@@ -123,6 +143,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const QuotationsScreen(),
             routes: [
               GoRoute(
+                path: 'new',
+                builder: (context, state) => const CreateQuotationScreen(),
+              ),
+              GoRoute(
                 path: ':id',
                 builder: (context, state) {
                   final id = state.pathParameters['id']!;
@@ -152,6 +176,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/invoices',
             builder: (context, state) => const InvoicesScreen(),
             routes: [
+              GoRoute(
+                path: 'new',
+                builder: (context, state) => const CreateInvoiceScreen(),
+              ),
               GoRoute(
                 path: ':id',
                 builder: (context, state) {
@@ -272,6 +300,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/company-branding',
         builder: (context, state) => const CompanyBrandingScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: '/verify-email',
+        builder: (context, state) => const EmailVerificationScreen(),
       ),
     ],
   );

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../providers/providers.dart';
 import '../../models/models.dart';
+import '../../widgets/premium_empty_state.dart';
 
 class QuotationsScreen extends ConsumerStatefulWidget {
   const QuotationsScreen({super.key});
@@ -47,6 +48,9 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen>
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final quotationsAsync = ref.watch(quotationsStreamProvider);
+    final company = ref.watch(companyProvider);
+    final isPremium = company?.tier == 'premium';
+    final activeCount = quotationsAsync.valueOrNull?.length ?? 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -126,7 +130,10 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen>
         ),
         data: (quotations) {
           if (quotations.isEmpty) {
-            return _EmptyState();
+            return _EmptyState(
+              isPremium: isPremium,
+              currentCount: activeCount,
+            );
           }
           return TabBarView(
             controller: _tabController,
@@ -141,6 +148,8 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen>
                     ? 'Create your first quotation to get started'
                     : 'Quotations with ${tab.label.toLowerCase()} status will appear here',
                 onAddTap: () => context.push('/quotations/new'),
+                isPremium: isPremium,
+                currentCount: activeCount,
               );
             }).toList(),
           );
@@ -158,33 +167,28 @@ class _StatusTab {
 }
 
 class _EmptyState extends StatelessWidget {
+  final bool isPremium;
+  final int currentCount;
+
+  const _EmptyState({
+    required this.isPremium,
+    required this.currentCount,
+  });
+
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.description_outlined,
-            size: 64,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No Quotations Yet',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Create your first quotation to get started',
-            style: TextStyle(color: Colors.grey.shade500),
-          ),
-        ],
-      ),
+    return PremiumEmptyState(
+      icon: Icons.description_outlined,
+      title: 'No Quotations Yet',
+      subtitle: 'Create your first quotation to get started',
+      actionLabel: 'Create Quotation',
+      onAction: () => context.push('/quotations/new'),
+      isPremium: isPremium,
+      currentCount: currentCount,
+      limit: 10,
+      itemName: 'quotations',
+      showUpgradeCta: !isPremium,
+      onUpgrade: () => context.push('/settings'),
     );
   }
 }
@@ -194,48 +198,33 @@ class _QuotationList extends StatelessWidget {
   final String emptyTitle;
   final String emptySubtitle;
   final VoidCallback onAddTap;
+  final bool isPremium;
+  final int currentCount;
 
   const _QuotationList({
     required this.quotations,
     required this.emptyTitle,
     required this.emptySubtitle,
     required this.onAddTap,
+    required this.isPremium,
+    required this.currentCount,
   });
 
   @override
   Widget build(BuildContext context) {
     if (quotations.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.description_outlined,
-              size: 64,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              emptyTitle,
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              emptySubtitle,
-              style: TextStyle(color: Colors.grey.shade500),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: onAddTap,
-              icon: const Icon(Icons.add),
-              label: const Text('Create Quotation'),
-            ),
-          ],
-        ),
+      return PremiumEmptyState(
+        icon: Icons.description_outlined,
+        title: emptyTitle,
+        subtitle: emptySubtitle,
+        actionLabel: 'Create Quotation',
+        onAction: onAddTap,
+        isPremium: isPremium,
+        currentCount: currentCount,
+        limit: 10,
+        itemName: 'quotations',
+        showUpgradeCta: !isPremium,
+        onUpgrade: () => context.push('/settings'),
       );
     }
 

@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../models/company.dart';
 import '../../providers/providers.dart';
 
@@ -13,8 +16,7 @@ class CompanyBrandingScreen extends ConsumerStatefulWidget {
       _CompanyBrandingScreenState();
 }
 
-class _CompanyBrandingScreenState
-    extends ConsumerState<CompanyBrandingScreen> {
+class _CompanyBrandingScreenState extends ConsumerState<CompanyBrandingScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isSaving = false;
 
@@ -35,6 +37,11 @@ class _CompanyBrandingScreenState
   Company? _company;
   bool _initialised = false;
 
+  // Logo state
+  File? _newLogoFile;
+  String? _existingLogoUrl;
+  bool _removeLogo = false;
+
   @override
   void initState() {
     super.initState();
@@ -53,8 +60,16 @@ class _CompanyBrandingScreenState
   @override
   void dispose() {
     for (final c in [
-      _nameCtrl, _addressCtrl, _emailCtrl, _phoneCtrl, _websiteCtrl,
-      _taxRateCtrl, _acctNameCtrl, _bankNameCtrl, _sortCodeCtrl, _acctNumberCtrl,
+      _nameCtrl,
+      _addressCtrl,
+      _emailCtrl,
+      _phoneCtrl,
+      _websiteCtrl,
+      _taxRateCtrl,
+      _acctNameCtrl,
+      _bankNameCtrl,
+      _sortCodeCtrl,
+      _acctNumberCtrl,
     ]) {
       c.dispose();
     }
@@ -71,14 +86,69 @@ class _CompanyBrandingScreenState
     _websiteCtrl.text = company.website ?? '';
     _taxRateCtrl.text =
         company.defaultTaxRate != null ? '${company.defaultTaxRate}' : '';
-    final bank =
-        (company.bankAccounts?.isNotEmpty == true) ? company.bankAccounts!.first : null;
+    _existingLogoUrl = company.logoUrl;
+    final bank = (company.bankAccounts?.isNotEmpty == true)
+        ? company.bankAccounts!.first
+        : null;
     if (bank != null) {
       _acctNameCtrl.text = bank.accountName;
       _bankNameCtrl.text = bank.bankName;
       _sortCodeCtrl.text = bank.sortCode;
       _acctNumberCtrl.text = bank.accountNumber;
     }
+  }
+
+  Future<void> _pickLogo() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 512,
+    );
+    if (picked != null) {
+      setState(() {
+        _newLogoFile = File(picked.path);
+        _removeLogo = false;
+      });
+    }
+  }
+
+  void _clearLogo() {
+    setState(() {
+      _newLogoFile = null;
+      _removeLogo = true;
+    });
+  }
+
+  Widget _buildLogoPreview(ColorScheme colorScheme) {
+    // New file selected — show local preview
+    if (_newLogoFile != null) {
+      return Image.file(_newLogoFile!, fit: BoxFit.cover);
+    }
+    // Existing URL and not marked for removal
+    if (_existingLogoUrl != null && !_removeLogo) {
+      return Image.network(
+        _existingLogoUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _logoPlaceholder(colorScheme),
+      );
+    }
+    // No logo
+    return _logoPlaceholder(colorScheme);
+  }
+
+  Widget _logoPlaceholder(ColorScheme colorScheme) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.add_photo_alternate_outlined,
+            size: 32, color: colorScheme.onSurfaceVariant),
+        const SizedBox(height: 4),
+        Text('No logo',
+            style:
+                TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
+      ],
+    );
   }
 
   Future<void> _save() async {
@@ -88,6 +158,36 @@ class _CompanyBrandingScreenState
 
     setState(() => _isSaving = true);
     try {
+      // Handle logo upload / removal
+      String? logoUrl = _existingLogoUrl;
+      if (_newLogoFile != null) {
+        try {
+          final ref = FirebaseStorage.instance
+              .ref()
+              .child('companies/${company.id}/logo.jpg');
+          await ref.putFile(_newLogoFile!);
+          logoUrl = await ref.getDownloadURL();
+          setState(() {
+            _existingLogoUrl = logoUrl;
+            _newLogoFile = null;
+          });
+        } catch (_) {
+          // Storage upload failed — skip logo change silently
+        }
+      } else if (_removeLogo) {
+        try {
+          await FirebaseStorage.instance
+              .ref()
+              .child('companies/${company.id}/logo.jpg')
+              .delete();
+        } catch (_) {}
+        logoUrl = null;
+        setState(() {
+          _existingLogoUrl = null;
+          _removeLogo = false;
+        });
+      }
+
       final taxRate = double.tryParse(_taxRateCtrl.text.trim());
       final hasBankDetails = _acctNameCtrl.text.trim().isNotEmpty ||
           _bankNameCtrl.text.trim().isNotEmpty;
@@ -112,6 +212,7 @@ class _CompanyBrandingScreenState
         'email': _emailCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
         'website': _websiteCtrl.text.trim(),
+        'logoUrl': logoUrl,
         if (taxRate != null) 'defaultTaxRate': taxRate,
         if (bankAccounts.isNotEmpty) 'bankAccounts': bankAccounts,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -208,6 +309,109 @@ class _CompanyBrandingScreenState
                       ),
                     ),
 
+                  // ── Company Logo ──────────────────────────────────────
+                  _SectionCard(
+                    title: 'Company Logo',
+                    icon: Icons.image_outlined,
+                    children: [
+                      Text(
+                        'Appears on your quotes and invoices.',
+                        style: TextStyle(
+                            fontSize: 13, color: colorScheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          // Logo preview
+                          GestureDetector(
+                            onTap: canEdit ? _pickLogo : null,
+                            child: Stack(
+                              children: [
+                                Container(
+                                  width: 96,
+                                  height: 96,
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: colorScheme.outlineVariant,
+                                    ),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(11),
+                                    child: _buildLogoPreview(colorScheme),
+                                  ),
+                                ),
+                                if (canEdit)
+                                  Positioned(
+                                    right: 0,
+                                    bottom: 0,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.primary,
+                                        borderRadius: const BorderRadius.only(
+                                          topLeft: Radius.circular(8),
+                                          bottomRight: Radius.circular(11),
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        Icons.edit,
+                                        size: 14,
+                                        color: colorScheme.onPrimary,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          if (canEdit)
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed: _pickLogo,
+                                    icon: const Icon(Icons.upload_outlined,
+                                        size: 16),
+                                    label: Text(
+                                      _newLogoFile != null ||
+                                              (_existingLogoUrl != null &&
+                                                  !_removeLogo)
+                                          ? 'Change Logo'
+                                          : 'Upload Logo',
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                        minimumSize:
+                                            const Size(double.infinity, 40)),
+                                  ),
+                                  if (_newLogoFile != null ||
+                                      (_existingLogoUrl != null &&
+                                          !_removeLogo)) ...[
+                                    const SizedBox(height: 8),
+                                    TextButton.icon(
+                                      onPressed: _clearLogo,
+                                      icon: Icon(Icons.delete_outline,
+                                          size: 16, color: colorScheme.error),
+                                      label: Text('Remove Logo',
+                                          style: TextStyle(
+                                              color: colorScheme.error)),
+                                      style: TextButton.styleFrom(
+                                          minimumSize:
+                                              const Size(double.infinity, 36)),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
                   // ── Company Info ──────────────────────────────────────
                   _SectionCard(
                     title: 'Company Details',
@@ -272,7 +476,9 @@ class _CompanyBrandingScreenState
                               controller: _taxRateCtrl,
                               enabled: canEdit,
                               hint: '20',
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
                             ),
                           ),
                         ],
@@ -290,8 +496,7 @@ class _CompanyBrandingScreenState
                       Text(
                         'Appears on your invoices for customer payments.',
                         style: TextStyle(
-                            fontSize: 13,
-                            color: colorScheme.onSurfaceVariant),
+                            fontSize: 13, color: colorScheme.onSurfaceVariant),
                       ),
                       const SizedBox(height: 12),
                       _Field(
