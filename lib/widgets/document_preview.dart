@@ -158,7 +158,7 @@ class DocumentPreview extends StatelessWidget {
                 const SizedBox(height: 4),
                 if (company?.address != null)
                   Text(
-                    company!.address!,
+                    company!.address,
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey[600],
@@ -457,7 +457,7 @@ class DocumentPreview extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Container(
+          SizedBox(
             width: 200,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,

@@ -3,10 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import '../../providers/providers.dart';
+import '../../theme/semantic_colors.dart';
+import '../../components/mesh_background.dart';
+import '../../components/glass_card.dart';
 
 const String _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
 
@@ -35,7 +37,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       String? redirectUrl;
 
       if (isPremium) {
-        // Open Stripe Customer Portal
         if (company.stripeCustomerId == null) {
           throw Exception(
               'Stripe customer ID not found. Please contact support.');
@@ -52,7 +53,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         }
         redirectUrl = data['url'] as String?;
       } else {
-        // Open Stripe Checkout (upgrade)
         final response = await http.post(
           Uri.parse('$_webAppBaseUrl/api/stripe/create-checkout-session'),
           headers: {'Content-Type': 'application/json'},
@@ -95,7 +95,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Check if user signed in with Google (no password to change)
     final isGoogleUser =
         user.providerData.any((p) => p.providerId == 'google.com');
     if (isGoogleUser) {
@@ -180,280 +179,350 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     final userProfile = ref.watch(userProfileProvider);
     final company = ref.watch(companyProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Settings',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          title: const Text(
+            'Settings',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
         ),
-      ),
-      body: ListView(
-        children: [
-          // Profile Header
-          Container(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: colorScheme.primaryContainer,
-                  child: Text(
-                    userProfile?.displayName != null &&
-                            userProfile!.displayName!.isNotEmpty
-                        ? userProfile.displayName![0].toUpperCase()
-                        : userProfile?.email != null &&
-                                userProfile!.email!.isNotEmpty
-                            ? userProfile.email![0].toUpperCase()
-                            : '?',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.primary,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  userProfile?.displayName ?? userProfile?.email ?? 'User',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (userProfile?.email != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    userProfile!.email!,
-                    style: TextStyle(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-                if (company != null) ...[
-                  const SizedBox(height: 8),
+        body: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          children: [
+            // Profile Header
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Column(
+                children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: company.tier == 'premium'
-                          ? colorScheme.tertiaryContainer
-                          : colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(20),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: colorScheme.primary.withValues(alpha: 0.5),
+                        width: 2.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colorScheme.primary.withValues(alpha: 0.25),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ],
                     ),
-                    child: Text(
-                      company.tier.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: company.tier == 'premium'
-                            ? colorScheme.tertiary
-                            : colorScheme.onSurfaceVariant,
-                        letterSpacing: 1,
+                    child: CircleAvatar(
+                      radius: 40,
+                      backgroundColor: isDark
+                          ? Colors.black.withValues(alpha: 0.4)
+                          : Colors.white.withValues(alpha: 0.6),
+                      child: Text(
+                        userProfile?.displayName != null &&
+                                userProfile!.displayName!.isNotEmpty
+                            ? userProfile.displayName![0].toUpperCase()
+                            : userProfile?.email != null &&
+                                    userProfile!.email!.isNotEmpty
+                                ? userProfile.email![0].toUpperCase()
+                                : '?',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary,
+                        ),
                       ),
                     ),
                   ),
-                ],
-              ],
-            ),
-          ),
-
-          const Divider(),
-
-          // Company Section
-          const _SectionHeader(title: 'Company'),
-          ListTile(
-            leading: const Icon(Icons.business),
-            title: Text(company?.name ?? 'Company'),
-            subtitle: Text(company?.email ?? 'Tap to edit branding'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => context.push('/company-branding'),
-          ),
-
-          const Divider(),
-
-          // Account Section
-          const _SectionHeader(title: 'Account'),
-          ListTile(
-            leading: const Icon(Icons.person_outline),
-            title: const Text('Edit Profile'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => _showEditProfileDialog(context, ref),
-          ),
-          ListTile(
-            leading: const Icon(Icons.lock_outline),
-            title: const Text('Change Password'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => _showChangePasswordDialog(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.people_outline),
-            title: const Text('Team Management'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => context.push('/team'),
-          ),
-
-          const Divider(),
-
-          // Subscription Section
-          const _SectionHeader(title: 'Subscription'),
-          _SubscriptionTile(
-            tier: company?.tier ?? 'free',
-            subscriptionStatus: company?.subscriptionStatus,
-            trialEndsAt: company?.trialEndsAt,
-            isLoading: _isSubscriptionLoading,
-            onTap: () => _manageSubscription(context),
-          ),
-
-          const Divider(),
-
-          // Integrations Section
-          const _SectionHeader(title: 'Integrations'),
-          ListTile(
-            leading: const Icon(Icons.sync),
-            title: const Text('QuickBooks'),
-            subtitle: Text(
-              company?.quickbooksEnabled == true
-                  ? 'Connected'
-                  : 'Not connected',
-            ),
-            trailing: Icon(
-              company?.quickbooksEnabled == true
-                  ? Icons.check_circle
-                  : Icons.radio_button_unchecked,
-              color: company?.quickbooksEnabled == true
-                  ? Colors.green
-                  : Colors.grey,
-            ),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content:
-                        Text('Integrations are managed from the web app.')),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.calendar_today),
-            title: const Text('Google Calendar'),
-            subtitle: Text(
-              company?.googleCalendarEnabled == true
-                  ? 'Connected'
-                  : 'Not connected',
-            ),
-            trailing: Icon(
-              company?.googleCalendarEnabled == true
-                  ? Icons.check_circle
-                  : Icons.radio_button_unchecked,
-              color: company?.googleCalendarEnabled == true
-                  ? Colors.green
-                  : Colors.grey,
-            ),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content:
-                        Text('Integrations are managed from the web app.')),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.table_chart),
-            title: const Text('Monday.com'),
-            subtitle: Text(
-              company?.mondayEnabled == true ? 'Connected' : 'Not connected',
-            ),
-            trailing: Icon(
-              company?.mondayEnabled == true
-                  ? Icons.check_circle
-                  : Icons.radio_button_unchecked,
-              color:
-                  company?.mondayEnabled == true ? Colors.green : Colors.grey,
-            ),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content:
-                        Text('Integrations are managed from the web app.')),
-              );
-            },
-          ),
-
-          const Divider(),
-
-          // Preferences Section
-          const _SectionHeader(title: 'Preferences'),
-          ListTile(
-            leading: const Icon(Icons.dark_mode),
-            title: const Text('Dark Mode'),
-            subtitle: Text(
-              ref.watch(themeModeProvider) == ThemeMode.system
-                  ? 'Following system setting'
-                  : ref.watch(themeModeProvider) == ThemeMode.dark
-                      ? 'Always dark'
-                      : 'Always light',
-            ),
-            trailing: Switch(
-              value: ref.watch(themeModeProvider) == ThemeMode.dark ||
-                  (ref.watch(themeModeProvider) == ThemeMode.system &&
-                      Theme.of(context).brightness == Brightness.dark),
-              onChanged: (value) {
-                ref.read(themeModeProvider.notifier).setThemeMode(
-                      value ? ThemeMode.dark : ThemeMode.light,
-                    );
-              },
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.notifications_outlined),
-            title: const Text('Notifications'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => context.push('/notifications'),
-          ),
-
-          const Divider(),
-
-          // Danger Zone
-          const _SectionHeader(title: 'Danger Zone', color: Colors.red),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text(
-              'Log Out',
-              style: TextStyle(color: Colors.red),
-            ),
-            onTap: () async {
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Log Out'),
-                  content: const Text('Are you sure you want to log out?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancel'),
+                  const SizedBox(height: 16),
+                  Text(
+                    userProfile?.displayName ?? userProfile?.email ?? 'User',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
                     ),
-                    FilledButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Log Out'),
+                  ),
+                  if (userProfile?.email != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      userProfile!.email!,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
                     ),
                   ],
+                  if (company != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        gradient: company.tier == 'premium'
+                            ? LinearGradient(
+                                colors: [
+                                  colorScheme.primary,
+                                  Color.lerp(colorScheme.primary, Colors.orangeAccent, 0.4)!,
+                                ],
+                              )
+                            : null,
+                        color: company.tier != 'premium'
+                            ? colorScheme.onSurface.withValues(alpha: 0.08)
+                            : null,
+                        borderRadius: BorderRadius.circular(999),
+                        boxShadow: company.tier == 'premium'
+                            ? [
+                                BoxShadow(
+                                  color: colorScheme.primary.withValues(alpha: 0.24),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Text(
+                        company.tier.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: company.tier == 'premium'
+                              ? colorScheme.onPrimary
+                              : colorScheme.onSurface.withValues(alpha: 0.65),
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            // Company Section
+            const _SectionHeader(title: 'Company'),
+            GlassCard(
+              padding: EdgeInsets.zero,
+              child: ListTile(
+                leading: Icon(Icons.business, color: colorScheme.primary),
+                title: Text(
+                  company?.name ?? 'Company',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-              );
+                subtitle: Text(
+                  company?.email ?? 'Tap to edit branding',
+                  style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                onTap: () => context.push('/company-branding'),
+              ),
+            ),
+            const SizedBox(height: 16),
 
-              if (confirmed == true) {
-                final authService = ref.read(authServiceProvider);
-                await authService.signOut();
-              }
-              // ignore: use_build_context_synchronously
-            },
+            // Account Section
+            const _SectionHeader(title: 'Account'),
+            GlassCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.person_outline, color: colorScheme.primary),
+                    title: const Text('Edit Profile', style: TextStyle(fontWeight: FontWeight.w600)),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => _showEditProfileDialog(context, ref),
+                  ),
+                  _buildSubtleDivider(isDark),
+                  ListTile(
+                    leading: Icon(Icons.lock_outline, color: colorScheme.primary),
+                    title: const Text('Change Password', style: TextStyle(fontWeight: FontWeight.w600)),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => _showChangePasswordDialog(context),
+                  ),
+                  _buildSubtleDivider(isDark),
+                  ListTile(
+                    leading: Icon(Icons.people_outline, color: colorScheme.primary),
+                    title: const Text('Team Management', style: TextStyle(fontWeight: FontWeight.w600)),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => context.push('/team'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Subscription Section
+            const _SectionHeader(title: 'Subscription'),
+            GlassCard(
+              padding: EdgeInsets.zero,
+              child: _SubscriptionTile(
+                tier: company?.tier ?? 'free',
+                subscriptionStatus: company?.subscriptionStatus,
+                trialEndsAt: company?.trialEndsAt,
+                isLoading: _isSubscriptionLoading,
+                onTap: () => _manageSubscription(context),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Integrations Section
+            const _SectionHeader(title: 'Integrations'),
+            GlassCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.sync, color: colorScheme.primary),
+                    title: const Text('QuickBooks', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text(
+                      company?.quickbooksEnabled == true ? 'Connected' : 'Not connected',
+                      style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                    ),
+                    trailing: Icon(
+                      company?.quickbooksEnabled == true ? Icons.check_circle : Icons.radio_button_unchecked,
+                      color: company?.quickbooksEnabled == true ? semanticColors.success : colorScheme.onSurface.withValues(alpha: 0.3),
+                      size: 20,
+                    ),
+                    onTap: () => _showIntegrationMessage(context),
+                  ),
+                  _buildSubtleDivider(isDark),
+                  ListTile(
+                    leading: Icon(Icons.calendar_today, color: colorScheme.primary),
+                    title: const Text('Google Calendar', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text(
+                      company?.googleCalendarEnabled == true ? 'Connected' : 'Not connected',
+                      style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                    ),
+                    trailing: Icon(
+                      company?.googleCalendarEnabled == true ? Icons.check_circle : Icons.radio_button_unchecked,
+                      color: company?.googleCalendarEnabled == true ? semanticColors.success : colorScheme.onSurface.withValues(alpha: 0.3),
+                      size: 20,
+                    ),
+                    onTap: () => _showIntegrationMessage(context),
+                  ),
+                  _buildSubtleDivider(isDark),
+                  ListTile(
+                    leading: Icon(Icons.table_chart, color: colorScheme.primary),
+                    title: const Text('Monday.com', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text(
+                      company?.mondayEnabled == true ? 'Connected' : 'Not connected',
+                      style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                    ),
+                    trailing: Icon(
+                      company?.mondayEnabled == true ? Icons.check_circle : Icons.radio_button_unchecked,
+                      color: company?.mondayEnabled == true ? semanticColors.success : colorScheme.onSurface.withValues(alpha: 0.3),
+                      size: 20,
+                    ),
+                    onTap: () => _showIntegrationMessage(context),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Preferences Section
+            const _SectionHeader(title: 'Preferences'),
+            GlassCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.dark_mode, color: colorScheme.primary),
+                    title: const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text(
+                      ref.watch(themeModeProvider) == ThemeMode.system
+                          ? 'Following system setting'
+                          : ref.watch(themeModeProvider) == ThemeMode.dark
+                              ? 'Always dark'
+                              : 'Always light',
+                      style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                    ),
+                    trailing: Switch(
+                      activeThumbColor: colorScheme.primary,
+                      value: ref.watch(themeModeProvider) == ThemeMode.dark ||
+                          (ref.watch(themeModeProvider) == ThemeMode.system &&
+                              Theme.of(context).brightness == Brightness.dark),
+                      onChanged: (value) {
+                        ref.read(themeModeProvider.notifier).setThemeMode(
+                              value ? ThemeMode.dark : ThemeMode.light,
+                            );
+                      },
+                    ),
+                  ),
+                  _buildSubtleDivider(isDark),
+                  ListTile(
+                    leading: Icon(Icons.notifications_outlined, color: colorScheme.primary),
+                    title: const Text('Notifications', style: TextStyle(fontWeight: FontWeight.w600)),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => context.push('/notifications'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Danger Zone
+            _SectionHeader(title: 'Danger Zone', color: semanticColors.error),
+            GlassCard(
+              padding: EdgeInsets.zero,
+              child: ListTile(
+                leading: Icon(Icons.logout, color: semanticColors.error),
+                title: Text(
+                  'Log Out',
+                  style: TextStyle(color: semanticColors.error, fontWeight: FontWeight.w600),
+                ),
+                trailing: Icon(Icons.arrow_forward_ios, size: 14, color: semanticColors.error.withValues(alpha: 0.6)),
+                onTap: () => _handleLogOut(context),
+              ),
+            ),
+            const SizedBox(height: 48),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubtleDivider(bool isDark) {
+    return Divider(
+      height: 1,
+      thickness: 1,
+      color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04),
+    );
+  }
+
+  void _showIntegrationMessage(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Integrations are managed from the web app.')),
+    );
+  }
+
+  Future<void> _handleLogOut(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Log Out'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
           ),
-
-          const SizedBox(height: 32),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Log Out'),
+          ),
         ],
       ),
     );
+
+    if (confirmed == true) {
+      final authService = ref.read(authServiceProvider);
+      await authService.signOut();
+    }
   }
 }
 
@@ -534,14 +603,14 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
       child: Text(
         title.toUpperCase(),
         style: TextStyle(
           fontSize: 12,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
           color: color ?? Theme.of(context).colorScheme.primary,
-          letterSpacing: 1,
+          letterSpacing: 1.5,
         ),
       ),
     );

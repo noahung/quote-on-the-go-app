@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
+import '../../components/glass_card.dart';
+import '../../components/mesh_background.dart';
 
 class InvoicePortalScreen extends ConsumerWidget {
   final String invoiceId;
@@ -21,9 +23,10 @@ class InvoicePortalScreen extends ConsumerWidget {
       );
     }
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
-      body: CustomScrollView(
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: CustomScrollView(
         slivers: [
           _PortalAppBar(invoice: invoice),
           SliverPadding(
@@ -62,7 +65,7 @@ class InvoicePortalScreen extends ConsumerWidget {
           ),
         ],
       ),
-    );
+    ));
   }
 }
 
@@ -75,7 +78,7 @@ class _PortalAppBar extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return SliverAppBar(
       pinned: true,
-      backgroundColor: colorScheme.surface,
+      backgroundColor: Colors.transparent,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
         onPressed: () => context.pop(),
@@ -156,64 +159,57 @@ class _CompanyHeader extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final company = invoice.company;
 
-    return Card(
-      elevation: 0,
-      color: colorScheme.primaryContainer,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            if (company?.logoUrl != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  company!.logoUrl!,
-                  width: 52,
-                  height: 52,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _LogoFallback(
-                      name: company.name, colorScheme: colorScheme),
-                ),
-              )
-            else
-              _LogoFallback(
-                  name: company?.name ?? 'C', colorScheme: colorScheme),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    company?.name ?? 'Company',
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                  if (company?.email != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      company!.email!,
-                      style: textTheme.bodySmall?.copyWith(
-                          color:
-                              colorScheme.onPrimaryContainer.withOpacity(0.75)),
-                    ),
-                  ],
-                  if (company?.phone != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      company!.phone!,
-                      style: textTheme.bodySmall?.copyWith(
-                          color:
-                              colorScheme.onPrimaryContainer.withOpacity(0.75)),
-                    ),
-                  ],
-                ],
+    return GlassCard(
+      borderRadius: BorderRadius.circular(16),
+      child: Row(
+        children: [
+          if (company?.logoUrl != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                company!.logoUrl!,
+                width: 52,
+                height: 52,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _LogoFallback(
+                    name: company.name, colorScheme: colorScheme),
               ),
+            )
+          else
+            _LogoFallback(
+                name: company?.name ?? 'C', colorScheme: colorScheme),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  company?.name ?? 'Company',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                if (company?.email != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    company!.email!,
+                    style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant),
+                  ),
+                ],
+                if (company?.phone != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    company!.phone!,
+                    style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant),
+                  ),
+                ],
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -252,28 +248,21 @@ class _InvoiceMetaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _MetaRow(label: 'Invoice Number', value: invoice.invoiceNumber),
+    return GlassCard(
+      borderRadius: BorderRadius.circular(16),
+      child: Column(
+        children: [
+          _MetaRow(label: 'Invoice Number', value: invoice.invoiceNumber),
+          const Divider(height: 20),
+          _MetaRow(label: 'Issue Date', value: invoice.date),
+          const Divider(height: 20),
+          _MetaRow(label: 'Due Date', value: invoice.dueDate),
+          if (invoice.quotationNumber != null) ...[
             const Divider(height: 20),
-            _MetaRow(label: 'Issue Date', value: invoice.date),
-            const Divider(height: 20),
-            _MetaRow(label: 'Due Date', value: invoice.dueDate),
-            if (invoice.quotationNumber != null) ...[
-              const Divider(height: 20),
-              _MetaRow(
-                  label: 'From Quotation', value: invoice.quotationNumber!),
-            ],
+            _MetaRow(
+                label: 'From Quotation', value: invoice.quotationNumber!),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -310,42 +299,37 @@ class _ClientAddressCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Bill To',
-                style: textTheme.labelSmall?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1)),
-            const SizedBox(height: 10),
-            Text(invoice.customerName,
-                style: textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w600)),
+    return GlassCard(
+      borderRadius: BorderRadius.circular(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Bill To',
+              style: textTheme.labelSmall?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1)),
+          const SizedBox(height: 10),
+          Text(invoice.customerName,
+              style: textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 2),
+          Text(invoice.customerEmail,
+              style: textTheme.bodySmall
+                  ?.copyWith(color: colorScheme.onSurfaceVariant)),
+          if (invoice.customerPhone != null) ...[
             const SizedBox(height: 2),
-            Text(invoice.customerEmail,
+            Text(invoice.customerPhone!,
                 style: textTheme.bodySmall
                     ?.copyWith(color: colorScheme.onSurfaceVariant)),
-            if (invoice.customerPhone != null) ...[
-              const SizedBox(height: 2),
-              Text(invoice.customerPhone!,
-                  style: textTheme.bodySmall
-                      ?.copyWith(color: colorScheme.onSurfaceVariant)),
-            ],
-            if (invoice.customerAddress != null) ...[
-              const SizedBox(height: 2),
-              Text(invoice.customerAddress!,
-                  style: textTheme.bodySmall
-                      ?.copyWith(color: colorScheme.onSurfaceVariant)),
-            ],
           ],
-        ),
+          if (invoice.customerAddress != null) ...[
+            const SizedBox(height: 2),
+            Text(invoice.customerAddress!,
+                style: textTheme.bodySmall
+                    ?.copyWith(color: colorScheme.onSurfaceVariant)),
+          ],
+        ],
       ),
     );
   }
@@ -361,88 +345,83 @@ class _ItemsCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final currency = NumberFormat.currency(symbol: '£');
 
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Services & Items',
-                style: textTheme.labelSmall?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1)),
-            const SizedBox(height: 12),
-            ...invoice.items.map((item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 5,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(item.description,
-                                style: textTheme.bodyMedium
-                                    ?.copyWith(fontWeight: FontWeight.w500)),
-                            Text(
-                              '${item.quantity} × ${currency.format(item.unitPrice)}',
-                              style: textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
+    return GlassCard(
+      borderRadius: BorderRadius.circular(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Services & Items',
+              style: textTheme.labelSmall?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1)),
+          const SizedBox(height: 12),
+          ...invoice.items.map((item) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item.description,
+                              style: textTheme.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w500)),
+                          Text(
+                            '${item.quantity} × ${currency.format(item.unitPrice)}',
+                            style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant),
+                          ),
+                        ],
                       ),
-                      Text(
-                        currency.format(item.total),
-                        style: textTheme.bodyMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                )),
-            const Divider(),
-            const SizedBox(height: 8),
+                    ),
+                    Text(
+                      currency.format(item.total),
+                      style: textTheme.bodyMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              )),
+          const Divider(),
+          const SizedBox(height: 8),
+          _TotalRow(
+              label: 'Subtotal',
+              value: currency.format(invoice.subtotal),
+              isTotal: false),
+          if (invoice.taxRate != null && invoice.taxAmount != null) ...[
+            const SizedBox(height: 6),
             _TotalRow(
-                label: 'Subtotal',
-                value: currency.format(invoice.subtotal),
+                label: 'Tax (${invoice.taxRate!.toStringAsFixed(0)}%)',
+                value: currency.format(invoice.taxAmount),
                 isTotal: false),
-            if (invoice.taxRate != null && invoice.taxAmount != null) ...[
-              const SizedBox(height: 6),
-              _TotalRow(
-                  label: 'Tax (${invoice.taxRate!.toStringAsFixed(0)}%)',
-                  value: currency.format(invoice.taxAmount),
-                  isTotal: false),
-            ],
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Total',
-                      style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onPrimaryContainer)),
-                  Text(
-                    currency.format(invoice.total),
-                    style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onPrimaryContainer),
-                  ),
-                ],
-              ),
-            ),
           ],
-        ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Total',
+                    style: textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onPrimaryContainer)),
+                Text(
+                  currency.format(invoice.total),
+                  style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onPrimaryContainer),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -489,26 +468,21 @@ class _NotesCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Notes & Terms',
-                style: textTheme.labelSmall?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1)),
-            const SizedBox(height: 8),
-            Text(notes,
-                style: textTheme.bodySmall
-                    ?.copyWith(color: colorScheme.onSurfaceVariant)),
-          ],
-        ),
+    return GlassCard(
+      borderRadius: BorderRadius.circular(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Notes & Terms',
+              style: textTheme.labelSmall?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1)),
+          const SizedBox(height: 8),
+          Text(notes,
+              style: textTheme.bodySmall
+                  ?.copyWith(color: colorScheme.onSurfaceVariant)),
+        ],
       ),
     );
   }
@@ -527,12 +501,9 @@ class _StatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
+    return GlassCard(
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: color.withOpacity(0.15), width: 1.5),
       child: Row(
         children: [
           Icon(icon, color: color),

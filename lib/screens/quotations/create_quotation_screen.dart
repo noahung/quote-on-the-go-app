@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../widgets/widgets.dart';
+import '../../components/mesh_background.dart';
+import '../../components/glass_card.dart';
+import '../../components/pill_button.dart';
 
 class CreateQuotationScreen extends ConsumerStatefulWidget {
   final Quotation? existingQuotation;
@@ -68,8 +70,6 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
       _expiryDate = q.expiryDate;
     } else if (widget.prefilledCustomer != null) {
       final c = widget.prefilledCustomer!;
-      // Don't set _selectedCustomer — it may not be in the dropdown list
-      // and would cause a value mismatch assertion. Just prefill the text fields.
       _customerNameController.text = c.name;
       _customerEmailController.text = c.email;
       _customerPhoneController.text = c.phone ?? '';
@@ -171,12 +171,12 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
               ? null
               : _notesController.text.trim(),
         );
-        await repository.createQuotation(quotation);
+        final newId = await repository.createQuotation(quotation);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Quotation created successfully')),
           );
-          context.pop();
+          context.go('/quotations/$newId');
         }
       }
     } catch (e) {
@@ -222,98 +222,107 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _isEditing ? 'Edit Quotation' : 'New Quotation',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          title: Text(
+            _isEditing ? 'Edit Quotation' : 'New Quotation',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => context.pop(),
+          ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      body: Stepper(
-        type: StepperType.horizontal,
-        currentStep: _currentStep,
-        onStepTapped: (step) {
-          if (step < _currentStep) {
-            setState(() => _currentStep = step);
-          }
-        },
-        onStepContinue: () {
-          if (_currentStep < 2) {
-            setState(() => _currentStep++);
-          } else {
-            _saveQuotation();
-          }
-        },
-        onStepCancel: () {
-          if (_currentStep > 0) {
-            setState(() => _currentStep--);
-          } else {
-            context.pop();
-          }
-        },
-        controlsBuilder: (context, details) {
-          return Padding(
-            padding: const EdgeInsets.only(top: 24),
-            child: Row(
-              children: [
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _isLoading ? null : details.onStepContinue,
+        body: Stepper(
+          type: StepperType.horizontal,
+          currentStep: _currentStep,
+          onStepTapped: (step) {
+            if (step < _currentStep) {
+              setState(() => _currentStep = step);
+            }
+          },
+          onStepContinue: () {
+            if (_currentStep < 2) {
+              setState(() => _currentStep++);
+            } else {
+              _saveQuotation();
+            }
+          },
+          onStepCancel: () {
+            if (_currentStep > 0) {
+              setState(() => _currentStep--);
+            } else {
+              context.pop();
+            }
+          },
+          controlsBuilder: (context, details) {
+            return Padding(
+              padding: const EdgeInsets.only(top: 24),
+              child: Row(
+                children: [
+                  Expanded(
                     child: _isLoading && _currentStep == 2
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
+                        ? Center(
                             child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
+                              color: colorScheme.primary,
                             ),
                           )
-                        : Text(
-                            _currentStep == 2
+                        : PillButton(
+                            text: _currentStep == 2
                                 ? (_isEditing ? 'Save Changes' : 'Create Quote')
                                 : 'Next',
+                            onTap: details.onStepContinue,
                           ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: details.onStepCancel,
-                    child: Text(_currentStep == 0 ? 'Cancel' : 'Back'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      onPressed: details.onStepCancel,
+                      child: Text(_currentStep == 0 ? 'Cancel' : 'Back'),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+            );
+          },
+          steps: [
+            Step(
+              title: const Text('Customer'),
+              content: _buildCustomerStep(),
+              isActive: _currentStep >= 0,
+              state: _currentStep > 0 ? StepState.complete : StepState.indexed,
             ),
-          );
-        },
-        steps: [
-          Step(
-            title: const Text('Customer'),
-            content: _buildCustomerStep(),
-            isActive: _currentStep >= 0,
-            state: _currentStep > 0 ? StepState.complete : StepState.indexed,
-          ),
-          Step(
-            title: const Text('Items'),
-            content: _buildLineItemsStep(),
-            isActive: _currentStep >= 1,
-            state: _currentStep > 1
-                ? StepState.complete
-                : _currentStep == 1
-                    ? StepState.indexed
-                    : StepState.disabled,
-          ),
-          Step(
-            title: const Text('Review'),
-            content: _buildReviewStep(),
-            isActive: _currentStep >= 2,
-            state: _currentStep == 2 ? StepState.indexed : StepState.disabled,
-          ),
-        ],
+            Step(
+              title: const Text('Items'),
+              content: _buildLineItemsStep(),
+              isActive: _currentStep >= 1,
+              state: _currentStep > 1
+                  ? StepState.complete
+                  : _currentStep == 1
+                      ? StepState.indexed
+                      : StepState.disabled,
+            ),
+            Step(
+              title: const Text('Review'),
+              content: _buildReviewStep(),
+              isActive: _currentStep >= 2,
+              state: _currentStep == 2 ? StepState.indexed : StepState.disabled,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -321,101 +330,108 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
   Widget _buildCustomerStep() {
     final customers = ref.watch(customersProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (customers.isNotEmpty) ...[
-          DropdownButtonFormField<Customer?>(
-            initialValue: _selectedCustomer,
-            decoration: const InputDecoration(
-              labelText: 'Select Existing Customer',
-              prefixIcon: Icon(Icons.person_search),
-            ),
-            items: [
-              const DropdownMenuItem(
-                value: null,
-                child: Text('Manual entry...'),
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (customers.isNotEmpty) ...[
+            DropdownButtonFormField<Customer?>(
+              initialValue: _selectedCustomer,
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
-              ...customers.map((customer) {
-                return DropdownMenuItem(
-                  value: customer,
-                  child: Text(customer.name),
-                );
-              }),
-            ],
-            onChanged: (customer) {
-              if (customer != null) {
-                _onCustomerSelected(customer);
-              } else {
-                setState(() {
-                  _selectedCustomer = null;
-                  _customerNameController.clear();
-                  _customerEmailController.clear();
-                  _customerPhoneController.clear();
-                  _customerAddressController.clear();
-                });
-              }
-            },
-          ),
-          const SizedBox(height: 16),
-        ],
-        TextFormField(
-          controller: _customerNameController,
-          decoration: const InputDecoration(
-            labelText: 'Customer Name *',
-            prefixIcon: Icon(Icons.person_outline),
-          ),
-          textCapitalization: TextCapitalization.words,
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _customerEmailController,
-          decoration: const InputDecoration(
-            labelText: 'Email *',
-            prefixIcon: Icon(Icons.email_outlined),
-          ),
-          keyboardType: TextInputType.emailAddress,
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _customerPhoneController,
-          decoration: const InputDecoration(
-            labelText: 'Phone',
-            prefixIcon: Icon(Icons.phone_outlined),
-          ),
-          keyboardType: TextInputType.phone,
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _customerAddressController,
-          decoration: const InputDecoration(
-            labelText: 'Address',
-            prefixIcon: Icon(Icons.location_on_outlined),
-          ),
-          maxLines: 2,
-          textCapitalization: TextCapitalization.sentences,
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildDateField(
-                label: 'Quote Date',
-                value: _date,
-                onTap: () => _pickDate(context, true),
+              decoration: const InputDecoration(
+                labelText: 'Select Existing Customer',
+                labelStyle: TextStyle(fontSize: 13),
+                prefixIcon: Icon(Icons.person_search),
               ),
+              items: [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('Manual entry...'),
+                ),
+                ...customers.map((customer) {
+                  return DropdownMenuItem(
+                    value: customer,
+                    child: Text(customer.name),
+                  );
+                }),
+              ],
+              onChanged: (customer) {
+                if (customer != null) {
+                  _onCustomerSelected(customer);
+                } else {
+                  setState(() {
+                    _selectedCustomer = null;
+                    _customerNameController.clear();
+                    _customerEmailController.clear();
+                    _customerPhoneController.clear();
+                    _customerAddressController.clear();
+                  });
+                }
+              },
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildDateField(
-                label: 'Expiry Date',
-                value: _expiryDate,
-                onTap: () => _pickDate(context, false),
-              ),
-            ),
+            const SizedBox(height: 16),
           ],
-        ),
-      ],
+          TextFormField(
+            controller: _customerNameController,
+            style: const TextStyle(fontSize: 14),
+            decoration: const InputDecoration(
+              labelText: 'Customer Name *',
+              labelStyle: TextStyle(fontSize: 13),
+              prefixIcon: Icon(Icons.person_outline),
+            ),
+            textCapitalization: TextCapitalization.words,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _customerEmailController,
+            style: const TextStyle(fontSize: 14),
+            decoration: const InputDecoration(
+              labelText: 'Email *',
+              labelStyle: TextStyle(fontSize: 13),
+              prefixIcon: Icon(Icons.email_outlined),
+            ),
+            keyboardType: TextInputType.emailAddress,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _customerPhoneController,
+            style: const TextStyle(fontSize: 14),
+            decoration: const InputDecoration(
+              labelText: 'Phone',
+              labelStyle: TextStyle(fontSize: 13),
+              prefixIcon: Icon(Icons.phone_outlined),
+            ),
+            keyboardType: TextInputType.phone,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _customerAddressController,
+            style: const TextStyle(fontSize: 14),
+            decoration: const InputDecoration(
+              labelText: 'Address',
+              labelStyle: TextStyle(fontSize: 13),
+              prefixIcon: Icon(Icons.location_on_outlined),
+            ),
+            maxLines: 2,
+            textCapitalization: TextCapitalization.sentences,
+          ),
+          const SizedBox(height: 12),
+          _buildDateField(
+            label: 'Quote Date',
+            value: _date,
+            onTap: () => _pickDate(context, true),
+          ),
+          const SizedBox(height: 12),
+          _buildDateField(
+            label: 'Expiry Date',
+            value: _expiryDate,
+            onTap: () => _pickDate(context, false),
+          ),
+        ],
+      ),
     );
   }
 
@@ -430,9 +446,13 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: const Icon(Icons.calendar_today),
+          labelStyle: const TextStyle(fontSize: 13),
+          suffixIcon: const Icon(Icons.calendar_today, size: 18),
         ),
-        child: Text(value),
+        child: Text(
+          value,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        ),
       ),
     );
   }
@@ -473,47 +493,51 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
             itemCount: _lineItems.length,
             itemBuilder: (context, index) {
               final item = _lineItems[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  title: Text(
-                    item.description,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text(
-                    '${item.quantity} x ${NumberFormat.currency(symbol: '£').format(item.unitPrice)}',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        NumberFormat.currency(symbol: '£').format(item.total),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined),
-                        onPressed: () =>
-                            _showEditLineItemSheet(context, index, item),
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete_outline,
-                          color: Colors.red,
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: GlassCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      item.description,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      '${item.quantity} x ${NumberFormat.currency(symbol: '£').format(item.unitPrice)}',
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          NumberFormat.currency(symbol: '£').format(item.total),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        onPressed: () => _removeLineItem(index),
-                      ),
-                    ],
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined),
+                          onPressed: () =>
+                              _showEditLineItemSheet(context, index, item),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.delete_outline,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                          onPressed: () => _removeLineItem(index),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
             },
           ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         Center(
-          child: FilledButton.icon(
-            onPressed: () => _showAddLineItemSheet(context),
-            icon: const Icon(Icons.add),
-            label: const Text('Add Item'),
+          child: PillButton(
+            onTap: () => _showAddLineItemSheet(context),
+            icon: Icons.add,
+            text: 'Add Item',
           ),
         ),
       ],
@@ -524,15 +548,13 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
     final result = await showModalBottomSheet<dynamic>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.5),
       builder: (context) {
         return const _AddItemBottomSheet();
       },
     );
 
-    // Handle returned items
     if (result != null) {
       if (result is LineItem) {
         _addLineItem(result);
@@ -549,9 +571,8 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
     final result = await showModalBottomSheet<LineItem>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.5),
       builder: (context) {
         return _AddItemBottomSheet(existingItem: item);
       },
@@ -569,7 +590,6 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
       height: 560,
       child: Column(
         children: [
-          // Edit/Preview Tabs
           Container(
             decoration: BoxDecoration(
               border: Border(
@@ -642,7 +662,6 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
             ),
           ),
 
-          // Content based on selected tab
           Expanded(
             child: _showPreviewInReview
                 ? _buildPreviewContent()
@@ -704,6 +723,8 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
 
   Widget _buildEditReviewContent() {
     final currencyFormat = NumberFormat.currency(symbol: '£');
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -711,129 +732,142 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Customer Summary
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Customer',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Customer',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: colorScheme.primary,
                   ),
-                  const SizedBox(height: 8),
-                  Text(_customerNameController.text),
-                  Text(
-                    _customerEmailController.text,
-                    style: TextStyle(color: Colors.grey.shade600),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                Text(_customerNameController.text, style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(
+                  _customerEmailController.text,
+                  style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
 
           // Items Summary
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Items',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Items',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: colorScheme.primary,
                   ),
-                  const SizedBox(height: 8),
-                  ..._lineItems.map((item) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${item.quantity}x ${item.description}',
-                              style: const TextStyle(fontSize: 13),
-                            ),
-                          ),
-                          Text(
-                            currencyFormat.format(item.total),
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                  const Divider(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Subtotal'),
-                      Text(currencyFormat.format(_subtotal)),
-                    ],
-                  ),
-                  if (_taxRate > 0) ...[
-                    const SizedBox(height: 4),
-                    Row(
+                ),
+                const SizedBox(height: 12),
+                ..._lineItems.map((item) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Tax (${_taxRate.toStringAsFixed(1)}%)'),
-                        Text(currencyFormat.format(_taxAmount)),
+                        Expanded(
+                          child: Text(
+                            '${item.quantity}x ${item.description}',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                        Text(
+                          currencyFormat.format(item.total),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
                       ],
                     ),
+                  );
+                }),
+                Divider(
+                  height: 24,
+                  thickness: 1,
+                  color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Subtotal', style: TextStyle(fontWeight: FontWeight.w500)),
+                    Text(currencyFormat.format(_subtotal), style: const TextStyle(fontWeight: FontWeight.w600)),
                   ],
-                  const SizedBox(height: 8),
+                ),
+                if (_taxRate > 0) ...[
+                  const SizedBox(height: 4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Total',
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                      ),
-                      Text(
-                        currencyFormat.format(_total),
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-                      ),
+                      Text('Tax (${_taxRate.toStringAsFixed(1)}%)', style: const TextStyle(fontWeight: FontWeight.w500)),
+                      Text(currencyFormat.format(_taxAmount), style: const TextStyle(fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ],
-              ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Total',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                    ),
+                    Text(
+                      currencyFormat.format(_total),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 20,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
 
-          // Tax Rate
-          TextFormField(
-            controller: _taxRateController,
-            decoration: const InputDecoration(
-              labelText: 'Tax Rate (%)',
-              prefixIcon: Icon(Icons.percent),
+          // Tax Rate & Notes
+          GlassCard(
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _taxRateController,
+                  style: const TextStyle(fontSize: 14),
+                  decoration: const InputDecoration(
+                    labelText: 'Tax Rate (%)',
+                    labelStyle: TextStyle(fontSize: 13),
+                    prefixIcon: Icon(Icons.percent),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (value) {
+                    setState(() {
+                      _taxRate = double.tryParse(value) ?? 0;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _notesController,
+                  style: const TextStyle(fontSize: 14),
+                  decoration: const InputDecoration(
+                    labelText: 'Notes',
+                    labelStyle: TextStyle(fontSize: 13),
+                    prefixIcon: Icon(Icons.notes),
+                  ),
+                  maxLines: 3,
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+              ],
             ),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (value) {
-              setState(() {
-                _taxRate = double.tryParse(value) ?? 0;
-              });
-            },
-          ),
-          const SizedBox(height: 12),
-
-          // Notes
-          TextFormField(
-            controller: _notesController,
-            decoration: const InputDecoration(
-              labelText: 'Notes',
-              prefixIcon: Icon(Icons.notes),
-            ),
-            maxLines: 3,
-            textCapitalization: TextCapitalization.sentences,
           ),
         ],
       ),
@@ -932,30 +966,42 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
     final aiState = ref.watch(aiGenerationStateProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Padding(
+    return GlassCard(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 16,
-        right: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        left: 20,
+        right: 20,
         top: 24,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            widget.existingItem != null ? 'Edit Item' : 'Add Items',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+          Row(
+            children: [
+              Text(
+                widget.existingItem != null ? 'Edit Item' : 'Add Items',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.close, size: 20),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
 
           // Mode Toggle
           Container(
             decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -988,7 +1034,6 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
           ),
           const SizedBox(height: 20),
 
-          // Content based on mode
           if (_mode == _ItemAddMode.manual)
             _buildManualEntryForm()
           else
@@ -997,6 +1042,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
           const SizedBox(height: 16),
         ],
       ),
+    ),
     );
   }
 
@@ -1007,8 +1053,10 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
       children: [
         TextFormField(
           controller: _descriptionController,
+          style: const TextStyle(fontSize: 14),
           decoration: const InputDecoration(
             labelText: 'Description *',
+            labelStyle: TextStyle(fontSize: 13),
             prefixIcon: Icon(Icons.description_outlined),
           ),
           textCapitalization: TextCapitalization.sentences,
@@ -1020,8 +1068,10 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
               flex: 2,
               child: TextFormField(
                 controller: _quantityController,
+                style: const TextStyle(fontSize: 14),
                 decoration: const InputDecoration(
                   labelText: 'Qty *',
+                  labelStyle: TextStyle(fontSize: 13),
                   prefixIcon: Icon(Icons.numbers),
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
@@ -1034,8 +1084,10 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
               flex: 3,
               child: TextFormField(
                 controller: _priceController,
+                style: const TextStyle(fontSize: 14),
                 decoration: const InputDecoration(
                   labelText: 'Unit Price *',
+                  labelStyle: TextStyle(fontSize: 13),
                   prefixIcon: Icon(Icons.currency_pound),
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
@@ -1046,10 +1098,9 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
           ],
         ),
         const SizedBox(height: 24),
-        FilledButton(
-          onPressed: _addManualItem,
-          child:
-              Text(widget.existingItem != null ? 'Save Changes' : 'Add Item'),
+        PillButton(
+          onTap: _addManualItem,
+          text: widget.existingItem != null ? 'Save Changes' : 'Add Item',
         ),
       ],
     );
@@ -1059,7 +1110,6 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
     AIGenerationState aiState,
     ColorScheme colorScheme,
   ) {
-    // Show generated items if available
     if (aiState.generatedItems != null && aiState.generatedItems!.isNotEmpty) {
       return Column(
         mainAxisSize: MainAxisSize.min,
@@ -1070,7 +1120,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
             children: [
               Text(
                 'Generated Items (${aiState.generatedItems!.length})',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               TextButton.icon(
                 onPressed: () {
@@ -1089,20 +1139,24 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
               itemCount: aiState.generatedItems!.length,
               itemBuilder: (context, index) {
                 final item = aiState.generatedItems![index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    dense: true,
-                    title: Text(
-                      item.description,
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    subtitle: Text(
-                      '${item.quantity} x £${item.unitPrice.toStringAsFixed(2)}',
-                    ),
-                    trailing: Text(
-                      '£${item.total.toStringAsFixed(2)}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: GlassCard(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      title: Text(
+                        item.description,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Text(
+                        '${item.quantity} x £${item.unitPrice.toStringAsFixed(2)}',
+                      ),
+                      trailing: Text(
+                        '£${item.total.toStringAsFixed(2)}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                 );
@@ -1114,6 +1168,12 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
             children: [
               Expanded(
                 child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
                   onPressed: () {
                     ref.read(aiGenerationStateProvider.notifier).clear();
                   },
@@ -1123,10 +1183,10 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
               const SizedBox(width: 12),
               Expanded(
                 flex: 2,
-                child: FilledButton.icon(
-                  onPressed: () => _addGeneratedItems(aiState.generatedItems!),
-                  icon: const Icon(Icons.add),
-                  label: Text('Add ${aiState.generatedItems!.length} Items'),
+                child: PillButton(
+                  onTap: () => _addGeneratedItems(aiState.generatedItems!),
+                  icon: Icons.add,
+                  text: 'Add ${aiState.generatedItems!.length} Items',
                 ),
               ),
             ],
@@ -1135,15 +1195,16 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
       );
     }
 
-    // Show generation form
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TextFormField(
           controller: _aiPromptController,
+          style: const TextStyle(fontSize: 14),
           decoration: InputDecoration(
             labelText: 'Describe the job...',
+            labelStyle: const TextStyle(fontSize: 13),
             hintText:
                 'E.g., Install 5 split-system air conditioners in a 2-story office building. Include labor, copper piping, and electrical work.',
             prefixIcon: const Icon(Icons.auto_fix_high),
@@ -1176,22 +1237,11 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
           ),
         ],
         const SizedBox(height: 16),
-        FilledButton.icon(
-          onPressed:
-              aiState.isLoading || _aiPromptController.text.trim().isEmpty
-                  ? null
-                  : _generateAIItems,
-          icon: aiState.isLoading
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(Icons.auto_fix_high),
-          label: Text(aiState.isLoading ? 'Generating...' : 'Generate Items'),
+        PillButton(
+          isLoading: aiState.isLoading,
+          onTap: _aiPromptController.text.trim().isEmpty ? null : _generateAIItems,
+          icon: Icons.auto_fix_high,
+          text: aiState.isLoading ? 'Generating...' : 'Generate Items',
         ),
       ],
     );
@@ -1214,7 +1264,6 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
           FilledButton(
             onPressed: () {
               Navigator.pop(context);
-              // Navigate to settings/subscription screen
               context.push('/settings');
             },
             child: const Text('Upgrade Now'),
@@ -1249,8 +1298,11 @@ class _ModeButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: isSelected ? colorScheme.primaryContainer : null,
-          borderRadius: BorderRadius.circular(10),
+          color: isSelected ? colorScheme.primaryContainer.withValues(alpha: 0.7) : null,
+          borderRadius: BorderRadius.circular(12),
+          border: isSelected
+              ? Border.all(color: colorScheme.primary.withValues(alpha: 0.3), width: 1)
+              : null,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1262,19 +1314,19 @@ class _ModeButton extends StatelessWidget {
                   ? colorScheme.primary
                   : !isPremium
                       ? Colors.grey
-                      : null,
+                      : colorScheme.onSurface.withValues(alpha: 0.6),
             ),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
                 fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected
                     ? colorScheme.primary
                     : !isPremium
                         ? Colors.grey
-                        : null,
+                        : colorScheme.onSurface.withValues(alpha: 0.8),
               ),
             ),
           ],

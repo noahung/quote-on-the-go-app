@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../providers/providers.dart';
+import '../../theme/semantic_colors.dart';
+import '../../components/glass_card.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -15,6 +16,8 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+    
     final totalRevenue = ref.watch(totalRevenueProvider);
     final outstandingRevenue = ref.watch(outstandingRevenueProvider);
     final activeInvoicesCount = ref.watch(activeInvoicesCountProvider);
@@ -23,10 +26,14 @@ class DashboardScreen extends ConsumerWidget {
     final acceptedQuotationsCount = ref.watch(acceptedQuotationsCountProvider);
 
     return Scaffold(
+      backgroundColor: Colors.transparent, // Transparent to let the mesh background shine through
       appBar: AppBar(
-        title: Text(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: const Text(
           'Dashboard',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
         actions: [
           IconButton(
@@ -41,7 +48,6 @@ class DashboardScreen extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          // Refresh data by invalidating providers
           ref.invalidate(quotationsStreamProvider);
           ref.invalidate(invoicesStreamProvider);
         },
@@ -54,10 +60,11 @@ class DashboardScreen extends ConsumerWidget {
               // Welcome header
               Text(
                 'Welcome back!',
-                style: GoogleFonts.poppins(
+                style: TextStyle(
                   fontSize: 24,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w800,
                   color: colorScheme.onSurface,
+                  letterSpacing: -0.5,
                 ),
               ),
               const SizedBox(height: 4),
@@ -65,7 +72,7 @@ class DashboardScreen extends ConsumerWidget {
                 'Here\'s an overview of your business',
                 style: TextStyle(
                   fontSize: 14,
-                  color: colorScheme.onSurfaceVariant,
+                  color: colorScheme.onSurface.withValues(alpha: 0.65),
                 ),
               ),
               const SizedBox(height: 24),
@@ -83,28 +90,28 @@ class DashboardScreen extends ConsumerWidget {
                     title: 'Total Revenue',
                     value: _formatCurrency(totalRevenue),
                     icon: Icons.paid,
-                    color: colorScheme.primary,
+                    color: semanticColors.accentPrimary,
                     subtitle: 'All time paid',
                   ),
                   _KpiCard(
                     title: 'Outstanding',
                     value: _formatCurrency(outstandingRevenue),
                     icon: Icons.pending_actions,
-                    color: Colors.orange,
+                    color: semanticColors.accentOrange,
                     subtitle: 'Unpaid invoices',
                   ),
                   _KpiCard(
                     title: 'Active Invoices',
                     value: activeInvoicesCount.toString(),
                     icon: Icons.receipt_long,
-                    color: Colors.blue,
+                    color: semanticColors.accentBlue,
                     subtitle: 'Sent/Overdue',
                   ),
                   _KpiCard(
                     title: 'Pending Quotes',
                     value: pendingQuotationsCount.toString(),
                     icon: Icons.description,
-                    color: Colors.purple,
+                    color: semanticColors.accentPurple,
                     subtitle: 'Draft/Sent',
                   ),
                 ],
@@ -112,103 +119,177 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // Quick Actions
-              Text(
+              const Text(
                 'Quick Actions',
-                style: GoogleFonts.poppins(
+                style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
                 ),
               ),
               const SizedBox(height: 12),
 
-              // New Quotation Button
-              _QuickActionCard(
-                title: 'Create Quotation',
-                subtitle: 'Create a new quote for a customer',
-                icon: Icons.add_circle_outline,
-                color: colorScheme.primary,
-                onTap: () => context.push('/quotations/new'),
-              ),
-              const SizedBox(height: 8),
-              _QuickActionCard(
-                title: 'Create Invoice',
-                subtitle: 'Generate an invoice from a quote',
-                icon: Icons.receipt,
-                color: Colors.green,
-                onTap: () => context.push('/invoices/new'),
-              ),
-              const SizedBox(height: 8),
-              _QuickActionCard(
-                title: 'Add Customer',
-                subtitle: 'Add a new customer to your list',
-                icon: Icons.person_add,
-                color: Colors.blue,
-                onTap: () => context.push('/customers/new'),
-              ),
-              const SizedBox(height: 8),
-              _QuickActionCard(
-                title: 'Expenses',
-                subtitle: 'Track business spending',
-                icon: Icons.receipt_long,
-                color: Colors.deepOrange,
-                onTap: () => context.push('/expenses'),
-              ),
-              const SizedBox(height: 8),
-              _QuickActionCard(
-                title: 'Services',
-                subtitle: 'Manage service catalog',
-                icon: Icons.construction,
-                color: Colors.teal,
-                onTap: () => context.push('/services'),
-              ),
-              const SizedBox(height: 8),
-              _QuickActionCard(
-                title: 'Schedule',
-                subtitle: 'View calendar events',
-                icon: Icons.calendar_month,
-                color: Colors.indigo,
-                onTap: () => context.push('/schedule'),
-              ),
-              const SizedBox(height: 8),
-              _QuickActionCard(
-                title: 'Workflows',
-                subtitle: 'Automate follow-ups',
-                icon: Icons.auto_fix_high,
-                color: Colors.purple,
-                onTap: () => context.push('/workflows'),
+
+              Column(
+                children: [
+                  // Row 1: Create Quotation & Create Invoice
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _BentoActionCard(
+                          title: 'Create Quotation',
+                          subtitle: 'New quote for customer pricing',
+                          icon: Icons.add_circle_outline,
+                          color: semanticColors.accentPrimary,
+                          actionText: 'NEW QUOTE',
+                          onTap: () => context.push('/quotations/new'),
+                          height: 160,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _BentoActionCard(
+                          title: 'Create Invoice',
+                          subtitle: 'Generate invoice from quote',
+                          icon: Icons.receipt,
+                          color: semanticColors.accentGreen,
+                          actionText: 'GENERATE',
+                          onTap: () => context.push('/invoices/new'),
+                          height: 160,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Row 2: Add Customer & Expenses
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _BentoActionCard(
+                          title: 'Add Customer',
+                          subtitle: 'Add a new client to database',
+                          icon: Icons.person_add,
+                          color: semanticColors.accentBlue,
+                          actionText: 'ADD CLIENT',
+                          onTap: () => context.push('/customers/new'),
+                          height: 160,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _BentoActionCard(
+                          title: 'Expenses',
+                          subtitle: 'Track spending and logs',
+                          icon: Icons.receipt_long,
+                          color: semanticColors.accentDeepOrange,
+                          actionText: 'LOG COST',
+                          onTap: () => context.push('/expenses'),
+                          height: 160,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Row 3: Services & Schedule
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _BentoActionCard(
+                          title: 'Services',
+                          subtitle: 'Manage items catalog',
+                          icon: Icons.construction,
+                          color: semanticColors.accentTeal,
+                          actionText: 'MANAGE',
+                          onTap: () => context.push('/services'),
+                          height: 160,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _BentoActionCard(
+                          title: 'Schedule',
+                          subtitle: 'View calendar schedules',
+                          icon: Icons.calendar_month,
+                          color: semanticColors.accentIndigo,
+                          actionText: 'VIEW CALENDAR',
+                          onTap: () => context.push('/schedule'),
+                          height: 160,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Row 4: Workflows & Branding
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _BentoActionCard(
+                          title: 'Workflows',
+                          subtitle: 'Automation tasks active',
+                          icon: Icons.auto_fix_high,
+                          color: semanticColors.accentPurple,
+                          actionText: 'RUN',
+                          onTap: () => context.push('/workflows'),
+                          height: 160,
+                          hasStatusDot: true,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _BentoActionCard(
+                          title: 'Branding',
+                          subtitle: 'Customize company assets',
+                          icon: Icons.palette,
+                          color: semanticColors.accentOrange,
+                          actionText: 'BRANDING',
+                          onTap: () => context.push('/company-branding'),
+                          height: 160,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
 
               // Recent Activity Summary
-              Text(
+              const Text(
                 'Status Overview',
-                style: GoogleFonts.poppins(
+                style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
                 ),
               ),
               const SizedBox(height: 12),
-              Card(
+              GlassCard(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                   child: Column(
                     children: [
                       _StatusRow(
                         label: 'Overdue Invoices',
                         value: overdueInvoicesCount.toString(),
-                        color: Colors.red,
+                        color: semanticColors.error,
                       ),
                       const Divider(),
                       _StatusRow(
                         label: 'Accepted Quotations',
                         value: acceptedQuotationsCount.toString(),
-                        color: Colors.green,
+                        color: semanticColors.success,
                       ),
                       const Divider(),
                       _StatusRow(
                         label: 'Active Quotes',
                         value: pendingQuotationsCount.toString(),
-                        color: Colors.orange,
+                        color: semanticColors.warning,
                       ),
                     ],
                   ),
@@ -239,118 +320,171 @@ class _KpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, color: color, size: 20),
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
-            ),
-            const Spacer(),
-            Text(
-              value,
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+                child: Icon(icon, color: color, size: 20),
               ),
+            ],
+          ),
+          const Spacer(),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
             ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                color: color.withOpacity(0.8),
-                fontWeight: FontWeight.w500,
-              ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: colorScheme.onSurface.withValues(alpha: 0.7),
+              fontWeight: FontWeight.w600,
             ),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey.shade600,
-              ),
+          ),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 11,
+              color: colorScheme.onSurface.withValues(alpha: 0.5),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _QuickActionCard extends StatelessWidget {
+
+class _BentoActionCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
   final Color color;
+  final String actionText;
   final VoidCallback onTap;
+  final double height;
+  final bool hasStatusDot;
 
-  const _QuickActionCard({
+  const _BentoActionCard({
     required this.title,
     required this.subtitle,
     required this.icon,
     required this.color,
+    required this.actionText,
     required this.onTap,
+    required this.height,
+    this.hasStatusDot = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      onTap: onTap,
+      child: Container(
+        height: height,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color, size: 18),
                 ),
-                child: Icon(icon, color: color),
+                if (hasStatusDot)
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                          blurRadius: 6,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Icon(
+                    Icons.more_vert,
+                    size: 18,
+                    color: colorScheme.onSurface.withValues(alpha: 0.3),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                letterSpacing: -0.2,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Expanded(
+              child: Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: colorScheme.onSurface.withValues(alpha: 0.55),
+                  height: 1.3,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Colors.grey.shade400,
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(
+                  actionText,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Icon(
+                  Icons.chevron_right,
+                  size: 12,
+                  color: color,
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -381,16 +515,26 @@ class _StatusRow extends StatelessWidget {
               decoration: BoxDecoration(
                 color: color,
                 borderRadius: BorderRadius.circular(4),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.4),
+                    blurRadius: 6,
+                    spreadRadius: 1,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 8),
-            Text(label),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
           ],
         ),
         Text(
           value,
           style: TextStyle(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w700,
             color: color,
           ),
         ),

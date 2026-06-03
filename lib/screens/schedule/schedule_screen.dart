@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../../models/calendar_event.dart';
 import '../../providers/providers.dart';
 import '../../widgets/widgets.dart';
+import '../../components/glass_card.dart';
+import '../../components/mesh_background.dart';
 
 class ScheduleScreen extends ConsumerStatefulWidget {
   const ScheduleScreen({super.key});
@@ -86,10 +88,12 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen>
     final colorScheme = Theme.of(context).colorScheme;
     final scheduleAsync = ref.watch(scheduleStreamProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Schedule',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: Text('Schedule',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
             icon: const Icon(Icons.today_outlined),
@@ -140,9 +144,6 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen>
               // ── Tabs ──────────────────────────────────────────────────
               TabBar(
                 controller: _tabController,
-                labelStyle: GoogleFonts.poppins(
-                    fontSize: 13, fontWeight: FontWeight.w600),
-                unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
                 tabs: [
                   Tab(
                     child: Row(
@@ -210,7 +211,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen>
         onPressed: () => context.push('/schedule/new'),
         child: const Icon(Icons.add),
       ),
-    );
+    ));
   }
 }
 
@@ -240,8 +241,12 @@ class _CalendarSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return Column(
-      children: [
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: GlassCard(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          children: [
         // Month navigator
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -297,7 +302,9 @@ class _CalendarSection extends StatelessWidget {
         ),
         const SizedBox(height: 8),
       ],
-    );
+    ),
+  ),
+);
   }
 }
 
@@ -485,21 +492,17 @@ class _EventTile extends StatelessWidget {
       timeLabel = '';
     }
 
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          if (event.id.isNotEmpty) {
-            context.push('/schedule/${event.id}');
-          }
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      borderRadius: BorderRadius.circular(16),
+      onTap: () {
+        if (event.id.isNotEmpty) {
+          context.push('/schedule/${event.id}');
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
             children: [
               Container(
                 width: 4,
@@ -547,9 +550,8 @@ class _EventTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, size: 18),
-            ],
-          ),
+            const Icon(Icons.chevron_right, size: 18),
+          ],
         ),
       ),
     );

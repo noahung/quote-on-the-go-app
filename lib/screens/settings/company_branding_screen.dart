@@ -434,54 +434,38 @@ class _CompanyBrandingScreenState extends ConsumerState<CompanyBrandingScreen> {
                         maxLines: 3,
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _Field(
-                              label: 'Email',
-                              controller: _emailCtrl,
-                              enabled: canEdit,
-                              hint: 'contact@yourco.com',
-                              keyboardType: TextInputType.emailAddress,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _Field(
-                              label: 'Phone',
-                              controller: _phoneCtrl,
-                              enabled: canEdit,
-                              hint: '+44 123 456 7890',
-                              keyboardType: TextInputType.phone,
-                            ),
-                          ),
-                        ],
+                      _Field(
+                        label: 'Email',
+                        controller: _emailCtrl,
+                        enabled: canEdit,
+                        hint: 'contact@yourco.com',
+                        keyboardType: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _Field(
-                              label: 'Website',
-                              controller: _websiteCtrl,
-                              enabled: canEdit,
-                              hint: 'https://yourcompany.com',
-                              keyboardType: TextInputType.url,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _Field(
-                              label: 'Default Tax Rate (%)',
-                              controller: _taxRateCtrl,
-                              enabled: canEdit,
-                              hint: '20',
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                      decimal: true),
-                            ),
-                          ),
-                        ],
+                      _Field(
+                        label: 'Phone',
+                        controller: _phoneCtrl,
+                        enabled: canEdit,
+                        hint: '+44 123 456 7890',
+                        keyboardType: TextInputType.phone,
+                      ),
+                      const SizedBox(height: 12),
+                      _Field(
+                        label: 'Website',
+                        controller: _websiteCtrl,
+                        enabled: canEdit,
+                        hint: 'https://yourcompany.com',
+                        keyboardType: TextInputType.url,
+                      ),
+                      const SizedBox(height: 12),
+                      _Field(
+                        label: 'Default Tax Rate (%)',
+                        controller: _taxRateCtrl,
+                        enabled: canEdit,
+                        hint: '20',
+                        keyboardType:
+                            const TextInputType.numberWithOptions(
+                                decimal: true),
                       ),
                     ],
                   ),
@@ -513,28 +497,20 @@ class _CompanyBrandingScreenState extends ConsumerState<CompanyBrandingScreen> {
                         hint: 'Monzo Bank',
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _Field(
-                              label: 'Sort Code',
-                              controller: _sortCodeCtrl,
-                              enabled: canEdit,
-                              hint: '04-00-04',
-                              keyboardType: TextInputType.number,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _Field(
-                              label: 'Account Number',
-                              controller: _acctNumberCtrl,
-                              enabled: canEdit,
-                              hint: '12345678',
-                              keyboardType: TextInputType.number,
-                            ),
-                          ),
-                        ],
+                      _Field(
+                        label: 'Sort Code',
+                        controller: _sortCodeCtrl,
+                        enabled: canEdit,
+                        hint: '04-00-04',
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 12),
+                      _Field(
+                        label: 'Account Number',
+                        controller: _acctNumberCtrl,
+                        enabled: canEdit,
+                        hint: '12345678',
+                        keyboardType: TextInputType.number,
                       ),
                     ],
                   ),

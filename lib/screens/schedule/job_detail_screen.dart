@@ -8,6 +8,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../../models/models.dart';
+import '../../components/glass_card.dart';
+import '../../components/mesh_background.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/job_note_provider.dart';
 import '../../providers/job_media_provider.dart';
@@ -138,22 +140,25 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: NestedScrollView(
-        headerSliverBuilder: (_, __) => [
-          SliverAppBar(
-            expandedHeight: 110,
-            pinned: true,
-            backgroundColor: _jobColor,
-            foregroundColor: Colors.white,
-            title: Text(
-              widget.job.title,
-              style: const TextStyle(
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: NestedScrollView(
+          headerSliverBuilder: (_, __) => [
+            SliverAppBar(
+              expandedHeight: 110,
+              pinned: true,
+              backgroundColor: _jobColor.withOpacity(0.85),
+              foregroundColor: Colors.white,
+              title: Text(
+                widget.job.title,
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 18),
-              overflow: TextOverflow.ellipsis,
-            ),
+                  fontSize: 18,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () => context.pop(),
@@ -202,14 +207,28 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
             ),
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(48),
-              child: TabBar(
-                controller: _tabController,
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                indicatorColor: Colors.white,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white70,
-                tabs: _tabs,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: TabBar(
+                  controller: _tabController,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  dividerColor: Colors.transparent,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  labelColor: Colors.white,
+                  unselectedLabelColor: Colors.white.withValues(alpha: 0.65),
+                  labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  indicator: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  tabs: _tabs,
+                ),
               ),
             ),
           ),
@@ -226,7 +245,7 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
           ],
         ),
       ),
-    );
+    ));
   }
 }
 
@@ -891,28 +910,23 @@ class _NotesTabState extends ConsumerState<_NotesTab> {
                   ),
                 ),
                 onDismissed: (_) => _deleteNote(note.id),
-                child: Card(
-                  elevation: 0,
-                  color: colorScheme.surfaceContainerLow,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(note.content, style: textTheme.bodyMedium),
-                        const SizedBox(height: 8),
-                        Text(
-                          note.createdAt != null
-                              ? DateFormat('MMM d, yyyy h:mm a')
-                                  .format(note.createdAt!)
-                              : '',
-                          style: textTheme.labelSmall
-                              ?.copyWith(color: colorScheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
+                child: GlassCard(
+                  padding: const EdgeInsets.all(16),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(note.content, style: textTheme.bodyMedium),
+                      const SizedBox(height: 8),
+                      Text(
+                        note.createdAt != null
+                            ? DateFormat('MMM d, yyyy h:mm a')
+                                .format(note.createdAt!)
+                            : '',
+                        style: textTheme.labelSmall
+                            ?.copyWith(color: colorScheme.onSurfaceVariant),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -1034,32 +1048,28 @@ class _InfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 16, color: colorScheme.primary),
-                const SizedBox(width: 6),
-                Text(
-                  title.toUpperCase(),
-                  style: textTheme.labelSmall?.copyWith(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            child,
-          ],
-        ),
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      borderRadius: BorderRadius.circular(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: colorScheme.primary),
+              const SizedBox(width: 6),
+              Text(
+                title.toUpperCase(),
+                style: textTheme.labelSmall?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
       ),
     );
   }
@@ -1145,10 +1155,9 @@ class _QuotationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      borderRadius: BorderRadius.circular(16),
       child: ListTile(
         onTap: onTap,
         leading: Container(
@@ -1204,10 +1213,9 @@ class _InvoiceTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      borderRadius: BorderRadius.circular(16),
       child: ListTile(
         onTap: onTap,
         leading: Container(
@@ -1250,10 +1258,9 @@ class _ExpenseTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      borderRadius: BorderRadius.circular(16),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),

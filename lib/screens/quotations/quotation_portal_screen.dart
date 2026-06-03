@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
+import '../../components/glass_card.dart';
+import '../../components/mesh_background.dart';
 
 class QuotationPortalScreen extends ConsumerWidget {
   final String quotationId;
@@ -21,9 +23,10 @@ class QuotationPortalScreen extends ConsumerWidget {
       );
     }
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
-      body: CustomScrollView(
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: CustomScrollView(
         slivers: [
           _PortalAppBar(quotation: quotation),
           SliverPadding(
@@ -66,7 +69,7 @@ class QuotationPortalScreen extends ConsumerWidget {
           ),
         ],
       ),
-    );
+    ));
   }
 }
 
@@ -79,7 +82,7 @@ class _PortalAppBar extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return SliverAppBar(
       pinned: true,
-      backgroundColor: colorScheme.surface,
+      backgroundColor: Colors.transparent,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
         onPressed: () => context.pop(),
@@ -160,64 +163,57 @@ class _CompanyHeader extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final company = quotation.company;
 
-    return Card(
-      elevation: 0,
-      color: colorScheme.primaryContainer,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            if (company?.logoUrl != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  company!.logoUrl!,
-                  width: 52,
-                  height: 52,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _LogoFallback(
-                      name: company.name, colorScheme: colorScheme),
-                ),
-              )
-            else
-              _LogoFallback(
-                  name: company?.name ?? 'C', colorScheme: colorScheme),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    company?.name ?? 'Company',
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                  if (company?.email != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      company!.email!,
-                      style: textTheme.bodySmall?.copyWith(
-                          color:
-                              colorScheme.onPrimaryContainer.withOpacity(0.75)),
-                    ),
-                  ],
-                  if (company?.phone != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      company!.phone!,
-                      style: textTheme.bodySmall?.copyWith(
-                          color:
-                              colorScheme.onPrimaryContainer.withOpacity(0.75)),
-                    ),
-                  ],
-                ],
+    return GlassCard(
+      borderRadius: BorderRadius.circular(16),
+      child: Row(
+        children: [
+          if (company?.logoUrl != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                company!.logoUrl!,
+                width: 52,
+                height: 52,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _LogoFallback(
+                    name: company.name, colorScheme: colorScheme),
               ),
+            )
+          else
+            _LogoFallback(
+                name: company?.name ?? 'C', colorScheme: colorScheme),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  company?.name ?? 'Company',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                if (company?.email != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    company!.email!,
+                    style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant),
+                  ),
+                ],
+                if (company?.phone != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    company!.phone!,
+                    style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant),
+                  ),
+                ],
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -256,23 +252,16 @@ class _QuoteMetaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _MetaRow(label: 'Quote Number', value: quotation.quotationNumber),
-            const Divider(height: 20),
-            _MetaRow(label: 'Issue Date', value: quotation.date),
-            const Divider(height: 20),
-            _MetaRow(label: 'Expiry Date', value: quotation.expiryDate),
-          ],
-        ),
+    return GlassCard(
+      borderRadius: BorderRadius.circular(16),
+      child: Column(
+        children: [
+          _MetaRow(label: 'Quote Number', value: quotation.quotationNumber),
+          const Divider(height: 20),
+          _MetaRow(label: 'Issue Date', value: quotation.date),
+          const Divider(height: 20),
+          _MetaRow(label: 'Expiry Date', value: quotation.expiryDate),
+        ],
       ),
     );
   }
@@ -309,13 +298,9 @@ class _ClientAddressCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+    return GlassCard(
+      borderRadius: BorderRadius.circular(16),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Quote For',
@@ -345,10 +330,9 @@ class _ClientAddressCard extends StatelessWidget {
             ],
           ],
         ),
-      ),
-    );
+      );
+    }
   }
-}
 
 class _ItemsCard extends StatelessWidget {
   final Quotation quotation;
@@ -360,13 +344,9 @@ class _ItemsCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final currency = NumberFormat.currency(symbol: '£');
 
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+    return GlassCard(
+      borderRadius: BorderRadius.circular(16),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Services & Items',
@@ -442,10 +422,9 @@ class _ItemsCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
+    }
   }
-}
 
 class _TotalRow extends StatelessWidget {
   final String label;
@@ -488,13 +467,9 @@ class _NotesCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+    return GlassCard(
+      borderRadius: BorderRadius.circular(16),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Notes & Terms',
@@ -508,10 +483,9 @@ class _NotesCard extends StatelessWidget {
                     ?.copyWith(color: colorScheme.onSurfaceVariant)),
           ],
         ),
-      ),
-    );
+      );
+    }
   }
-}
 
 class _ActionButtons extends StatefulWidget {
   final Quotation quotation;
@@ -603,12 +577,9 @@ class _StatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
+    return GlassCard(
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: color.withOpacity(0.15), width: 1.5),
       child: Row(
         children: [
           Icon(icon, color: color),

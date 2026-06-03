@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../providers/providers.dart';
 import '../../models/models.dart';
 import '../../widgets/premium_empty_state.dart';
+import '../../theme/semantic_colors.dart';
+import '../../components/glass_card.dart';
 
 class InvoicesScreen extends ConsumerStatefulWidget {
   const InvoicesScreen({super.key});
@@ -46,6 +47,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     final invoicesAsync = ref.watch(invoicesStreamProvider);
     final company = ref.watch(companyProvider);
     final isPremium = company?.tier == 'premium';
@@ -55,10 +57,14 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
         0;
 
     return Scaffold(
+      backgroundColor: Colors.transparent, // Let global mesh gradient flow underneath
       appBar: AppBar(
-        title: Text(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: const Text(
           'Invoices',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
         actions: [
           IconButton(
@@ -72,11 +78,12 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
           data: (invoices) => TabBar(
             controller: _tabController,
             isScrollable: true,
-            labelStyle: GoogleFonts.poppins(
+            labelStyle: const TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.1,
             ),
-            unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
+            unselectedLabelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
             tabs: _tabs.map((tab) {
               final count = tab.status == null
                   ? invoices.length
@@ -105,20 +112,20 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+                Icon(Icons.error_outline, size: 48, color: semanticColors.error),
                 const SizedBox(height: 16),
-                Text(
+                const Text(
                   'Failed to load invoices',
-                  style: GoogleFonts.poppins(
+                  style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   error.toString(),
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  style: TextStyle(fontSize: 13, color: colorScheme.onSurface.withValues(alpha: 0.6)),
                 ),
                 const SizedBox(height: 16),
                 FilledButton.icon(
@@ -246,16 +253,16 @@ class _InvoiceCard extends StatelessWidget {
 
   const _InvoiceCard({required this.invoice});
 
-  Color _getStatusColor(String status) {
+  Color _getStatusColor(String status, SemanticColors semanticColors) {
     switch (status) {
       case 'Paid':
-        return Colors.green;
+        return semanticColors.success;
       case 'Sent':
-        return Colors.blue;
+        return semanticColors.info;
       case 'Overdue':
-        return Colors.red;
+        return semanticColors.error;
       case 'Draft':
-        return Colors.orange;
+        return semanticColors.accentOrange;
       default:
         return Colors.grey;
     }
@@ -264,12 +271,14 @@ class _InvoiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+    final statusColor = _getStatusColor(invoice.status, semanticColors);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        padding: EdgeInsets.zero,
         onTap: () => context.push('/invoices/${invoice.id}'),
-        borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -279,28 +288,29 @@ class _InvoiceCard extends StatelessWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: 10,
+                      vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(invoice.status).withOpacity(0.1),
+                      color: statusColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       invoice.status,
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: _getStatusColor(invoice.status),
+                        fontWeight: FontWeight.w700,
+                        color: statusColor,
                       ),
                     ),
                   ),
                   const Spacer(),
                   Text(
                     NumberFormat.currency(symbol: '£').format(invoice.total),
-                    style: GoogleFonts.poppins(
+                    style: const TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
                     ),
                   ),
                 ],
@@ -310,7 +320,8 @@ class _InvoiceCard extends StatelessWidget {
                 invoice.invoiceNumber,
                 style: TextStyle(
                   fontSize: 12,
-                  color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface.withValues(alpha: 0.55),
                 ),
               ),
               const SizedBox(height: 4),
@@ -318,7 +329,8 @@ class _InvoiceCard extends StatelessWidget {
                 invoice.customerName,
                 style: const TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
                 ),
               ),
               const SizedBox(height: 4),
@@ -326,20 +338,19 @@ class _InvoiceCard extends StatelessWidget {
                 invoice.customerEmail,
                 style: TextStyle(
                   fontSize: 13,
-                  color: Colors.grey.shade600,
+                  color: colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Row(
                 children: [
-                  Icon(Icons.calendar_today,
-                      size: 14, color: Colors.grey.shade500),
-                  const SizedBox(width: 4),
+                  Icon(Icons.calendar_today, size: 13, color: colorScheme.onSurface.withValues(alpha: 0.4)),
+                  const SizedBox(width: 6),
                   Text(
                     'Due: ${invoice.dueDate}',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey.shade500,
+                      color: colorScheme.onSurface.withValues(alpha: 0.45),
                     ),
                   ),
                 ],
@@ -363,7 +374,7 @@ class _CountBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(

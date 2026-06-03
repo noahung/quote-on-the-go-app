@@ -7,6 +7,9 @@ import 'package:uuid/uuid.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../widgets/widgets.dart';
+import '../../components/glass_card.dart';
+import '../../components/mesh_background.dart';
+import '../../components/pill_button.dart';
 
 class CreateInvoiceScreen extends ConsumerStatefulWidget {
   final Invoice? existingInvoice;
@@ -171,12 +174,12 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
               ? null
               : _notesController.text.trim(),
         );
-        await repository.createInvoice(invoice);
+        final newId = await repository.createInvoice(invoice);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Invoice created successfully')),
           );
-          context.pop();
+          context.go('/invoices/$newId');
         }
       }
     } catch (e) {
@@ -222,17 +225,19 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _isEditing ? 'Edit Invoice' : 'New Invoice',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: Text(
+            _isEditing ? 'Edit Invoice' : 'New Invoice',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => context.pop(),
+          ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => context.pop(),
-        ),
-      ),
       body: Stepper(
         type: StepperType.horizontal,
         currentStep: _currentStep,
@@ -256,34 +261,34 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
           }
         },
         controlsBuilder: (context, details) {
+          final colorScheme = Theme.of(context).colorScheme;
           return Padding(
             padding: const EdgeInsets.only(top: 24),
             child: Row(
               children: [
                 Expanded(
-                  child: FilledButton(
-                    onPressed: _isLoading ? null : details.onStepContinue,
-                    child: _isLoading && _currentStep == 2
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            _currentStep == 2
-                                ? (_isEditing
-                                    ? 'Save Changes'
-                                    : 'Create Invoice')
-                                : 'Next',
+                  child: _isLoading && _currentStep == 2
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            color: colorScheme.primary,
                           ),
-                  ),
+                        )
+                      : PillButton(
+                          text: _currentStep == 2
+                              ? (_isEditing ? 'Save Changes' : 'Create Invoice')
+                              : 'Next',
+                          onTap: details.onStepContinue,
+                        ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
                     onPressed: details.onStepCancel,
                     child: Text(_currentStep == 0 ? 'Cancel' : 'Back'),
                   ),
@@ -317,107 +322,114 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildCustomerStep() {
     final customers = ref.watch(customersProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (customers.isNotEmpty) ...[
-          DropdownButtonFormField<Customer?>(
-            initialValue: _selectedCustomer,
-            decoration: const InputDecoration(
-              labelText: 'Select Existing Customer',
-              prefixIcon: Icon(Icons.person_search),
-            ),
-            items: [
-              const DropdownMenuItem(
-                value: null,
-                child: Text('Manual entry...'),
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (customers.isNotEmpty) ...[
+            DropdownButtonFormField<Customer?>(
+              initialValue: _selectedCustomer,
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
-              ...customers.map((customer) {
-                return DropdownMenuItem(
-                  value: customer,
-                  child: Text(customer.name),
-                );
-              }),
-            ],
-            onChanged: (customer) {
-              if (customer != null) {
-                _onCustomerSelected(customer);
-              } else {
-                setState(() {
-                  _selectedCustomer = null;
-                  _customerNameController.clear();
-                  _customerEmailController.clear();
-                  _customerPhoneController.clear();
-                  _customerAddressController.clear();
-                });
-              }
-            },
-          ),
-          const SizedBox(height: 16),
-        ],
-        TextFormField(
-          controller: _customerNameController,
-          decoration: const InputDecoration(
-            labelText: 'Customer Name *',
-            prefixIcon: Icon(Icons.person_outline),
-          ),
-          textCapitalization: TextCapitalization.words,
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _customerEmailController,
-          decoration: const InputDecoration(
-            labelText: 'Email *',
-            prefixIcon: Icon(Icons.email_outlined),
-          ),
-          keyboardType: TextInputType.emailAddress,
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _customerPhoneController,
-          decoration: const InputDecoration(
-            labelText: 'Phone',
-            prefixIcon: Icon(Icons.phone_outlined),
-          ),
-          keyboardType: TextInputType.phone,
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _customerAddressController,
-          decoration: const InputDecoration(
-            labelText: 'Address',
-            prefixIcon: Icon(Icons.location_on_outlined),
-          ),
-          maxLines: 2,
-          textCapitalization: TextCapitalization.sentences,
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildDateField(
-                label: 'Invoice Date',
-                value: _date,
-                onTap: () => _pickDate(context, true),
+              decoration: const InputDecoration(
+                labelText: 'Select Existing Customer',
+                labelStyle: TextStyle(fontSize: 13),
+                prefixIcon: Icon(Icons.person_search),
               ),
+              items: [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('Manual entry...'),
+                ),
+                ...customers.map((customer) {
+                  return DropdownMenuItem(
+                    value: customer,
+                    child: Text(customer.name),
+                  );
+                }),
+              ],
+              onChanged: (customer) {
+                if (customer != null) {
+                  _onCustomerSelected(customer);
+                } else {
+                  setState(() {
+                    _selectedCustomer = null;
+                    _customerNameController.clear();
+                    _customerEmailController.clear();
+                    _customerPhoneController.clear();
+                    _customerAddressController.clear();
+                  });
+                }
+              },
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildDateField(
-                label: 'Due Date',
-                value: _dueDate,
-                onTap: () => _pickDate(context, false),
-              ),
-            ),
+            const SizedBox(height: 16),
           ],
-        ),
-      ],
+          TextFormField(
+            controller: _customerNameController,
+            style: const TextStyle(fontSize: 14),
+            decoration: const InputDecoration(
+              labelText: 'Customer Name *',
+              labelStyle: TextStyle(fontSize: 13),
+              prefixIcon: Icon(Icons.person_outline),
+            ),
+            textCapitalization: TextCapitalization.words,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _customerEmailController,
+            style: const TextStyle(fontSize: 14),
+            decoration: const InputDecoration(
+              labelText: 'Email *',
+              labelStyle: TextStyle(fontSize: 13),
+              prefixIcon: Icon(Icons.email_outlined),
+            ),
+            keyboardType: TextInputType.emailAddress,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _customerPhoneController,
+            style: const TextStyle(fontSize: 14),
+            decoration: const InputDecoration(
+              labelText: 'Phone',
+              labelStyle: TextStyle(fontSize: 13),
+              prefixIcon: Icon(Icons.phone_outlined),
+            ),
+            keyboardType: TextInputType.phone,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _customerAddressController,
+            style: const TextStyle(fontSize: 14),
+            decoration: const InputDecoration(
+              labelText: 'Address',
+              labelStyle: TextStyle(fontSize: 13),
+              prefixIcon: Icon(Icons.location_on_outlined),
+            ),
+            maxLines: 2,
+            textCapitalization: TextCapitalization.sentences,
+          ),
+          const SizedBox(height: 12),
+          _buildDateField(
+            label: 'Invoice Date',
+            value: _date,
+            onTap: () => _pickDate(context, true),
+          ),
+          const SizedBox(height: 12),
+          _buildDateField(
+            label: 'Due Date',
+            value: _dueDate,
+            onTap: () => _pickDate(context, false),
+          ),
+        ],
+      ),
     );
   }
 
@@ -432,9 +444,13 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: const Icon(Icons.calendar_today),
+          labelStyle: const TextStyle(fontSize: 13),
+          suffixIcon: const Icon(Icons.calendar_today, size: 18),
         ),
-        child: Text(value),
+        child: Text(
+          value,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        ),
       ),
     );
   }
@@ -475,49 +491,51 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
             itemCount: _lineItems.length,
             itemBuilder: (context, index) {
               final item = _lineItems[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  title: Text(
-                    item.description,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text(
-                    '${item.quantity} x ${NumberFormat.currency(symbol: '\u00A3').format(item.unitPrice)}',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        NumberFormat.currency(
-                          symbol: '\u00A3',
-                        ).format(item.total),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined),
-                        onPressed: () =>
-                            _showEditLineItemSheet(context, index, item),
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete_outline,
-                          color: Colors.red,
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: GlassCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      item.description,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      '${item.quantity} x ${NumberFormat.currency(symbol: '£').format(item.unitPrice)}',
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          NumberFormat.currency(symbol: '£').format(item.total),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        onPressed: () => _removeLineItem(index),
-                      ),
-                    ],
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined),
+                          onPressed: () =>
+                              _showEditLineItemSheet(context, index, item),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.delete_outline,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                          onPressed: () => _removeLineItem(index),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
             },
           ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         Center(
-          child: FilledButton.icon(
-            onPressed: () => _showAddLineItemSheet(context),
-            icon: const Icon(Icons.add),
-            label: const Text('Add Item'),
+          child: PillButton(
+            onTap: () => _showAddLineItemSheet(context),
+            icon: Icons.add,
+            text: 'Add Item',
           ),
         ),
       ],
@@ -708,145 +726,151 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
 
   Widget _buildEditReviewContent() {
     final currencyFormat = NumberFormat.currency(symbol: '£');
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Review Title
-          Text(
-            'Review & Confirm',
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 16),
-
           // Customer Summary
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Customer',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Customer',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: colorScheme.primary,
                   ),
-                  const SizedBox(height: 8),
-                  Text(_customerNameController.text),
-                  Text(
-                    _customerEmailController.text,
-                    style: TextStyle(color: Colors.grey.shade600),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                Text(_customerNameController.text, style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(
+                  _customerEmailController.text,
+                  style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
 
           // Items Summary
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Items',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Items',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: colorScheme.primary,
                   ),
-                  const SizedBox(height: 8),
-                  ..._lineItems.map((item) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${item.quantity}x ${item.description}',
-                              style: const TextStyle(fontSize: 13),
-                            ),
-                          ),
-                          Text(
-                            currencyFormat.format(item.total),
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                  const Divider(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Subtotal'),
-                      Text(currencyFormat.format(_subtotal)),
-                    ],
-                  ),
-                  if (_taxRate > 0) ...[
-                    const SizedBox(height: 4),
-                    Row(
+                ),
+                const SizedBox(height: 12),
+                ..._lineItems.map((item) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Tax (${_taxRate.toStringAsFixed(1)}%)'),
-                        Text(currencyFormat.format(_taxAmount)),
+                        Expanded(
+                          child: Text(
+                            '${item.quantity}x ${item.description}',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                        Text(
+                          currencyFormat.format(item.total),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
                       ],
                     ),
+                  );
+                }),
+                Divider(
+                  height: 24,
+                  thickness: 1,
+                  color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Subtotal', style: TextStyle(fontWeight: FontWeight.w500)),
+                    Text(currencyFormat.format(_subtotal), style: const TextStyle(fontWeight: FontWeight.w600)),
                   ],
-                  const SizedBox(height: 8),
+                ),
+                if (_taxRate > 0) ...[
+                  const SizedBox(height: 4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Total',
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                      ),
-                      Text(
-                        currencyFormat.format(_total),
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-                      ),
+                      Text('Tax (${_taxRate.toStringAsFixed(1)}%)', style: const TextStyle(fontWeight: FontWeight.w500)),
+                      Text(currencyFormat.format(_taxAmount), style: const TextStyle(fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ],
-              ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Total',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                    ),
+                    Text(
+                      currencyFormat.format(_total),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 20,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
 
-          // Tax Rate
-          TextFormField(
-            controller: _taxRateController,
-            decoration: const InputDecoration(
-              labelText: 'Tax Rate (%)',
-              prefixIcon: Icon(Icons.percent),
+          // Tax Rate & Notes
+          GlassCard(
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _taxRateController,
+                  style: const TextStyle(fontSize: 14),
+                  decoration: const InputDecoration(
+                    labelText: 'Tax Rate (%)',
+                    labelStyle: TextStyle(fontSize: 13),
+                    prefixIcon: Icon(Icons.percent),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (value) {
+                    setState(() {
+                      _taxRate = double.tryParse(value) ?? 0;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _notesController,
+                  style: const TextStyle(fontSize: 14),
+                  decoration: const InputDecoration(
+                    labelText: 'Notes',
+                    labelStyle: TextStyle(fontSize: 13),
+                    prefixIcon: Icon(Icons.notes),
+                  ),
+                  maxLines: 3,
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+              ],
             ),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (value) {
-              setState(() {
-                _taxRate = double.tryParse(value) ?? 0;
-              });
-            },
-          ),
-          const SizedBox(height: 12),
-
-          // Notes
-          TextFormField(
-            controller: _notesController,
-            decoration: const InputDecoration(
-              labelText: 'Notes',
-              prefixIcon: Icon(Icons.notes),
-            ),
-            maxLines: 3,
-            textCapitalization: TextCapitalization.sentences,
           ),
         ],
       ),
@@ -945,70 +969,83 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
     final aiState = ref.watch(aiGenerationStateProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Padding(
+    return GlassCard(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 16,
-        right: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        left: 20,
+        right: 20,
         top: 24,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            widget.existingItem != null ? 'Edit Item' : 'Add Items',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Mode Toggle
-          Container(
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
               children: [
-                Expanded(
-                  child: _ModeButton(
-                    icon: Icons.edit_outlined,
-                    label: 'Manual',
-                    isSelected: _mode == _ItemAddMode.manual,
-                    onTap: () => setState(() => _mode = _ItemAddMode.manual),
+                Text(
+                  widget.existingItem != null ? 'Edit Item' : 'Add Items',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
                   ),
                 ),
-                Expanded(
-                  child: _ModeButton(
-                    icon: isPremium ? Icons.auto_fix_high : Icons.lock_outline,
-                    label: 'AI Generate',
-                    isSelected: _mode == _ItemAddMode.ai,
-                    isPremium: isPremium,
-                    onTap: () {
-                      if (!isPremium) {
-                        _showPremiumUpgradeDialog(context);
-                        return;
-                      }
-                      setState(() => _mode = _ItemAddMode.ai);
-                    },
-                  ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20),
+                  onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-          // Content based on mode
-          if (_mode == _ItemAddMode.manual)
-            _buildManualEntryForm()
-          else
-            _buildAIGenerationForm(aiState, colorScheme),
+            // Mode Toggle
+            Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _ModeButton(
+                      icon: Icons.edit_outlined,
+                      label: 'Manual',
+                      isSelected: _mode == _ItemAddMode.manual,
+                      onTap: () => setState(() => _mode = _ItemAddMode.manual),
+                    ),
+                  ),
+                  Expanded(
+                    child: _ModeButton(
+                      icon: isPremium ? Icons.auto_fix_high : Icons.lock_outline,
+                      label: 'AI Generate',
+                      isSelected: _mode == _ItemAddMode.ai,
+                      isPremium: isPremium,
+                      onTap: () {
+                        if (!isPremium) {
+                          _showPremiumUpgradeDialog(context);
+                          return;
+                        }
+                        setState(() => _mode = _ItemAddMode.ai);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
 
-          const SizedBox(height: 16),
-        ],
+            // Content based on mode
+            if (_mode == _ItemAddMode.manual)
+              _buildManualEntryForm()
+            else
+              _buildAIGenerationForm(aiState, colorScheme),
+
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
@@ -1020,8 +1057,10 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
       children: [
         TextFormField(
           controller: _descriptionController,
+          style: const TextStyle(fontSize: 14),
           decoration: const InputDecoration(
             labelText: 'Description *',
+            labelStyle: TextStyle(fontSize: 13),
             prefixIcon: Icon(Icons.description_outlined),
           ),
           textCapitalization: TextCapitalization.sentences,
@@ -1033,8 +1072,10 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
               flex: 2,
               child: TextFormField(
                 controller: _quantityController,
+                style: const TextStyle(fontSize: 14),
                 decoration: const InputDecoration(
                   labelText: 'Qty *',
+                  labelStyle: TextStyle(fontSize: 13),
                   prefixIcon: Icon(Icons.numbers),
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
@@ -1047,8 +1088,10 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
               flex: 3,
               child: TextFormField(
                 controller: _priceController,
+                style: const TextStyle(fontSize: 14),
                 decoration: const InputDecoration(
                   labelText: 'Unit Price *',
+                  labelStyle: TextStyle(fontSize: 13),
                   prefixIcon: Icon(Icons.currency_pound),
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
@@ -1059,10 +1102,9 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
           ],
         ),
         const SizedBox(height: 24),
-        FilledButton(
-          onPressed: _addManualItem,
-          child:
-              Text(widget.existingItem != null ? 'Save Changes' : 'Add Item'),
+        PillButton(
+          onTap: _addManualItem,
+          text: widget.existingItem != null ? 'Save Changes' : 'Add Item',
         ),
       ],
     );
@@ -1083,7 +1125,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
             children: [
               Text(
                 'Generated Items (${aiState.generatedItems!.length})',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               TextButton.icon(
                 onPressed: () {
@@ -1102,20 +1144,24 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
               itemCount: aiState.generatedItems!.length,
               itemBuilder: (context, index) {
                 final item = aiState.generatedItems![index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    dense: true,
-                    title: Text(
-                      item.description,
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    subtitle: Text(
-                      '${item.quantity} x \u00A3${item.unitPrice.toStringAsFixed(2)}',
-                    ),
-                    trailing: Text(
-                      '\u00A3${item.total.toStringAsFixed(2)}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: GlassCard(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      title: Text(
+                        item.description,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Text(
+                        '${item.quantity} x £${item.unitPrice.toStringAsFixed(2)}',
+                      ),
+                      trailing: Text(
+                        '£${item.total.toStringAsFixed(2)}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                 );
@@ -1127,6 +1173,12 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
             children: [
               Expanded(
                 child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
                   onPressed: () {
                     ref.read(aiGenerationStateProvider.notifier).clear();
                   },
@@ -1136,10 +1188,10 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
               const SizedBox(width: 12),
               Expanded(
                 flex: 2,
-                child: FilledButton.icon(
-                  onPressed: () => _addGeneratedItems(aiState.generatedItems!),
-                  icon: const Icon(Icons.add),
-                  label: Text('Add ${aiState.generatedItems!.length} Items'),
+                child: PillButton(
+                  onTap: () => _addGeneratedItems(aiState.generatedItems!),
+                  icon: Icons.add,
+                  text: 'Add ${aiState.generatedItems!.length} Items',
                 ),
               ),
             ],
@@ -1155,8 +1207,10 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
       children: [
         TextFormField(
           controller: _aiPromptController,
+          style: const TextStyle(fontSize: 14),
           decoration: InputDecoration(
             labelText: 'Describe the job...',
+            labelStyle: const TextStyle(fontSize: 13),
             hintText:
                 'E.g., Install 5 split-system air conditioners in a 2-story office building. Include labor, copper piping, and electrical work.',
             prefixIcon: const Icon(Icons.auto_fix_high),
@@ -1189,22 +1243,11 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
           ),
         ],
         const SizedBox(height: 16),
-        FilledButton.icon(
-          onPressed:
-              aiState.isLoading || _aiPromptController.text.trim().isEmpty
-                  ? null
-                  : _generateAIItems,
-          icon: aiState.isLoading
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(Icons.auto_fix_high),
-          label: Text(aiState.isLoading ? 'Generating...' : 'Generate Items'),
+        PillButton(
+          isLoading: aiState.isLoading,
+          onTap: _aiPromptController.text.trim().isEmpty ? null : _generateAIItems,
+          icon: Icons.auto_fix_high,
+          text: aiState.isLoading ? 'Generating...' : 'Generate Items',
         ),
       ],
     );

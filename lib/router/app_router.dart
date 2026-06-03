@@ -229,6 +229,32 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          GoRoute(
+            path: '/schedule',
+            builder: (context, state) => const ScheduleScreen(),
+            routes: [
+              GoRoute(
+                path: 'new',
+                builder: (context, state) => const CreateJobScreen(),
+              ),
+              GoRoute(
+                path: ':id',
+                builder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  return JobDetailScreen(jobId: id);
+                },
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    builder: (context, state) {
+                      final event = state.extra as CalendarEvent?;
+                      return CreateJobScreen(event: event);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
         ],
       ),
       // Routes outside shell (no bottom nav)
@@ -257,28 +283,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return ServiceDetailScreen(serviceId: id);
-        },
-      ),
-      GoRoute(
-        path: '/schedule',
-        builder: (context, state) => const ScheduleScreen(),
-      ),
-      GoRoute(
-        path: '/schedule/new',
-        builder: (context, state) => const CreateJobScreen(),
-      ),
-      GoRoute(
-        path: '/schedule/:id',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return JobDetailScreen(jobId: id);
-        },
-      ),
-      GoRoute(
-        path: '/schedule/:id/edit',
-        builder: (context, state) {
-          final event = state.extra as CalendarEvent?;
-          return CreateJobScreen(event: event);
         },
       ),
       GoRoute(

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../models/calendar_event.dart';
 import '../../providers/providers.dart';
+import '../../components/glass_card.dart';
+import '../../components/mesh_background.dart';
 
 class MonthlyScheduleScreen extends ConsumerStatefulWidget {
   const MonthlyScheduleScreen({super.key});
@@ -72,10 +74,12 @@ class _MonthlyScheduleScreenState extends ConsumerState<MonthlyScheduleScreen> {
     final textTheme = Theme.of(context).textTheme;
     final scheduleAsync = ref.watch(scheduleStreamProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Monthly Schedule',
-            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: Text('Monthly Schedule',
+              style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
             icon: const Icon(Icons.today),
@@ -101,70 +105,76 @@ class _MonthlyScheduleScreenState extends ConsumerState<MonthlyScheduleScreen> {
           final selectedEvents = _eventsForSelectedOrAll(events);
           return Column(
             children: [
-              // Month navigator header
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.chevron_left),
-                      onPressed: _previousMonth,
-                    ),
-                    Text(
-                      DateFormat('MMMM yyyy').format(_focusedMonth),
-                      style: textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.chevron_right),
-                      onPressed: _nextMonth,
-                    ),
-                  ],
-                ),
-              ),
-
-              // Day-of-week headers
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Row(
-                  children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-                      .map((d) => Expanded(
-                            child: Center(
-                              child: Text(
-                                d,
-                                style: textTheme.labelSmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: GlassCard(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Column(
+                    children: [
+                      // Month navigator header
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.chevron_left),
+                              onPressed: _previousMonth,
                             ),
-                          ))
-                      .toList(),
+                            Text(
+                              DateFormat('MMMM yyyy').format(_focusedMonth),
+                              style: textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.chevron_right),
+                              onPressed: _nextMonth,
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Day-of-week headers
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Row(
+                          children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                              .map((d) => Expanded(
+                                    child: Center(
+                                      child: Text(
+                                        d,
+                                        style: textTheme.labelSmall?.copyWith(
+                                          color: colorScheme.onSurfaceVariant,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ))
+                              .toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      // Calendar grid
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: _CalendarGrid(
+                          focusedMonth: _focusedMonth,
+                          selectedDay: _selectedDay,
+                          events: events,
+                          onDaySelected: (day) {
+                            setState(() {
+                              _selectedDay = _selectedDay?.isAtSameMomentAs(day) == true
+                                  ? null
+                                  : day;
+                            });
+                          },
+                          eventsForDay: _eventsForDay,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 4),
-
-              // Calendar grid
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: _CalendarGrid(
-                  focusedMonth: _focusedMonth,
-                  selectedDay: _selectedDay,
-                  events: events,
-                  onDaySelected: (day) {
-                    setState(() {
-                      _selectedDay = _selectedDay?.isAtSameMomentAs(day) == true
-                          ? null
-                          : day;
-                    });
-                  },
-                  eventsForDay: _eventsForDay,
-                ),
-              ),
-
-              const Divider(height: 24),
+              const SizedBox(height: 12),
 
               // Event list for selected day / month
               Expanded(
@@ -189,7 +199,7 @@ class _MonthlyScheduleScreenState extends ConsumerState<MonthlyScheduleScreen> {
           );
         },
       ),
-    );
+    ));
   }
 }
 
@@ -321,11 +331,9 @@ class _EventListTile extends StatelessWidget {
       eventColor = colorScheme.primary;
     }
 
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      borderRadius: BorderRadius.circular(16),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
