@@ -36,8 +36,12 @@ import '../screens/schedule/schedule_screen.dart';
 import '../screens/schedule/create_job_screen.dart';
 import '../screens/schedule/job_detail_screen.dart';
 import '../screens/workflows/workflows_screen.dart';
+import '../screens/analytics/analytics_screen.dart';
+import '../screens/collaboration/collaboration_screen.dart';
+import '../screens/pricing/smart_pricing_screen.dart';
 import '../screens/auth/onboarding_screen.dart';
 import '../screens/auth/email_verification_screen.dart';
+import '../screens/shared/in_app_web_view_screen.dart';
 
 /// Converts a Firebase auth stream into a [Listenable] for GoRouter's
 /// refreshListenable, so the router re-evaluates redirects without being
@@ -128,9 +132,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/reset-password',
         builder: (context, state) => const ResetPasswordScreen(),
-      ),
-
-      // Main app shell with bottom navigation
+      ),      // Main app shell with bottom navigation
       ShellRoute(
         builder: (context, state, child) => ShellScaffold(child: child),
         routes: [
@@ -141,123 +143,142 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/quotations',
             builder: (context, state) => const QuotationsScreen(),
-            routes: [
-              GoRoute(
-                path: 'new',
-                builder: (context, state) => const CreateQuotationScreen(),
-              ),
-              GoRoute(
-                path: ':id',
-                builder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return QuotationDetailScreen(quotationId: id);
-                },
-                routes: [
-                  GoRoute(
-                    path: 'portal',
-                    builder: (context, state) {
-                      final id = state.pathParameters['id']!;
-                      return QuotationPortalScreen(quotationId: id);
-                    },
-                  ),
-                  GoRoute(
-                    path: 'edit',
-                    builder: (context, state) {
-                      final quotation = state.extra as Quotation?;
-                      return CreateQuotationScreen(
-                          existingQuotation: quotation);
-                    },
-                  ),
-                ],
-              ),
-            ],
           ),
           GoRoute(
             path: '/invoices',
             builder: (context, state) => const InvoicesScreen(),
-            routes: [
-              GoRoute(
-                path: 'new',
-                builder: (context, state) => const CreateInvoiceScreen(),
-              ),
-              GoRoute(
-                path: ':id',
-                builder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return InvoiceDetailScreen(invoiceId: id);
-                },
-                routes: [
-                  GoRoute(
-                    path: 'portal',
-                    builder: (context, state) {
-                      final id = state.pathParameters['id']!;
-                      return InvoicePortalScreen(invoiceId: id);
-                    },
-                  ),
-                  GoRoute(
-                    path: 'edit',
-                    builder: (context, state) {
-                      final invoice = state.extra as Invoice?;
-                      return CreateInvoiceScreen(existingInvoice: invoice);
-                    },
-                  ),
-                ],
-              ),
-            ],
           ),
           GoRoute(
             path: '/customers',
             builder: (context, state) => const CustomersScreen(),
-            routes: [
-              GoRoute(
-                path: 'new',
-                builder: (context, state) => const AddEditCustomerScreen(),
-              ),
-              GoRoute(
-                path: ':id',
-                builder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return CustomerDetailScreen(customerId: id);
-                },
-              ),
-              GoRoute(
-                path: ':id/edit',
-                builder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return AddEditCustomerScreen(customerId: id);
-                },
-              ),
-            ],
           ),
           GoRoute(
             path: '/schedule',
             builder: (context, state) => const ScheduleScreen(),
-            routes: [
-              GoRoute(
-                path: 'new',
-                builder: (context, state) => const CreateJobScreen(),
-              ),
-              GoRoute(
-                path: ':id',
-                builder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return JobDetailScreen(jobId: id);
-                },
-                routes: [
-                  GoRoute(
-                    path: 'edit',
-                    builder: (context, state) {
-                      final event = state.extra as CalendarEvent?;
-                      return CreateJobScreen(event: event);
-                    },
-                  ),
-                ],
-              ),
-            ],
+          ),
+          GoRoute(
+            path: '/workflows',
+            builder: (context, state) => const WorkflowsScreen(),
+          ),
+          GoRoute(
+            path: '/analytics',
+            builder: (context, state) => const AnalyticsScreen(),
+          ),
+          GoRoute(
+            path: '/pricing',
+            builder: (context, state) => const SmartPricingScreen(),
           ),
         ],
       ),
+
       // Routes outside shell (no bottom nav)
+      GoRoute(
+        path: '/web-preview',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final url = extra?['url'] as String? ?? state.uri.queryParameters['url'] ?? '';
+          final title = extra?['title'] as String? ?? state.uri.queryParameters['title'] ?? 'Preview';
+          return InAppWebViewScreen(url: url, title: title);
+        },
+      ),
+      GoRoute(
+        path: '/quotations/new',
+        builder: (context, state) => const CreateQuotationScreen(),
+      ),
+      GoRoute(
+        path: '/quotations/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return QuotationDetailScreen(quotationId: id);
+        },
+      ),
+      GoRoute(
+        path: '/quotations/:id/portal',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return QuotationPortalScreen(quotationId: id);
+        },
+      ),
+      GoRoute(
+        path: '/quotations/:id/edit',
+        builder: (context, state) {
+          final quotation = state.extra as Quotation?;
+          return CreateQuotationScreen(existingQuotation: quotation);
+        },
+      ),
+
+      GoRoute(
+        path: '/invoices/new',
+        builder: (context, state) => const CreateInvoiceScreen(),
+      ),
+      GoRoute(
+        path: '/invoices/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return InvoiceDetailScreen(invoiceId: id);
+        },
+      ),
+      GoRoute(
+        path: '/invoices/:id/portal',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return InvoicePortalScreen(invoiceId: id);
+        },
+      ),
+      GoRoute(
+        path: '/invoices/:id/edit',
+        builder: (context, state) {
+          final invoice = state.extra as Invoice?;
+          return CreateInvoiceScreen(existingInvoice: invoice);
+        },
+      ),
+
+      GoRoute(
+        path: '/customers/new',
+        builder: (context, state) => const AddEditCustomerScreen(),
+      ),
+      GoRoute(
+        path: '/customers/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CustomerDetailScreen(customerId: id);
+        },
+      ),
+      GoRoute(
+        path: '/customers/:id/edit',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return AddEditCustomerScreen(customerId: id);
+        },
+      ),
+
+      GoRoute(
+        path: '/schedule/new',
+        builder: (context, state) => const CreateJobScreen(),
+      ),
+      GoRoute(
+        path: '/schedule/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return JobDetailScreen(jobId: id);
+        },
+      ),
+      GoRoute(
+        path: '/schedule/:id/edit',
+        builder: (context, state) {
+          final event = state.extra as CalendarEvent?;
+          return CreateJobScreen(event: event);
+        },
+      ),
+
+      GoRoute(
+        path: '/collaboration/:type/:id',
+        builder: (context, state) {
+          final type = state.pathParameters['type']!;
+          final id = state.pathParameters['id']!;
+          return CollaborationScreen(documentType: type, documentId: id);
+        },
+      ),
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
@@ -285,10 +306,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           return ServiceDetailScreen(serviceId: id);
         },
       ),
-      GoRoute(
-        path: '/workflows',
-        builder: (context, state) => const WorkflowsScreen(),
-      ),
+
       GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfileMenuScreen(),

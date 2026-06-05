@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../components/glass_card.dart';
+import '../../components/mesh_background.dart';
 import '../../models/service.dart';
 import '../../providers/providers.dart';
 import '../../widgets/widgets.dart';
@@ -14,42 +15,55 @@ class ServicesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final servicesAsync = ref.watch(servicesStreamProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Services',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => context.push('/services/new'),
-          ),
-        ],
-      ),
-      body: servicesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
-        data: (services) {
-          if (services.isEmpty) {
-            return AppEmptyState(
-              icon: Icons.construction,
-              title: 'No services yet',
-              subtitle: 'Add your service offerings here.',
-              actionLabel: 'Add Service',
-              onAction: () => context.push('/services/new'),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: services.length,
-            itemBuilder: (context, index) {
-              final service = services[index];
-              return _ServiceCard(service: service);
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/');
+              }
             },
-          );
-        },
+          ),
+          title: const Text(
+            'Services',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () => context.push('/services/new'),
+            ),
+          ],
+        ),
+        body: servicesAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('Error: $err')),
+          data: (services) {
+            if (services.isEmpty) {
+              return AppEmptyState(
+                icon: Icons.construction,
+                title: 'No services yet',
+                subtitle: 'Add your service offerings here.',
+                actionLabel: 'Add Service',
+                onAction: () => context.push('/services/new'),
+              );
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: services.length,
+              itemBuilder: (context, index) {
+                final service = services[index];
+                return _ServiceCard(service: service);
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -64,10 +78,11 @@ class _ServiceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
         padding: const EdgeInsets.all(16),
+        onTap: () => context.push('/services/${service.id}'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -77,7 +92,7 @@ class _ServiceCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     service.name,
-                    style: GoogleFonts.poppins(
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -86,7 +101,7 @@ class _ServiceCard extends StatelessWidget {
                 ),
                 Text(
                   NumberFormat.currency(symbol: '£').format(service.price),
-                  style: GoogleFonts.poppins(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: colorScheme.primary,

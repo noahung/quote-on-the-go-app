@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../../components/mesh_background.dart';
+import '../../components/glass_card.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 
@@ -32,49 +34,53 @@ class TeamManagementScreen extends ConsumerWidget {
     final isOwner =
         currentUser?.role == 'owner' || currentUser?.role == 'admin';
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/settings');
+              }
+            },
+          ),
+          title: Text('Team Management',
+              style:
+                  textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+          actions: [
+            if (isOwner)
+              IconButton(
+                icon: const Icon(Icons.person_add_outlined),
+                tooltip: 'Invite member',
+                onPressed: () => _showInviteDialog(context, ref),
+              ),
+          ],
         ),
-        title: Text('Team Management',
-            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
-        actions: [
-          if (isOwner)
-            IconButton(
-              icon: const Icon(Icons.person_add_outlined),
-              tooltip: 'Invite member',
-              onPressed: () => _showInviteDialog(context, ref),
-            ),
-        ],
-      ),
-      body: teamAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (members) {
-          if (members.isEmpty) {
-            return _EmptyTeam(
-                isOwner: isOwner,
-                onInvite: () => _showInviteDialog(context, ref));
-          }
+        body: teamAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
+          data: (members) {
+            if (members.isEmpty) {
+              return _EmptyTeam(
+                  isOwner: isOwner,
+                  onInvite: () => _showInviteDialog(context, ref));
+            }
 
-          // Sort: owners first, then admins, then members
-          final sorted = [...members]..sort((a, b) {
-              const order = {'owner': 0, 'admin': 1, 'member': 2};
-              return (order[a.role] ?? 3).compareTo(order[b.role] ?? 3);
-            });
+            // Sort: owners first, then admins, then members
+            final sorted = [...members]..sort((a, b) {
+                const order = {'owner': 0, 'admin': 1, 'member': 2};
+                return (order[a.role] ?? 3).compareTo(order[b.role] ?? 3);
+              });
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              // Summary card
-              Card(
-                elevation: 0,
-                color: colorScheme.primaryContainer,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                child: Padding(
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                // Summary card
+                GlassCard(
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
@@ -88,14 +94,13 @@ class TeamManagementScreen extends ConsumerWidget {
                             '${members.length} Team Member${members.length == 1 ? '' : 's'}',
                             style: textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: colorScheme.onPrimaryContainer,
+                              color: colorScheme.primary,
                             ),
                           ),
                           Text(
                             '${members.where((m) => m.role == 'owner' || m.role == 'admin').length} admin(s)',
-                            style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onPrimaryContainer
-                                    .withOpacity(0.75)),
+                            style: textTheme.bodySmall
+                                ?.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -108,21 +113,21 @@ class TeamManagementScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Member list
-              ...sorted.map((member) => _MemberTile(
-                    member: member,
-                    isCurrentUser: member.uid == currentUser?.uid,
-                    canManage: isOwner && member.uid != currentUser?.uid,
-                    onRoleChange: (newRole) =>
-                        _updateRole(context, ref, member.uid, newRole),
-                    onRemove: () => _confirmRemove(context, ref, member),
-                  )),
-            ],
-          );
-        },
+                // Member list
+                ...sorted.map((member) => _MemberTile(
+                      member: member,
+                      isCurrentUser: member.uid == currentUser?.uid,
+                      canManage: isOwner && member.uid != currentUser?.uid,
+                      onRoleChange: (newRole) =>
+                          _updateRole(context, ref, member.uid, newRole),
+                      onRemove: () => _confirmRemove(context, ref, member),
+                    )),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -358,97 +363,98 @@ class _MemberTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Card(
-      elevation: 0,
-      color:
-          isCurrentUser ? colorScheme.surfaceContainerLow : colorScheme.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          radius: 22,
-          backgroundColor: colorScheme.primaryContainer,
-          child: Text(_initials,
-              style: TextStyle(
-                  color: colorScheme.primary, fontWeight: FontWeight.bold)),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                member.displayName ?? member.email ?? 'Unknown',
-                style:
-                    textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-                overflow: TextOverflow.ellipsis,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: GlassCard(
+        padding: EdgeInsets.zero,
+        child: ListTile(
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          leading: CircleAvatar(
+            radius: 22,
+            backgroundColor: colorScheme.primaryContainer,
+            child: Text(_initials,
+                style: TextStyle(
+                    color: colorScheme.primary, fontWeight: FontWeight.bold)),
+          ),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  member.displayName ?? member.email ?? 'Unknown',
+                  style: textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-            if (isCurrentUser) ...[
-              const SizedBox(width: 4),
+              if (isCurrentUser) ...[
+                const SizedBox(width: 4),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text('You',
+                      style: textTheme.labelSmall
+                          ?.copyWith(color: colorScheme.onSurfaceVariant)),
+                ),
+              ],
+            ],
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (member.email != null)
+                Text(member.email!,
+                    style: textTheme.bodySmall
+                        ?.copyWith(color: colorScheme.onSurfaceVariant)),
+              const SizedBox(height: 4),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
+                  color: _roleBg(colorScheme),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text('You',
-                    style: textTheme.labelSmall
-                        ?.copyWith(color: colorScheme.onSurfaceVariant)),
+                child: Text(
+                  member.role.substring(0, 1).toUpperCase() +
+                      member.role.substring(1),
+                  style: textTheme.labelSmall?.copyWith(
+                      color: _roleColor(colorScheme),
+                      fontWeight: FontWeight.w600),
+                ),
               ),
             ],
-          ],
+          ),
+          trailing: canManage
+              ? PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value) {
+                    if (value == 'remove') {
+                      onRemove();
+                    } else {
+                      onRoleChange(value);
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    if (member.role != 'admin')
+                      const PopupMenuItem(
+                          value: 'admin', child: Text('Make Admin')),
+                    if (member.role != 'member')
+                      const PopupMenuItem(
+                          value: 'member', child: Text('Make Member')),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 'remove',
+                      child: Text('Remove',
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.error)),
+                    ),
+                  ],
+                )
+              : null,
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (member.email != null)
-              Text(member.email!,
-                  style: textTheme.bodySmall
-                      ?.copyWith(color: colorScheme.onSurfaceVariant)),
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: _roleBg(colorScheme),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                member.role.substring(0, 1).toUpperCase() +
-                    member.role.substring(1),
-                style: textTheme.labelSmall?.copyWith(
-                    color: _roleColor(colorScheme),
-                    fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-        trailing: canManage
-            ? PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert),
-                onSelected: (value) {
-                  if (value == 'remove') {
-                    onRemove();
-                  } else {
-                    onRoleChange(value);
-                  }
-                },
-                itemBuilder: (_) => [
-                  if (member.role != 'admin')
-                    const PopupMenuItem(
-                        value: 'admin', child: Text('Make Admin')),
-                  if (member.role != 'member')
-                    const PopupMenuItem(
-                        value: 'member', child: Text('Make Member')),
-                  const PopupMenuDivider(),
-                  PopupMenuItem(
-                    value: 'remove',
-                    child: Text('Remove',
-                        style: TextStyle(
-                            color: Theme.of(context).colorScheme.error)),
-                  ),
-                ],
-              )
-            : null,
       ),
     );
   }

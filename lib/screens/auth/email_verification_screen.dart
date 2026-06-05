@@ -93,8 +93,7 @@ class _EmailVerificationScreenState
     }
   }
 
-  String get _enteredCode =>
-      _controllers.map((c) => c.text).join();
+  String get _enteredCode => _controllers.map((c) => c.text).join();
 
   Future<void> _verifyCode() async {
     final code = _enteredCode;
@@ -226,7 +225,8 @@ class _EmailVerificationScreenState
                 // OTP boxes
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: List.generate(6, (i) => _buildDigitBox(i, colorScheme)),
+                  children:
+                      List.generate(6, (i) => _buildDigitBox(i, colorScheme)),
                 ),
                 const SizedBox(height: 24),
 
@@ -240,12 +240,14 @@ class _EmailVerificationScreenState
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.error_outline, color: colorScheme.error, size: 20),
+                        Icon(Icons.error_outline,
+                            color: colorScheme.error, size: 20),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             _errorMessage!,
-                            style: TextStyle(color: colorScheme.error, fontSize: 13),
+                            style: TextStyle(
+                                color: colorScheme.error, fontSize: 13),
                           ),
                         ),
                       ],

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class PremiumEmptyState extends StatelessWidget {
   final IconData icon;
@@ -32,9 +31,11 @@ class PremiumEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final hasLimit = limit != null && limit! > 0;
     final isAtLimit = hasLimit && currentCount >= limit!;
-    final isNearLimit = hasLimit && currentCount >= (limit! * 0.8).floor() && !isAtLimit;
+    final isNearLimit =
+        hasLimit && currentCount >= (limit! * 0.8).floor() && !isAtLimit;
     final usagePercent = hasLimit ? (currentCount / limit!) : 0.0;
 
     return Center(
@@ -46,15 +47,14 @@ class PremiumEmptyState extends StatelessWidget {
             Icon(
               icon,
               size: 64,
-              color: Colors.grey.shade400,
+              color: colorScheme.outlineVariant,
             ),
             const SizedBox(height: 16),
             Text(
               title,
-              style: GoogleFonts.poppins(
-                fontSize: 18,
+              style: textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: Colors.grey.shade600,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
             if (subtitle != null) ...[
@@ -62,7 +62,9 @@ class PremiumEmptyState extends StatelessWidget {
               Text(
                 subtitle!,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey.shade500),
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                ),
               ),
             ],
             // Usage indicator for free tier
@@ -72,17 +74,17 @@ class PremiumEmptyState extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: isAtLimit
-                      ? Colors.red.shade50
+                      ? colorScheme.error.withValues(alpha: 0.06)
                       : isNearLimit
-                          ? Colors.amber.shade50
-                          : Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
+                          ? colorScheme.primary.withValues(alpha: 0.06)
+                          : colorScheme.onSurface.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isAtLimit
-                        ? Colors.red.shade200
+                        ? colorScheme.error.withValues(alpha: 0.2)
                         : isNearLimit
-                            ? Colors.amber.shade200
-                            : Colors.grey.shade200,
+                            ? colorScheme.primary.withValues(alpha: 0.2)
+                            : colorScheme.outlineVariant,
                   ),
                 ),
                 child: Column(
@@ -92,21 +94,19 @@ class PremiumEmptyState extends StatelessWidget {
                       children: [
                         Text(
                           'Free tier usage',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                         Text(
                           '$currentCount of $limit $itemName',
-                          style: TextStyle(
-                            fontSize: 12,
+                          style: textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: isAtLimit
-                                ? Colors.red
+                                ? colorScheme.error
                                 : isNearLimit
-                                    ? Colors.amber.shade700
-                                    : Colors.grey.shade600,
+                                    ? colorScheme.primary
+                                    : colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -117,16 +117,13 @@ class PremiumEmptyState extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: usagePercent,
                         minHeight: 6,
-                        backgroundColor: isAtLimit
-                            ? Colors.red.shade100
-                            : isNearLimit
-                                ? Colors.amber.shade100
-                                : Colors.grey.shade200,
+                        backgroundColor:
+                            colorScheme.onSurface.withValues(alpha: 0.08),
                         valueColor: AlwaysStoppedAnimation<Color>(
                           isAtLimit
-                              ? Colors.red
+                              ? colorScheme.error
                               : isNearLimit
-                                  ? Colors.amber
+                                  ? colorScheme.primary
                                   : colorScheme.primary,
                         ),
                       ),
@@ -138,9 +135,10 @@ class PremiumEmptyState extends StatelessWidget {
                             ? 'You\'ve reached your limit. Upgrade to create more.'
                             : 'You\'re approaching your limit. Upgrade for unlimited $itemName.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isAtLimit ? Colors.red : Colors.amber.shade700,
+                        style: textTheme.labelSmall?.copyWith(
+                          color: isAtLimit
+                              ? colorScheme.error
+                              : colorScheme.primary,
                         ),
                       ),
                     ],
@@ -161,12 +159,13 @@ class PremiumEmptyState extends StatelessWidget {
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: onUpgrade,
-                icon: const Icon(Icons.workspace_premium, color: Colors.amber),
+                icon: Icon(Icons.workspace_premium, color: colorScheme.primary),
                 label: const Text('Upgrade to Pro'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.amber.shade700,
-                  side: BorderSide(color: Colors.amber.shade200),
-                  backgroundColor: Colors.amber.shade50,
+                  foregroundColor: colorScheme.primary,
+                  side: BorderSide(
+                      color: colorScheme.primary.withValues(alpha: 0.4)),
+                  backgroundColor: colorScheme.primary.withValues(alpha: 0.05),
                 ),
               ),
             ],
@@ -174,11 +173,10 @@ class PremiumEmptyState extends StatelessWidget {
             if (isPremium) ...[
               const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.amber.shade100, Colors.orange.shade100],
-                  ),
+                  color: colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -187,15 +185,14 @@ class PremiumEmptyState extends StatelessWidget {
                     Icon(
                       Icons.workspace_premium,
                       size: 16,
-                      color: Colors.amber.shade700,
+                      color: colorScheme.primary,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       'Premium Plan',
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: textTheme.labelSmall?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: Colors.amber.shade700,
+                        color: colorScheme.primary,
                       ),
                     ),
                   ],

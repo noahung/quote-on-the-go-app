@@ -86,7 +86,7 @@ class DocumentPreview extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -97,26 +97,25 @@ class DocumentPreview extends StatelessWidget {
             children: [
               // Header
               _buildHeader(colorScheme),
-              
+
               const Divider(height: 1),
-              
+
               // Bill To & Dates
               _buildBillToAndDates(colorScheme),
-              
+
               const Divider(height: 1),
-              
+
               // Items Table
               _buildItemsTable(colorScheme),
-              
+
               const Divider(height: 1),
-              
+
               // Totals
               _buildTotals(colorScheme),
-              
+
               // Notes
-              if (notes != null && notes!.isNotEmpty)
-                _buildNotes(colorScheme),
-              
+              if (notes != null && notes!.isNotEmpty) _buildNotes(colorScheme),
+
               // Footer
               _buildFooter(colorScheme),
             ],
@@ -178,7 +177,7 @@ class DocumentPreview extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // Document Title
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -277,7 +276,7 @@ class DocumentPreview extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // Dates
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -294,10 +293,9 @@ class DocumentPreview extends StatelessWidget {
 
   Widget _buildDateRow(String label, String dateStr) {
     final date = DateTime.tryParse(dateStr);
-    final formattedDate = date != null
-        ? DateFormat('d MMM, yyyy').format(date)
-        : dateStr;
-    
+    final formattedDate =
+        date != null ? DateFormat('d MMM, yyyy').format(date) : dateStr;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -381,7 +379,7 @@ class DocumentPreview extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // Item Rows
           ...items.map((item) => _buildItemRow(item)),
         ],
@@ -464,7 +462,9 @@ class DocumentPreview extends StatelessWidget {
               children: [
                 _buildTotalRow('Subtotal', subtotal, isBold: false),
                 if (taxRate != null && taxRate! > 0 && taxAmount != null)
-                  _buildTotalRow('VAT (${taxRate!.toStringAsFixed(0)}%)', taxAmount!, isBold: false),
+                  _buildTotalRow(
+                      'VAT (${taxRate!.toStringAsFixed(0)}%)', taxAmount!,
+                      isBold: false),
                 const Divider(height: 16),
                 _buildTotalRow('Total', total, isBold: true),
               ],
@@ -536,7 +536,7 @@ class DocumentPreview extends StatelessWidget {
     final formattedSecondaryDate = secondaryDateValue != null
         ? DateFormat('d MMM, yyyy').format(secondaryDateValue)
         : secondaryDate;
-    
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),

@@ -191,6 +191,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/');
+              }
+            },
+          ),
           title: const Text(
             'Settings',
             style: TextStyle(fontWeight: FontWeight.w700),
@@ -263,13 +273,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   if (company != null) ...[
                     const SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
                         gradient: company.tier == 'premium'
                             ? LinearGradient(
                                 colors: [
                                   colorScheme.primary,
-                                  Color.lerp(colorScheme.primary, Colors.orangeAccent, 0.4)!,
+                                  Color.lerp(colorScheme.primary,
+                                      Colors.orangeAccent, 0.4)!,
                                 ],
                               )
                             : null,
@@ -280,7 +292,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         boxShadow: company.tier == 'premium'
                             ? [
                                 BoxShadow(
-                                  color: colorScheme.primary.withValues(alpha: 0.24),
+                                  color: colorScheme.primary
+                                      .withValues(alpha: 0.24),
                                   blurRadius: 12,
                                   offset: const Offset(0, 4),
                                 ),
@@ -316,7 +329,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 subtitle: Text(
                   company?.email ?? 'Tap to edit branding',
-                  style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                  style: TextStyle(
+                      color: colorScheme.onSurface.withValues(alpha: 0.6)),
                 ),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                 onTap: () => context.push('/company-branding'),
@@ -331,22 +345,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 children: [
                   ListTile(
-                    leading: Icon(Icons.person_outline, color: colorScheme.primary),
-                    title: const Text('Edit Profile', style: TextStyle(fontWeight: FontWeight.w600)),
+                    leading:
+                        Icon(Icons.person_outline, color: colorScheme.primary),
+                    title: const Text('Edit Profile',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () => _showEditProfileDialog(context, ref),
                   ),
                   _buildSubtleDivider(isDark),
                   ListTile(
-                    leading: Icon(Icons.lock_outline, color: colorScheme.primary),
-                    title: const Text('Change Password', style: TextStyle(fontWeight: FontWeight.w600)),
+                    leading:
+                        Icon(Icons.lock_outline, color: colorScheme.primary),
+                    title: const Text('Change Password',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () => _showChangePasswordDialog(context),
                   ),
                   _buildSubtleDivider(isDark),
                   ListTile(
-                    leading: Icon(Icons.people_outline, color: colorScheme.primary),
-                    title: const Text('Team Management', style: TextStyle(fontWeight: FontWeight.w600)),
+                    leading:
+                        Icon(Icons.people_outline, color: colorScheme.primary),
+                    title: const Text('Team Management',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () => context.push('/team'),
                   ),
@@ -377,44 +397,70 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 children: [
                   ListTile(
                     leading: Icon(Icons.sync, color: colorScheme.primary),
-                    title: const Text('QuickBooks', style: TextStyle(fontWeight: FontWeight.w600)),
+                    title: const Text('QuickBooks',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text(
-                      company?.quickbooksEnabled == true ? 'Connected' : 'Not connected',
-                      style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                      company?.quickbooksEnabled == true
+                          ? 'Connected'
+                          : 'Not connected',
+                      style: TextStyle(
+                          color: colorScheme.onSurface.withValues(alpha: 0.6)),
                     ),
                     trailing: Icon(
-                      company?.quickbooksEnabled == true ? Icons.check_circle : Icons.radio_button_unchecked,
-                      color: company?.quickbooksEnabled == true ? semanticColors.success : colorScheme.onSurface.withValues(alpha: 0.3),
+                      company?.quickbooksEnabled == true
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
+                      color: company?.quickbooksEnabled == true
+                          ? semanticColors.success
+                          : colorScheme.onSurface.withValues(alpha: 0.3),
                       size: 20,
                     ),
                     onTap: () => _showIntegrationMessage(context),
                   ),
                   _buildSubtleDivider(isDark),
                   ListTile(
-                    leading: Icon(Icons.calendar_today, color: colorScheme.primary),
-                    title: const Text('Google Calendar', style: TextStyle(fontWeight: FontWeight.w600)),
+                    leading:
+                        Icon(Icons.calendar_today, color: colorScheme.primary),
+                    title: const Text('Google Calendar',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text(
-                      company?.googleCalendarEnabled == true ? 'Connected' : 'Not connected',
-                      style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                      company?.googleCalendarEnabled == true
+                          ? 'Connected'
+                          : 'Not connected',
+                      style: TextStyle(
+                          color: colorScheme.onSurface.withValues(alpha: 0.6)),
                     ),
                     trailing: Icon(
-                      company?.googleCalendarEnabled == true ? Icons.check_circle : Icons.radio_button_unchecked,
-                      color: company?.googleCalendarEnabled == true ? semanticColors.success : colorScheme.onSurface.withValues(alpha: 0.3),
+                      company?.googleCalendarEnabled == true
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
+                      color: company?.googleCalendarEnabled == true
+                          ? semanticColors.success
+                          : colorScheme.onSurface.withValues(alpha: 0.3),
                       size: 20,
                     ),
                     onTap: () => _showIntegrationMessage(context),
                   ),
                   _buildSubtleDivider(isDark),
                   ListTile(
-                    leading: Icon(Icons.table_chart, color: colorScheme.primary),
-                    title: const Text('Monday.com', style: TextStyle(fontWeight: FontWeight.w600)),
+                    leading:
+                        Icon(Icons.table_chart, color: colorScheme.primary),
+                    title: const Text('Monday.com',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text(
-                      company?.mondayEnabled == true ? 'Connected' : 'Not connected',
-                      style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                      company?.mondayEnabled == true
+                          ? 'Connected'
+                          : 'Not connected',
+                      style: TextStyle(
+                          color: colorScheme.onSurface.withValues(alpha: 0.6)),
                     ),
                     trailing: Icon(
-                      company?.mondayEnabled == true ? Icons.check_circle : Icons.radio_button_unchecked,
-                      color: company?.mondayEnabled == true ? semanticColors.success : colorScheme.onSurface.withValues(alpha: 0.3),
+                      company?.mondayEnabled == true
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
+                      color: company?.mondayEnabled == true
+                          ? semanticColors.success
+                          : colorScheme.onSurface.withValues(alpha: 0.3),
                       size: 20,
                     ),
                     onTap: () => _showIntegrationMessage(context),
@@ -432,14 +478,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 children: [
                   ListTile(
                     leading: Icon(Icons.dark_mode, color: colorScheme.primary),
-                    title: const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.w600)),
+                    title: const Text('Dark Mode',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text(
                       ref.watch(themeModeProvider) == ThemeMode.system
                           ? 'Following system setting'
                           : ref.watch(themeModeProvider) == ThemeMode.dark
                               ? 'Always dark'
                               : 'Always light',
-                      style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                      style: TextStyle(
+                          color: colorScheme.onSurface.withValues(alpha: 0.6)),
                     ),
                     trailing: Switch(
                       activeThumbColor: colorScheme.primary,
@@ -455,8 +503,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   _buildSubtleDivider(isDark),
                   ListTile(
-                    leading: Icon(Icons.notifications_outlined, color: colorScheme.primary),
-                    title: const Text('Notifications', style: TextStyle(fontWeight: FontWeight.w600)),
+                    leading: Icon(Icons.notifications_outlined,
+                        color: colorScheme.primary),
+                    title: const Text('Notifications',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () => context.push('/notifications'),
                   ),
@@ -473,9 +523,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 leading: Icon(Icons.logout, color: semanticColors.error),
                 title: Text(
                   'Log Out',
-                  style: TextStyle(color: semanticColors.error, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                      color: semanticColors.error, fontWeight: FontWeight.w600),
                 ),
-                trailing: Icon(Icons.arrow_forward_ios, size: 14, color: semanticColors.error.withValues(alpha: 0.6)),
+                trailing: Icon(Icons.arrow_forward_ios,
+                    size: 14,
+                    color: semanticColors.error.withValues(alpha: 0.6)),
                 onTap: () => _handleLogOut(context),
               ),
             ),
@@ -490,13 +543,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Divider(
       height: 1,
       thickness: 1,
-      color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04),
+      color: isDark
+          ? Colors.white.withValues(alpha: 0.06)
+          : Colors.black.withValues(alpha: 0.04),
     );
   }
 
   void _showIntegrationMessage(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Integrations are managed from the web app.')),
+      const SnackBar(
+          content: Text('Integrations are managed from the web app.')),
     );
   }
 

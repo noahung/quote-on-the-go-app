@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
+import '../../components/mesh_background.dart';
 
 class AddEditCustomerScreen extends ConsumerStatefulWidget {
   final String? customerId;
@@ -15,8 +15,7 @@ class AddEditCustomerScreen extends ConsumerStatefulWidget {
       _AddEditCustomerScreenState();
 }
 
-class _AddEditCustomerScreenState
-    extends ConsumerState<AddEditCustomerScreen> {
+class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -128,92 +127,104 @@ class _AddEditCustomerScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _isEditing ? 'Edit Customer' : 'Add Customer',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          title: Text(
+            _isEditing ? 'Edit Customer' : 'Add Customer',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/customers');
+              }
+            },
+          ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Name *',
-                prefixIcon: Icon(Icons.person_outline),
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Name *',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                textCapitalization: TextCapitalization.words,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter a name';
+                  }
+                  return null;
+                },
               ),
-              textCapitalization: TextCapitalization.words,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter a name';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email *',
-                prefixIcon: Icon(Icons.email_outlined),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email *',
+                  prefixIcon: Icon(Icons.email_outlined),
+                ),
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter an email';
+                  }
+                  if (!value.contains('@')) {
+                    return 'Please enter a valid email';
+                  }
+                  return null;
+                },
               ),
-              keyboardType: TextInputType.emailAddress,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter an email';
-                }
-                if (!value.contains('@')) {
-                  return 'Please enter a valid email';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _phoneController,
-              decoration: const InputDecoration(
-                labelText: 'Phone',
-                prefixIcon: Icon(Icons.phone_outlined),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _phoneController,
+                decoration: const InputDecoration(
+                  labelText: 'Phone',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
+                keyboardType: TextInputType.phone,
               ),
-              keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _addressController,
-              decoration: const InputDecoration(
-                labelText: 'Address',
-                prefixIcon: Icon(Icons.location_on_outlined),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _addressController,
+                decoration: const InputDecoration(
+                  labelText: 'Address',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                ),
+                maxLines: 3,
+                textCapitalization: TextCapitalization.sentences,
               ),
-              maxLines: 3,
-              textCapitalization: TextCapitalization.sentences,
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: FilledButton(
-                onPressed: _isLoading ? null : _saveCustomer,
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(_isEditing ? 'Update Customer' : 'Add Customer'),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: FilledButton(
+                  onPressed: _isLoading ? null : _saveCustomer,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(_isEditing ? 'Update Customer' : 'Add Customer'),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

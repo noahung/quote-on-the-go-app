@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/providers.dart';
 import '../../models/models.dart';
 import '../../components/glass_card.dart';
+import '../../components/curved_header.dart';
 
 class CustomersScreen extends ConsumerWidget {
   const CustomersScreen({super.key});
@@ -15,33 +16,33 @@ class CustomersScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent, // Let global mesh gradient flow underneath
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: const Text(
-          'Customers',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => context.push('/customers/new'),
+      body: Column(
+        children: [
+          CurvedHeader(
+            title: 'Customers',
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.add, color: Colors.white),
+                onPressed: () => context.push('/customers/new'),
+              ),
+            ],
+          ),
+          Expanded(
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : customers.isEmpty
+                    ? const _EmptyState()
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 80),
+                        itemCount: customers.length,
+                        itemBuilder: (context, index) {
+                          final customer = customers[index];
+                          return _CustomerCard(customer: customer);
+                        },
+                      ),
           ),
         ],
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : customers.isEmpty
-              ? const _EmptyState()
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: customers.length,
-                  itemBuilder: (context, index) {
-                    final customer = customers[index];
-                    return _CustomerCard(customer: customer);
-                  },
-                ),
     );
   }
 }
@@ -95,6 +96,7 @@ class _CustomerCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: GlassCard(
         padding: EdgeInsets.zero,
+        borderRadius: BorderRadius.circular(24),
         onTap: () => context.push('/customers/${customer.id}'),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -105,22 +107,20 @@ class _CustomerCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: colorScheme.primary.withValues(alpha: 0.12),
+                  color: const Color(0xFFF4781F).withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: colorScheme.primary.withValues(alpha: 0.25),
+                    color: const Color(0xFFF4781F).withValues(alpha: 0.25),
                     width: 1.5,
                   ),
                 ),
                 child: Center(
                   child: Text(
-                    customer.name.isNotEmpty
-                        ? customer.name[0].toUpperCase()
-                        : '?',
-                    style: TextStyle(
+                    customer.name.isNotEmpty ? customer.name[0].toUpperCase() : '?',
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
-                      color: colorScheme.primary,
+                      color: Color(0xFFF4781F),
                     ),
                   ),
                 ),

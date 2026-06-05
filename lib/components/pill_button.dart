@@ -41,7 +41,7 @@ class _PillButtonState extends State<PillButton> {
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
-            gradient: isEnabled 
+            gradient: isEnabled
                 ? LinearGradient(
                     colors: [
                       colorScheme.primary,
@@ -51,7 +51,9 @@ class _PillButtonState extends State<PillButton> {
                     end: Alignment.bottomRight,
                   )
                 : null,
-            color: isEnabled ? null : colorScheme.onSurface.withValues(alpha: 0.12),
+            color: isEnabled
+                ? null
+                : colorScheme.onSurface.withValues(alpha: 0.12),
             boxShadow: isEnabled
                 ? [
                     BoxShadow(
@@ -77,7 +79,8 @@ class _PillButtonState extends State<PillButton> {
                   height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(colorScheme.onPrimary),
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(colorScheme.onPrimary),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -88,7 +91,9 @@ class _PillButtonState extends State<PillButton> {
               Text(
                 widget.text,
                 style: TextStyle(
-                  color: isEnabled ? colorScheme.onPrimary : colorScheme.onSurface.withValues(alpha: 0.38),
+                  color: isEnabled
+                      ? colorScheme.onPrimary
+                      : colorScheme.onSurface.withValues(alpha: 0.38),
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.2,
                   fontSize: 16,

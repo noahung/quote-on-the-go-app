@@ -82,7 +82,7 @@ double totalRevenue(Ref ref) {
   final invoices = ref.watch(invoicesProvider);
   return invoices
       .where((i) => i.status == 'Paid')
-      .fold(0.0, (sum, i) => sum + i.total);
+      .fold(0.0, (acc, i) => acc + i.total);
 }
 
 // Outstanding revenue
@@ -91,7 +91,7 @@ double outstandingRevenue(Ref ref) {
   final invoices = ref.watch(invoicesProvider);
   return invoices
       .where((i) => i.status == 'Sent' || i.status == 'Overdue')
-      .fold(0.0, (sum, i) => sum + i.total);
+      .fold(0.0, (acc, i) => acc + i.total);
 }
 
 // Class for invoice operations

@@ -24,9 +24,9 @@ class QuotationPortalScreen extends ConsumerWidget {
     }
 
     return MeshBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: CustomScrollView(
+        child: Scaffold(
+      backgroundColor: Colors.transparent,
+      body: CustomScrollView(
         slivers: [
           _PortalAppBar(quotation: quotation),
           SliverPadding(
@@ -85,7 +85,13 @@ class _PortalAppBar extends StatelessWidget {
       backgroundColor: Colors.transparent,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
-        onPressed: () => context.pop(),
+        onPressed: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/quotations/${quotation.id}');
+          }
+        },
       ),
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,13 +181,12 @@ class _CompanyHeader extends StatelessWidget {
                 width: 52,
                 height: 52,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _LogoFallback(
-                    name: company.name, colorScheme: colorScheme),
+                errorBuilder: (_, __, ___) =>
+                    _LogoFallback(name: company.name, colorScheme: colorScheme),
               ),
             )
           else
-            _LogoFallback(
-                name: company?.name ?? 'C', colorScheme: colorScheme),
+            _LogoFallback(name: company?.name ?? 'C', colorScheme: colorScheme),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -198,16 +203,16 @@ class _CompanyHeader extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     company!.email!,
-                    style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant),
+                    style: textTheme.bodySmall
+                        ?.copyWith(color: colorScheme.onSurfaceVariant),
                   ),
                 ],
                 if (company?.phone != null) ...[
                   const SizedBox(height: 2),
                   Text(
                     company!.phone!,
-                    style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant),
+                    style: textTheme.bodySmall
+                        ?.copyWith(color: colorScheme.onSurfaceVariant),
                   ),
                 ],
               ],
@@ -301,38 +306,38 @@ class _ClientAddressCard extends StatelessWidget {
     return GlassCard(
       borderRadius: BorderRadius.circular(16),
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Quote For',
-                style: textTheme.labelSmall?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1)),
-            const SizedBox(height: 10),
-            Text(quotation.customerName,
-                style: textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w600)),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Quote For',
+              style: textTheme.labelSmall?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1)),
+          const SizedBox(height: 10),
+          Text(quotation.customerName,
+              style:
+                  textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 2),
+          Text(quotation.customerEmail,
+              style: textTheme.bodySmall
+                  ?.copyWith(color: colorScheme.onSurfaceVariant)),
+          if (quotation.customerPhone != null) ...[
             const SizedBox(height: 2),
-            Text(quotation.customerEmail,
+            Text(quotation.customerPhone!,
                 style: textTheme.bodySmall
                     ?.copyWith(color: colorScheme.onSurfaceVariant)),
-            if (quotation.customerPhone != null) ...[
-              const SizedBox(height: 2),
-              Text(quotation.customerPhone!,
-                  style: textTheme.bodySmall
-                      ?.copyWith(color: colorScheme.onSurfaceVariant)),
-            ],
-            if (quotation.customerAddress != null) ...[
-              const SizedBox(height: 2),
-              Text(quotation.customerAddress!,
-                  style: textTheme.bodySmall
-                      ?.copyWith(color: colorScheme.onSurfaceVariant)),
-            ],
           ],
-        ),
-      );
-    }
+          if (quotation.customerAddress != null) ...[
+            const SizedBox(height: 2),
+            Text(quotation.customerAddress!,
+                style: textTheme.bodySmall
+                    ?.copyWith(color: colorScheme.onSurfaceVariant)),
+          ],
+        ],
+      ),
+    );
   }
+}
 
 class _ItemsCard extends StatelessWidget {
   final Quotation quotation;
@@ -347,84 +352,84 @@ class _ItemsCard extends StatelessWidget {
     return GlassCard(
       borderRadius: BorderRadius.circular(16),
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Services & Items',
-                style: textTheme.labelSmall?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1)),
-            const SizedBox(height: 12),
-            ...quotation.items.map((item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 5,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(item.description,
-                                style: textTheme.bodyMedium
-                                    ?.copyWith(fontWeight: FontWeight.w500)),
-                            Text(
-                              '${item.quantity} × ${currency.format(item.unitPrice)}',
-                              style: textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Services & Items',
+              style: textTheme.labelSmall?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1)),
+          const SizedBox(height: 12),
+          ...quotation.items.map((item) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item.description,
+                              style: textTheme.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w500)),
+                          Text(
+                            '${item.quantity} × ${currency.format(item.unitPrice)}',
+                            style: textTheme.bodySmall
+                                ?.copyWith(color: colorScheme.onSurfaceVariant),
+                          ),
+                        ],
                       ),
-                      Text(
-                        currency.format(item.total),
-                        style: textTheme.bodyMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                )),
-            const Divider(),
-            const SizedBox(height: 8),
+                    ),
+                    Text(
+                      currency.format(item.total),
+                      style: textTheme.bodyMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              )),
+          const Divider(),
+          const SizedBox(height: 8),
+          _TotalRow(
+              label: 'Subtotal',
+              value: currency.format(quotation.subtotal),
+              isTotal: false),
+          if (quotation.taxRate != null && quotation.taxAmount != null) ...[
+            const SizedBox(height: 6),
             _TotalRow(
-                label: 'Subtotal',
-                value: currency.format(quotation.subtotal),
+                label: 'Tax (${quotation.taxRate!.toStringAsFixed(0)}%)',
+                value: currency.format(quotation.taxAmount),
                 isTotal: false),
-            if (quotation.taxRate != null && quotation.taxAmount != null) ...[
-              const SizedBox(height: 6),
-              _TotalRow(
-                  label: 'Tax (${quotation.taxRate!.toStringAsFixed(0)}%)',
-                  value: currency.format(quotation.taxAmount),
-                  isTotal: false),
-            ],
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Total',
-                      style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onPrimaryContainer)),
-                  Text(
-                    currency.format(quotation.total),
-                    style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onPrimaryContainer),
-                  ),
-                ],
-              ),
-            ),
           ],
-        ),
-      );
-    }
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Total',
+                    style: textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onPrimaryContainer)),
+                Text(
+                  currency.format(quotation.total),
+                  style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onPrimaryContainer),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
+}
 
 class _TotalRow extends StatelessWidget {
   final String label;
@@ -470,22 +475,22 @@ class _NotesCard extends StatelessWidget {
     return GlassCard(
       borderRadius: BorderRadius.circular(16),
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Notes & Terms',
-                style: textTheme.labelSmall?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1)),
-            const SizedBox(height: 8),
-            Text(notes,
-                style: textTheme.bodySmall
-                    ?.copyWith(color: colorScheme.onSurfaceVariant)),
-          ],
-        ),
-      );
-    }
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Notes & Terms',
+              style: textTheme.labelSmall?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1)),
+          const SizedBox(height: 8),
+          Text(notes,
+              style: textTheme.bodySmall
+                  ?.copyWith(color: colorScheme.onSurfaceVariant)),
+        ],
+      ),
+    );
   }
+}
 
 class _ActionButtons extends StatefulWidget {
   final Quotation quotation;
@@ -506,21 +511,19 @@ class _ActionButtonsState extends State<_ActionButtons> {
     try {
       final repo = widget.ref.read(quotationRepositoryProvider);
       await repo.updateQuotationStatus(widget.quotation.id, status);
-      if (mounted) {
-        ScaffoldMessenger.of(widget.context).showSnackBar(
-          SnackBar(
-              content: Text('Quote $status'),
-              backgroundColor: status == 'Accepted'
-                  ? Theme.of(widget.context).colorScheme.tertiary
-                  : Theme.of(widget.context).colorScheme.error),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Quote $status'),
+            backgroundColor: status == 'Accepted'
+                ? Theme.of(context).colorScheme.tertiary
+                : Theme.of(context).colorScheme.error),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(widget.context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -550,7 +553,7 @@ class _ActionButtonsState extends State<_ActionButtons> {
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
             foregroundColor: colorScheme.error,
-            side: BorderSide(color: colorScheme.error.withOpacity(0.5)),
+            side: BorderSide(color: colorScheme.error.withValues(alpha: 0.5)),
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -579,7 +582,7 @@ class _StatusBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return GlassCard(
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: color.withOpacity(0.15), width: 1.5),
+      border: Border.all(color: color.withValues(alpha: 0.15), width: 1.5),
       child: Row(
         children: [
           Icon(icon, color: color),

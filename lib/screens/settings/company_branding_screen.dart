@@ -3,10 +3,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../components/glass_card.dart';
+import '../../components/mesh_background.dart';
 import '../../models/company.dart';
 import '../../providers/providers.dart';
+import 'package:go_router/go_router.dart';
 
 class CompanyBrandingScreen extends ConsumerStatefulWidget {
   const CompanyBrandingScreen({super.key});
@@ -255,288 +257,303 @@ class _CompanyBrandingScreenState extends ConsumerState<CompanyBrandingScreen> {
       _populateFromCompany(company);
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Company Branding',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-        actions: [
-          if (canEdit)
-            _isSaving
-                ? const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2)),
-                  )
-                : IconButton(
-                    icon: const Icon(Icons.check),
-                    tooltip: 'Save',
-                    onPressed: _save,
-                  ),
-        ],
-      ),
-      body: company == null
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  if (!canEdit)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: colorScheme.secondaryContainer,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline,
-                              size: 16,
-                              color: colorScheme.onSecondaryContainer),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'As a member you can view but not edit company settings.',
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color: colorScheme.onSecondaryContainer),
-                            ),
-                          ),
-                        ],
-                      ),
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/settings');
+              }
+            },
+          ),
+          title: const Text('Company Branding',
+              style: TextStyle(fontWeight: FontWeight.w600)),
+          actions: [
+            if (canEdit)
+              _isSaving
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2)),
+                    )
+                  : IconButton(
+                      icon: const Icon(Icons.check),
+                      tooltip: 'Save',
+                      onPressed: _save,
                     ),
-
-                  // ── Company Logo ──────────────────────────────────────
-                  _SectionCard(
-                    title: 'Company Logo',
-                    icon: Icons.image_outlined,
-                    children: [
-                      Text(
-                        'Appears on your quotes and invoices.',
-                        style: TextStyle(
-                            fontSize: 13, color: colorScheme.onSurfaceVariant),
+          ],
+        ),
+        body: company == null
+            ? const Center(child: CircularProgressIndicator())
+            : Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    if (!canEdit)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.secondaryContainer,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline,
+                                size: 16,
+                                color: colorScheme.onSecondaryContainer),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'As a member you can view but not edit company settings.',
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: colorScheme.onSecondaryContainer),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          // Logo preview
-                          GestureDetector(
-                            onTap: canEdit ? _pickLogo : null,
-                            child: Stack(
-                              children: [
-                                Container(
-                                  width: 96,
-                                  height: 96,
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: colorScheme.outlineVariant,
+
+                    // ── Company Logo ──────────────────────────────────────
+                    _SectionCard(
+                      title: 'Company Logo',
+                      icon: Icons.image_outlined,
+                      children: [
+                        Text(
+                          'Appears on your quotes and invoices.',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: colorScheme.onSurfaceVariant),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            // Logo preview
+                            GestureDetector(
+                              onTap: canEdit ? _pickLogo : null,
+                              child: Stack(
+                                children: [
+                                  Container(
+                                    width: 96,
+                                    height: 96,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          colorScheme.surfaceContainerHighest,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: colorScheme.outlineVariant,
+                                      ),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(11),
+                                      child: _buildLogoPreview(colorScheme),
                                     ),
                                   ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(11),
-                                    child: _buildLogoPreview(colorScheme),
-                                  ),
-                                ),
-                                if (canEdit)
-                                  Positioned(
-                                    right: 0,
-                                    bottom: 0,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        color: colorScheme.primary,
-                                        borderRadius: const BorderRadius.only(
-                                          topLeft: Radius.circular(8),
-                                          bottomRight: Radius.circular(11),
+                                  if (canEdit)
+                                    Positioned(
+                                      right: 0,
+                                      bottom: 0,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: colorScheme.primary,
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(8),
+                                            bottomRight: Radius.circular(11),
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.edit,
+                                          size: 14,
+                                          color: colorScheme.onPrimary,
                                         ),
                                       ),
-                                      child: Icon(
-                                        Icons.edit,
-                                        size: 14,
-                                        color: colorScheme.onPrimary,
-                                      ),
                                     ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          if (canEdit)
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  OutlinedButton.icon(
-                                    onPressed: _pickLogo,
-                                    icon: const Icon(Icons.upload_outlined,
-                                        size: 16),
-                                    label: Text(
-                                      _newLogoFile != null ||
-                                              (_existingLogoUrl != null &&
-                                                  !_removeLogo)
-                                          ? 'Change Logo'
-                                          : 'Upload Logo',
-                                    ),
-                                    style: OutlinedButton.styleFrom(
-                                        minimumSize:
-                                            const Size(double.infinity, 40)),
-                                  ),
-                                  if (_newLogoFile != null ||
-                                      (_existingLogoUrl != null &&
-                                          !_removeLogo)) ...[
-                                    const SizedBox(height: 8),
-                                    TextButton.icon(
-                                      onPressed: _clearLogo,
-                                      icon: Icon(Icons.delete_outline,
-                                          size: 16, color: colorScheme.error),
-                                      label: Text('Remove Logo',
-                                          style: TextStyle(
-                                              color: colorScheme.error)),
-                                      style: TextButton.styleFrom(
-                                          minimumSize:
-                                              const Size(double.infinity, 36)),
-                                    ),
-                                  ],
                                 ],
                               ),
                             ),
-                        ],
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // ── Company Info ──────────────────────────────────────
-                  _SectionCard(
-                    title: 'Company Details',
-                    icon: Icons.business_outlined,
-                    children: [
-                      _Field(
-                        label: 'Company Name',
-                        controller: _nameCtrl,
-                        enabled: canEdit,
-                        required: true,
-                        hint: 'Your Company Ltd.',
-                      ),
-                      const SizedBox(height: 12),
-                      _Field(
-                        label: 'Address',
-                        controller: _addressCtrl,
-                        enabled: canEdit,
-                        required: true,
-                        hint: '123 Main Street, London, SW1A 1AA',
-                        maxLines: 3,
-                      ),
-                      const SizedBox(height: 12),
-                      _Field(
-                        label: 'Email',
-                        controller: _emailCtrl,
-                        enabled: canEdit,
-                        hint: 'contact@yourco.com',
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                      const SizedBox(height: 12),
-                      _Field(
-                        label: 'Phone',
-                        controller: _phoneCtrl,
-                        enabled: canEdit,
-                        hint: '+44 123 456 7890',
-                        keyboardType: TextInputType.phone,
-                      ),
-                      const SizedBox(height: 12),
-                      _Field(
-                        label: 'Website',
-                        controller: _websiteCtrl,
-                        enabled: canEdit,
-                        hint: 'https://yourcompany.com',
-                        keyboardType: TextInputType.url,
-                      ),
-                      const SizedBox(height: 12),
-                      _Field(
-                        label: 'Default Tax Rate (%)',
-                        controller: _taxRateCtrl,
-                        enabled: canEdit,
-                        hint: '20',
-                        keyboardType:
-                            const TextInputType.numberWithOptions(
-                                decimal: true),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // ── Bank Details ──────────────────────────────────────
-                  _SectionCard(
-                    title: 'Payment / Bank Details',
-                    icon: Icons.account_balance_outlined,
-                    children: [
-                      Text(
-                        'Appears on your invoices for customer payments.',
-                        style: TextStyle(
-                            fontSize: 13, color: colorScheme.onSurfaceVariant),
-                      ),
-                      const SizedBox(height: 12),
-                      _Field(
-                        label: 'Account Holder Name',
-                        controller: _acctNameCtrl,
-                        enabled: canEdit,
-                        hint: 'My Business Ltd',
-                      ),
-                      const SizedBox(height: 12),
-                      _Field(
-                        label: 'Bank Name',
-                        controller: _bankNameCtrl,
-                        enabled: canEdit,
-                        hint: 'Monzo Bank',
-                      ),
-                      const SizedBox(height: 12),
-                      _Field(
-                        label: 'Sort Code',
-                        controller: _sortCodeCtrl,
-                        enabled: canEdit,
-                        hint: '04-00-04',
-                        keyboardType: TextInputType.number,
-                      ),
-                      const SizedBox(height: 12),
-                      _Field(
-                        label: 'Account Number',
-                        controller: _acctNumberCtrl,
-                        enabled: canEdit,
-                        hint: '12345678',
-                        keyboardType: TextInputType.number,
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  if (canEdit)
-                    FilledButton.icon(
-                      onPressed: _isSaving ? null : _save,
-                      icon: _isSaving
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Icon(Icons.save_outlined),
-                      label: Text(_isSaving ? 'Saving...' : 'Save Changes'),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 50),
-                      ),
+                            const SizedBox(width: 16),
+                            if (canEdit)
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    OutlinedButton.icon(
+                                      onPressed: _pickLogo,
+                                      icon: const Icon(Icons.upload_outlined,
+                                          size: 16),
+                                      label: Text(
+                                        _newLogoFile != null ||
+                                                (_existingLogoUrl != null &&
+                                                    !_removeLogo)
+                                            ? 'Change Logo'
+                                            : 'Upload Logo',
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                          minimumSize:
+                                              const Size(double.infinity, 40)),
+                                    ),
+                                    if (_newLogoFile != null ||
+                                        (_existingLogoUrl != null &&
+                                            !_removeLogo)) ...[
+                                      const SizedBox(height: 8),
+                                      TextButton.icon(
+                                        onPressed: _clearLogo,
+                                        icon: Icon(Icons.delete_outline,
+                                            size: 16, color: colorScheme.error),
+                                        label: Text('Remove Logo',
+                                            style: TextStyle(
+                                                color: colorScheme.error)),
+                                        style: TextButton.styleFrom(
+                                            minimumSize: const Size(
+                                                double.infinity, 36)),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
-                  const SizedBox(height: 32),
-                ],
+
+                    const SizedBox(height: 16),
+
+                    // ── Company Info ──────────────────────────────────────
+                    _SectionCard(
+                      title: 'Company Details',
+                      icon: Icons.business_outlined,
+                      children: [
+                        _Field(
+                          label: 'Company Name',
+                          controller: _nameCtrl,
+                          enabled: canEdit,
+                          required: true,
+                          hint: 'Your Company Ltd.',
+                        ),
+                        const SizedBox(height: 12),
+                        _Field(
+                          label: 'Address',
+                          controller: _addressCtrl,
+                          enabled: canEdit,
+                          required: true,
+                          hint: '123 Main Street, London, SW1A 1AA',
+                          maxLines: 3,
+                        ),
+                        const SizedBox(height: 12),
+                        _Field(
+                          label: 'Email',
+                          controller: _emailCtrl,
+                          enabled: canEdit,
+                          hint: 'contact@yourco.com',
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        const SizedBox(height: 12),
+                        _Field(
+                          label: 'Phone',
+                          controller: _phoneCtrl,
+                          enabled: canEdit,
+                          hint: '+44 123 456 7890',
+                          keyboardType: TextInputType.phone,
+                        ),
+                        const SizedBox(height: 12),
+                        _Field(
+                          label: 'Website',
+                          controller: _websiteCtrl,
+                          enabled: canEdit,
+                          hint: 'https://yourcompany.com',
+                          keyboardType: TextInputType.url,
+                        ),
+                        const SizedBox(height: 12),
+                        _Field(
+                          label: 'Default Tax Rate (%)',
+                          controller: _taxRateCtrl,
+                          enabled: canEdit,
+                          hint: '20',
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // ── Bank Details ──────────────────────────────────────
+                    _SectionCard(
+                      title: 'Payment / Bank Details',
+                      icon: Icons.account_balance_outlined,
+                      children: [
+                        Text(
+                          'Appears on your invoices for customer payments.',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: colorScheme.onSurfaceVariant),
+                        ),
+                        const SizedBox(height: 12),
+                        _Field(
+                          label: 'Account Holder Name',
+                          controller: _acctNameCtrl,
+                          enabled: canEdit,
+                          hint: 'My Business Ltd',
+                        ),
+                        const SizedBox(height: 12),
+                        _Field(
+                          label: 'Bank Name',
+                          controller: _bankNameCtrl,
+                          enabled: canEdit,
+                          hint: 'Monzo Bank',
+                        ),
+                        const SizedBox(height: 12),
+                        _Field(
+                          label: 'Sort Code',
+                          controller: _sortCodeCtrl,
+                          enabled: canEdit,
+                          hint: '04-00-04',
+                          keyboardType: TextInputType.number,
+                        ),
+                        const SizedBox(height: 12),
+                        _Field(
+                          label: 'Account Number',
+                          controller: _acctNumberCtrl,
+                          enabled: canEdit,
+                          hint: '12345678',
+                          keyboardType: TextInputType.number,
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    if (canEdit)
+                      FilledButton.icon(
+                        onPressed: _isSaving ? null : _save,
+                        icon: _isSaving
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.save_outlined),
+                        label: Text(_isSaving ? 'Saving...' : 'Save Changes'),
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 50),
+                        ),
+                      ),
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 }
@@ -555,34 +572,30 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 16, color: colorScheme.primary),
-                const SizedBox(width: 6),
-                Text(
-                  title.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: colorScheme.primary,
-                    letterSpacing: 1,
-                  ),
+    return GlassCard(
+      borderRadius: BorderRadius.circular(12),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: colorScheme.primary),
+              const SizedBox(width: 6),
+              Text(
+                title.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: colorScheme.primary,
+                  letterSpacing: 1,
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ...children,
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...children,
+        ],
       ),
     );
   }

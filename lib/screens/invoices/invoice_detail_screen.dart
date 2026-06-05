@@ -2,10 +2,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import '../../providers/providers.dart';
+import '../../theme/semantic_colors.dart';
+import '../../components/curved_header.dart';
+import '../../components/mesh_background.dart';
+import '../../components/glass_card.dart';
+import '../../components/custom_date_time_picker.dart';
 
 const _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
 
@@ -14,38 +18,46 @@ class InvoiceDetailScreen extends ConsumerWidget {
 
   const InvoiceDetailScreen({super.key, required this.invoiceId});
 
-  Color _getStatusColor(String status) {
+  Color _getStatusColor(String status, SemanticColors semanticColors) {
     switch (status) {
       case 'Paid':
-        return Colors.green;
+        return semanticColors.success;
       case 'Sent':
-        return Colors.blue;
+        return semanticColors.info;
       case 'Overdue':
-        return Colors.red;
+        return semanticColors.error;
       case 'Draft':
-        return Colors.orange;
+        return semanticColors.accentOrange;
       default:
         return Colors.grey;
     }
   }
 
   Future<void> _sendByEmail(
-      BuildContext context, WidgetRef ref, invoice) async {
+      BuildContext context, WidgetRef ref, invoice, {DateTime? sendAt}) async {
     try {
+      final body = {
+        'invoiceId': invoice.id,
+        'customerEmail': invoice.customerEmail,
+        'customerName': invoice.customerName,
+      };
+      if (sendAt != null) {
+        body['sendAt'] = sendAt.toUtc().toIso8601String();
+      }
+
       final response = await http.post(
         Uri.parse('$_webAppBaseUrl/api/send-invoice'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'invoiceId': invoice.id,
-          'customerEmail': invoice.customerEmail,
-          'customerName': invoice.customerName,
-        }),
+        body: jsonEncode(body),
       );
       if (context.mounted) {
         if (response.statusCode == 200) {
+          final isScheduled = sendAt != null;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Invoice sent successfully via email')),
+            SnackBar(
+                content: Text(isScheduled
+                    ? 'Invoice scheduled successfully via email'
+                    : 'Invoice sent successfully via email')),
           );
         } else {
           String err = 'Send failed (${response.statusCode})';
@@ -84,7 +96,8 @@ class InvoiceDetailScreen extends ConsumerWidget {
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('Cancel')),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(ctx).colorScheme.error),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Delete'),
           ),
@@ -97,274 +110,572 @@ class InvoiceDetailScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _showSendOptions(
+      BuildContext context, WidgetRef ref, invoice) async {
+    final colorScheme = Theme.of(context).colorScheme;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(ctx).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Send Invoice',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Select how you want to send this invoice to ${invoice.customerName}.',
+              style: TextStyle(
+                fontSize: 14,
+                color: colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ListTile(
+              leading: Icon(Icons.send, color: colorScheme.primary),
+              title: const Text('Send Immediately', style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text('Deliver the email to the customer right now'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _sendByEmail(context, ref, invoice);
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: Icon(Icons.calendar_month, color: colorScheme.primary),
+              title: const Text('Schedule for Later', style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text('Select a date and time to deliver the email'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final scheduledDateTime = await showModalBottomSheet<DateTime>(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (ctx) => CustomDateTimePickerSheet(
+                    initialDateTime: DateTime.now().add(const Duration(minutes: 5)),
+                    title: 'Schedule for Later',
+                  ),
+                );
+                if (scheduledDateTime != null && context.mounted) {
+                  if (scheduledDateTime.isBefore(DateTime.now())) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Scheduled time must be in the future.'),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                    return;
+                  }
+                  _sendByEmail(context, ref, invoice, sendAt: scheduledDateTime);
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _markPaid(
+      BuildContext context, WidgetRef ref, String id) async {
+    try {
+      await ref
+          .read(invoiceRepositoryProvider)
+          .updateInvoiceStatus(id, 'Paid');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invoice marked as paid.')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update status: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _sendReminder(
+      BuildContext context, WidgetRef ref, invoice) async {
+    // Send email reminder
+    await _sendByEmail(context, ref, invoice);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final invoice = ref.watch(invoiceProvider(invoiceId));
+    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (invoice == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Invoice')),
-        body: const Center(child: CircularProgressIndicator()),
+      return const MeshBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Column(
+            children: [
+              CurvedHeader(title: 'Invoice Details'),
+              Expanded(child: Center(child: CircularProgressIndicator())),
+            ],
+          ),
+        ),
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Invoice Details',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.visibility),
-            tooltip: 'View as Client',
-            onPressed: () => context.push('/invoices/${invoice.id}/portal'),
-          ),
-          PopupMenuButton<String>(
-            onSelected: (value) async {
-              if (value == 'edit') {
-                context.push('/invoices/${invoice.id}/edit', extra: invoice);
-              } else if (value == 'send') {
-                await _sendByEmail(context, ref, invoice);
-              } else if (value == 'mark_paid') {
-                await ref
-                    .read(invoiceRepositoryProvider)
-                    .updateInvoiceStatus(invoice.id, 'Paid');
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Invoice marked as paid')),
-                  );
-                }
-              } else if (value == 'delete') {
-                await _deleteInvoice(context, ref, invoice.id);
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'edit',
-                child: Row(children: [
-                  Icon(Icons.edit_outlined),
-                  SizedBox(width: 8),
-                  Text('Edit')
-                ]),
-              ),
-              const PopupMenuItem(
-                value: 'send',
-                child: Row(children: [
-                  Icon(Icons.email_outlined, color: Colors.blue),
-                  SizedBox(width: 8),
-                  Text('Send by Email')
-                ]),
-              ),
-              const PopupMenuItem(
-                value: 'mark_paid',
-                child: Row(children: [
-                  Icon(Icons.check_circle_outline, color: Colors.green),
-                  SizedBox(width: 8),
-                  Text('Mark as Paid')
-                ]),
-              ),
-              const PopupMenuItem(
-                value: 'delete',
-                child: Row(children: [
-                  Icon(Icons.delete_outline, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('Delete', style: TextStyle(color: Colors.red))
-                ]),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final statusColor = _getStatusColor(invoice.status, semanticColors);
+
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Column(
           children: [
-            // Status and Number
-            Row(
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(invoice.status).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    invoice.status,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: _getStatusColor(invoice.status),
-                    ),
-                  ),
+            CurvedHeader(
+              title: 'Invoice #${invoice.invoiceNumber.replaceFirst('INV-', '')}',
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.forum_outlined, color: Colors.white),
+                  tooltip: 'Collaboration & History',
+                  onPressed: () =>
+                      context.push('/collaboration/invoice/${invoice.id}'),
                 ),
-                const Spacer(),
-                Text(
-                  invoice.invoiceNumber,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                  ),
+                IconButton(
+                  icon: const Icon(Icons.visibility, color: Colors.white),
+                  tooltip: 'View as Client',
+                  onPressed: () =>
+                      context.push('/invoices/${invoice.id}/portal'),
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: Colors.white),
+                  onSelected: (value) async {
+                    if (value == 'edit') {
+                      context.push('/invoices/${invoice.id}/edit',
+                          extra: invoice);
+                    } else if (value == 'send') {
+                      await _showSendOptions(context, ref, invoice);
+                    } else if (value == 'mark_paid') {
+                      await _markPaid(context, ref, invoice.id);
+                    } else if (value == 'delete') {
+                      await _deleteInvoice(context, ref, invoice.id);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Row(children: [
+                        Icon(Icons.edit_outlined),
+                        SizedBox(width: 8),
+                        Text('Edit')
+                      ]),
+                    ),
+                    PopupMenuItem(
+                      value: 'send',
+                      child: Row(children: [
+                        Icon(Icons.email_outlined, color: semanticColors.info),
+                        const SizedBox(width: 8),
+                        const Text('Send by Email')
+                      ]),
+                    ),
+                    PopupMenuItem(
+                      value: 'mark_paid',
+                      child: Row(children: [
+                        Icon(Icons.check_circle_outline,
+                            color: semanticColors.success),
+                        const SizedBox(width: 8),
+                        const Text('Mark as Paid')
+                      ]),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(children: [
+                        Icon(Icons.delete_outline, color: semanticColors.error),
+                        const SizedBox(width: 8),
+                        Text('Delete',
+                            style: TextStyle(color: semanticColors.error))
+                      ]),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-
-            // Customer Info
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Customer',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      invoice.customerName,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(invoice.customerEmail),
-                    if (invoice.customerPhone != null) ...[
-                      const SizedBox(height: 4),
-                      Text(invoice.customerPhone!),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
+                    const SizedBox(height: 24),
 
-            // Invoice Details
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Invoice Details',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _DetailRow(label: 'Issue Date', value: invoice.date),
-                    const SizedBox(height: 8),
-                    _DetailRow(label: 'Due Date', value: invoice.dueDate),
-                    if (invoice.quotationNumber != null) ...[
-                      const SizedBox(height: 8),
-                      _DetailRow(
-                        label: 'From Quotation',
-                        value: invoice.quotationNumber!,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Items
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Items',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ...invoice.items.map((item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: Text(item.description),
+                    // Summary Section
+                    Center(
+                      child: Column(
+                        children: [
+                          Text(
+                            NumberFormat.currency(symbol: '£')
+                                .format(invoice.total),
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                              color: colorScheme.onSurface,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: statusColor.withValues(alpha: 0.24),
+                                width: 1,
                               ),
-                              Expanded(
-                                child: Text(
-                                  '${item.quantity}x',
-                                  textAlign: TextAlign.center,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  invoice.status == 'Paid'
+                                      ? Icons.check_circle
+                                      : (invoice.status == 'Overdue'
+                                          ? Icons.warning
+                                          : Icons.info_outline),
+                                  size: 14,
+                                  color: statusColor,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  invoice.status,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: statusColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Client Info Card
+                    GlassCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            invoice.customerName,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (invoice.customerAddress != null &&
+                              invoice.customerAddress!.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.location_on,
+                                  color: colorScheme.primary,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    invoice.customerAddress!,
+                                    style: TextStyle(
+                                      color: colorScheme.onSurface
+                                          .withValues(alpha: 0.65),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Invoice Schedule Card
+                    GlassCard(
+                      child: Column(
+                        children: [
+                          _DetailRow(
+                            label: 'Issue Date',
+                            value: invoice.date,
+                          ),
+                          const SizedBox(height: 12),
+                          _DetailRow(
+                            label: 'Due Date',
+                            value: invoice.dueDate,
+                            valueColor: invoice.status == 'Overdue'
+                                ? semanticColors.error
+                                : (invoice.status == 'Paid'
+                                    ? semanticColors.success
+                                    : semanticColors.accentOrange),
+                          ),
+                          const SizedBox(height: 12),
+                          const _DetailRow(
+                            label: 'Payment Terms',
+                            value: 'Net 14',
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Items List Card
+                    GlassCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ...invoice.items.map((item) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item.description,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Qty ${item.quantity} × ${NumberFormat.currency(symbol: '£').format(item.unitPrice)}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: colorScheme.onSurface
+                                                  .withValues(alpha: 0.6),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(
+                                      NumberFormat.currency(symbol: '£')
+                                          .format(item.total),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )),
+                          const SizedBox(height: 8),
+                          Divider(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.08)
+                                : Colors.black.withValues(alpha: 0.05),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Subtotal',
+                                style: TextStyle(
+                                  color: colorScheme.onSurface
+                                      .withValues(alpha: 0.65),
+                                  fontSize: 14,
                                 ),
                               ),
-                              Expanded(
-                                flex: 2,
-                                child: Text(
-                                  NumberFormat.currency(symbol: '£')
-                                      .format(item.total),
-                                  textAlign: TextAlign.right,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w500),
+                              Text(
+                                NumberFormat.currency(symbol: '£')
+                                    .format(invoice.subtotal),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
                                 ),
                               ),
                             ],
                           ),
-                        )),
-                    const Divider(),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Subtotal'),
-                        Text(
-                          NumberFormat.currency(symbol: '£')
-                              .format(invoice.subtotal),
-                        ),
-                      ],
-                    ),
-                    if (invoice.taxAmount != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Tax (${invoice.taxRate}%)'),
-                          Text(
-                            NumberFormat.currency(symbol: '£')
-                                .format(invoice.taxAmount),
+                          if (invoice.taxAmount != null) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Taxes (${invoice.taxRate}%)',
+                                  style: TextStyle(
+                                    color: colorScheme.onSurface
+                                        .withValues(alpha: 0.65),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Text(
+                                  NumberFormat.currency(symbol: '£')
+                                      .format(invoice.taxAmount),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Total',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              Text(
+                                NumberFormat.currency(symbol: '£')
+                                    .format(invoice.total),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 20,
+                                  color: colorScheme.primary,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Total',
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          NumberFormat.currency(symbol: '£')
-                              .format(invoice.total),
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ],
                     ),
+                    const SizedBox(height: 16),
+                    // PDF Card
+                    GlassCard(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: semanticColors.error.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.picture_as_pdf,
+                              color: semanticColors.error,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Invoice_${invoice.invoiceNumber.replaceFirst('INV-', '')}_Final.pdf',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              side: BorderSide(color: colorScheme.outline),
+                            ),
+                            onPressed: () {
+                              final url = '$_webAppBaseUrl/portal/invoices/${invoice.id}';
+                              context.push(
+                                '/web-preview',
+                                extra: {
+                                  'url': url,
+                                  'title': 'Invoice PDF',
+                                },
+                              );
+                            },
+                            child: Text(
+                              'View PDF',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Bottom Actions
+                    if (invoice.status != 'Paid') ...[
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: colorScheme.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
+                          onPressed: () => _markPaid(context, ref, invoice.id),
+                          child: const Text(
+                            'Mark as Paid',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            side: BorderSide(
+                              color: colorScheme.outline,
+                              width: 1.5,
+                            ),
+                          ),
+                          onPressed: () =>
+                              _sendReminder(context, ref, invoice),
+                          child: Text(
+                            'Send Reminder',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                    ],
                   ],
                 ),
               ),
@@ -379,21 +690,35 @@ class InvoiceDetailScreen extends ConsumerWidget {
 class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
+  final Color? valueColor;
 
-  const _DetailRow({required this.label, required this.value});
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: TextStyle(color: Colors.grey.shade600),
+          style: TextStyle(
+            fontSize: 14,
+            color: colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
         ),
         Text(
           value,
-          style: const TextStyle(fontWeight: FontWeight.w500),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: valueColor ?? colorScheme.onSurface,
+          ),
         ),
       ],
     );

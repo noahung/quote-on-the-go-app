@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class AppEmptyState extends StatelessWidget {
   final IconData icon;
@@ -19,6 +18,9 @@ class AppEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -28,15 +30,14 @@ class AppEmptyState extends StatelessWidget {
             Icon(
               icon,
               size: 64,
-              color: Colors.grey.shade400,
+              color: colorScheme.outlineVariant,
             ),
             const SizedBox(height: 16),
             Text(
               title,
-              style: GoogleFonts.poppins(
-                fontSize: 18,
+              style: textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: Colors.grey.shade600,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
             if (subtitle != null) ...[
@@ -44,7 +45,9 @@ class AppEmptyState extends StatelessWidget {
               Text(
                 subtitle!,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey.shade500),
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                ),
               ),
             ],
             if (actionLabel != null && onAction != null) ...[

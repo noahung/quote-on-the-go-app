@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../components/glass_card.dart';
+import '../../components/mesh_background.dart';
+import '../../components/curved_header.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 
@@ -15,9 +18,18 @@ class ServiceDetailScreen extends ConsumerWidget {
     final service = services.where((s) => s.id == serviceId).firstOrNull;
 
     if (service == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Service Detail')),
-        body: const Center(child: CircularProgressIndicator()),
+      return const MeshBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Column(
+            children: [
+              CurvedHeader(title: 'Service Detail'),
+              Expanded(
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -35,179 +47,171 @@ class _ServiceDetailView extends ConsumerWidget {
     final textTheme = Theme.of(context).textTheme;
     final currency = NumberFormat.currency(symbol: '£');
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: Text('Service Detail',
-            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: () => _showEditSheet(context, ref),
-          ),
-          PopupMenuButton<String>(
-            onSelected: (v) {
-              if (v == 'delete') _confirmDelete(context, ref);
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'delete',
-                child: Text('Delete Service',
-                    style: TextStyle(color: colorScheme.error)),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: ListView(
+          padding: const EdgeInsets.only(top: 0),
           children: [
-            // Hero price card
-            Card(
-              elevation: 0,
-              color: colorScheme.primaryContainer,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: colorScheme.primary,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(Icons.build_outlined,
-                          color: colorScheme.onPrimary, size: 28),
+            CurvedHeader(
+              title: 'Service Detail',
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                  onPressed: () => _showEditSheet(context, ref),
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: Colors.white),
+                  onSelected: (v) {
+                    if (v == 'delete') _confirmDelete(context, ref);
+                  },
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Delete Service',
+                          style: TextStyle(color: colorScheme.error)),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  ],
+                ),
+              ],
+            ),
+            Transform.translate(
+              offset: const Offset(0, -24),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Hero price card
+                    GlassCard(
+                      borderRadius: BorderRadius.circular(16),
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
                         children: [
-                          Text(
-                            service.name,
-                            style: textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onPrimaryContainer),
+                          Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: colorScheme.primary,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(Icons.build_outlined,
+                                color: colorScheme.onPrimary, size: 28),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            currency.format(service.price),
-                            style: textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.primary),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  service.name,
+                                  style: textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.onSurface),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  currency.format(service.price),
+                                  style: textTheme.headlineSmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.primary),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-            // Description
-            if (service.description != null &&
-                service.description!.isNotEmpty) ...[
-              Card(
-                elevation: 0,
-                color: colorScheme.surfaceContainerLow,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('DESCRIPTION',
-                          style: textTheme.labelSmall?.copyWith(
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1)),
-                      const SizedBox(height: 8),
-                      Text(service.description!,
-                          style: textTheme.bodyMedium
-                              ?.copyWith(color: colorScheme.onSurfaceVariant)),
+                    // Description
+                    if (service.description != null &&
+                        service.description!.isNotEmpty) ...[
+                      GlassCard(
+                        borderRadius: BorderRadius.circular(12),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('DESCRIPTION',
+                                style: textTheme.labelSmall?.copyWith(
+                                    color: colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 1)),
+                            const SizedBox(height: 8),
+                            Text(service.description!,
+                                style: textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onSurfaceVariant)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                     ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
 
-            // Integrations status
-            Card(
-              elevation: 0,
-              color: colorScheme.surfaceContainerLow,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('INTEGRATIONS',
-                        style: textTheme.labelSmall?.copyWith(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1)),
-                    const SizedBox(height: 12),
-                    _IntegrationRow(
-                      icon: Icons.sync,
-                      label: 'QuickBooks',
-                      synced: service.quickbooksItemId != null,
-                      lastSync: service.quickbooksLastSyncAt,
+                    // Integrations status
+                    GlassCard(
+                      borderRadius: BorderRadius.circular(12),
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('INTEGRATIONS',
+                              style: textTheme.labelSmall?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 1)),
+                          const SizedBox(height: 12),
+                          _IntegrationRow(
+                            icon: Icons.sync,
+                            label: 'QuickBooks',
+                            synced: service.quickbooksItemId != null,
+                            lastSync: service.quickbooksLastSyncAt,
+                          ),
+                          const Divider(height: 20),
+                          _IntegrationRow(
+                            icon: Icons.table_chart_outlined,
+                            label: 'Monday.com',
+                            synced: service.mondayItemId != null,
+                            lastSync: service.mondayLastSyncAt,
+                          ),
+                        ],
+                      ),
                     ),
-                    const Divider(height: 20),
-                    _IntegrationRow(
-                      icon: Icons.table_chart_outlined,
-                      label: 'Monday.com',
-                      synced: service.mondayItemId != null,
-                      lastSync: service.mondayLastSyncAt,
+                    const SizedBox(height: 24),
+
+                    // Add to quote CTA
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () => context.push('/quotations/new'),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add to New Quotation'),
+                      ),
                     ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () => _showEditSheet(context, ref),
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Edit Service'),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Add to quote CTA
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () => context.push('/quotations/new'),
-                icon: const Icon(Icons.add),
-                label: const Text('Add to New Quotation'),
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () => _showEditSheet(context, ref),
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text('Edit Service'),
-              ),
-            ),
-            const SizedBox(height: 32),
           ],
         ),
       ),

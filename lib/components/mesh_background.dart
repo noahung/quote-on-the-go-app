@@ -26,7 +26,8 @@ class MeshBackground extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFF0F4F9), // Ice-blue white tint (Gemini light mode signature)
+              Color(
+                  0xFFF0F4F9), // Ice-blue white tint (Gemini light mode signature)
               Color(0xFFFBFBFD), // Pure clean white slate
             ],
           );
@@ -44,4 +45,3 @@ class MeshBackground extends StatelessWidget {
     );
   }
 }
-

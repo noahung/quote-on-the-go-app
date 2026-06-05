@@ -10,6 +10,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../../models/models.dart';
 import '../../components/glass_card.dart';
 import '../../components/mesh_background.dart';
+import '../../components/curved_header.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/job_note_provider.dart';
 import '../../providers/job_media_provider.dart';
@@ -20,6 +21,7 @@ import '../../providers/customer_provider.dart';
 import 'create_job_screen.dart';
 import '../quotations/create_quotation_screen.dart';
 import '../invoices/create_invoice_screen.dart';
+import '../team/team_management_screen.dart' show teamMembersProvider;
 
 // Provider for a single calendar event by ID
 final jobDetailProvider =
@@ -40,19 +42,46 @@ class JobDetailScreen extends ConsumerWidget {
     final jobAsync = ref.watch(jobDetailProvider(jobId));
 
     return jobAsync.when(
-      loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Job Detail')),
-        body: const Center(child: CircularProgressIndicator()),
+      loading: () => const MeshBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Column(
+            children: [
+              CurvedHeader(title: 'Job Detail'),
+              Expanded(
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ],
+          ),
+        ),
       ),
-      error: (e, _) => Scaffold(
-        appBar: AppBar(title: const Text('Job Detail')),
-        body: Center(child: Text('Error: $e')),
+      error: (e, _) => MeshBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Column(
+            children: [
+              const CurvedHeader(title: 'Job Detail'),
+              Expanded(
+                child: Center(child: Text('Error: $e')),
+              ),
+            ],
+          ),
+        ),
       ),
       data: (job) {
         if (job == null) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Job Detail')),
-            body: const Center(child: Text('Job not found')),
+          return const MeshBackground(
+            child: Scaffold(
+              backgroundColor: Colors.transparent,
+              body: Column(
+                children: [
+                  CurvedHeader(title: 'Job Detail'),
+                  Expanded(
+                    child: Center(child: Text('Job not found')),
+                  ),
+                ],
+              ),
+            ),
           );
         }
         return _JobDetailView(job: job);
@@ -94,15 +123,6 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
     super.dispose();
   }
 
-  Color get _jobColor {
-    try {
-      if (widget.job.color != null) {
-        return Color(int.parse(widget.job.color!.replaceFirst('#', '0xff')));
-      }
-    } catch (_) {}
-    return const Color(0xFFF4781F);
-  }
-
   Future<void> _confirmDelete() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -140,28 +160,49 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final brandGradientColors = isDark
+        ? const [
+            Color(0xFFBA6935), // Deep dark brand orange
+            Color(0xFF9A5228), // Sunset amber dark
+          ]
+        : const [
+            Color(0xFFF4781F), // Bright brand orange
+            Color(0xFFFF9845), // Peach glow brand orange
+          ];
+
     return MeshBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: NestedScrollView(
-          headerSliverBuilder: (_, __) => [
-            SliverAppBar(
-              expandedHeight: 110,
-              pinned: true,
-              backgroundColor: _jobColor.withOpacity(0.85),
-              foregroundColor: Colors.white,
-              title: Text(
-                widget.job.title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-                overflow: TextOverflow.ellipsis,
+        child: Scaffold(
+      backgroundColor: Colors.transparent,
+      body: NestedScrollView(
+        headerSliverBuilder: (_, __) => [
+          SliverAppBar(
+            expandedHeight: 110,
+            pinned: true,
+            backgroundColor:
+                isDark ? const Color(0xFFBA6935) : const Color(0xFFF4781F),
+            foregroundColor: Colors.white,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+            ),
+            title: Text(
+              widget.job.title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
               ),
+              overflow: TextOverflow.ellipsis,
+            ),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.pop(),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/schedule');
+                }
+              },
             ),
             actions: [
               IconButton(
@@ -192,7 +233,10 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [_jobColor, _jobColor.withAlpha(178)],
+                    colors: brandGradientColors,
+                  ),
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(32),
                   ),
                 ),
                 child: Align(
@@ -206,28 +250,34 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
               ),
             ),
             bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(48),
+              preferredSize: const Size.fromHeight(56),
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: TabBar(
-                  controller: _tabController,
-                  isScrollable: true,
-                  tabAlignment: TabAlignment.start,
-                  dividerColor: Colors.transparent,
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.white.withValues(alpha: 0.65),
-                  labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                  unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                  indicator: BoxDecoration(
+                padding: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
+                child: Container(
+                  height: 40,
+                  decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      width: 1,
-                    ),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  tabs: _tabs,
+                  padding: const EdgeInsets.all(4),
+                  child: TabBar(
+                    controller: _tabController,
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                    dividerColor: Colors.transparent,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    labelColor: const Color(0xFFF4781F),
+                    unselectedLabelColor: Colors.white,
+                    labelStyle: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 13),
+                    unselectedLabelStyle: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 13),
+                    indicator: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    tabs: _tabs,
+                  ),
                 ),
               ),
             ),
@@ -252,143 +302,707 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
 // ─────────────────────────────────────────────────────────────────
 // TAB 1: Overview
 // ─────────────────────────────────────────────────────────────────
-class _OverviewTab extends ConsumerWidget {
+class _OverviewTab extends ConsumerStatefulWidget {
   final CalendarEvent job;
   const _OverviewTab({required this.job});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final start = DateTime.tryParse(job.start);
-    final end = DateTime.tryParse(job.end);
-    final dateFormat = DateFormat('EEEE, MMMM d, yyyy');
-    final timeFormat = DateFormat('h:mm a');
+  ConsumerState<_OverviewTab> createState() => _OverviewTabState();
+}
 
-    // Project value: sum of linked quotes
-    final allQuotes = ref.watch(quotationsStreamProvider).valueOrNull ?? [];
-    final linkedQuotes = allQuotes.where((q) => q.jobId == job.id).toList();
-    final projectValue =
-        linkedQuotes.fold<double>(0, (acc, q) => acc + q.total);
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Status chip
-        Row(
-          children: [
-            _StatusChip(status: job.status ?? 'Draft'),
-            if (job.googleEventId != null) ...[
-              const SizedBox(width: 8),
-              Chip(
-                avatar:
-                    Icon(Icons.sync, size: 14, color: colorScheme.secondary),
-                label: Text('Google Calendar',
-                    style: textTheme.labelSmall
-                        ?.copyWith(color: colorScheme.secondary)),
-                backgroundColor: colorScheme.secondaryContainer,
-                padding: EdgeInsets.zero,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 12),
-
-        // Project value card
-        if (linkedQuotes.isNotEmpty)
-          _InfoCard(
-            icon: Icons.attach_money,
-            title: 'Project Value',
-            child: Text(
-              NumberFormat.currency(symbol: r'$').format(projectValue),
-              style: textTheme.headlineSmall?.copyWith(
-                  color: colorScheme.primary, fontWeight: FontWeight.bold),
-            ),
-          ),
-        if (linkedQuotes.isNotEmpty) const SizedBox(height: 12),
-
-        // Customer info
-        if (job.customerName != null)
-          _InfoCard(
-            icon: Icons.person_outline,
-            title: 'Customer',
-            child: Text(job.customerName!, style: textTheme.bodyMedium),
-          ),
-        if (job.customerName != null) const SizedBox(height: 12),
-
-        // Schedule card
-        _InfoCard(
-          icon: Icons.schedule_outlined,
-          title: 'Schedule',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _DetailRow(
-                label: 'Date',
-                value: start != null ? dateFormat.format(start) : job.start,
-              ),
-              if (job.allDay == true)
-                const _DetailRow(label: 'Duration', value: 'All Day')
-              else ...[
-                if (start != null) ...[
-                  const Divider(height: 12),
-                  _DetailRow(label: 'Start', value: timeFormat.format(start)),
-                ],
-                if (end != null) ...[
-                  const Divider(height: 12),
-                  _DetailRow(label: 'End', value: timeFormat.format(end)),
-                ],
-                if (start != null && end != null) ...[
-                  const Divider(height: 12),
-                  _DetailRow(
-                    label: 'Duration',
-                    value: _formatDuration(end.difference(start)),
-                  ),
-                ],
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Description
-        if (job.description != null && job.description!.isNotEmpty) ...[
-          _InfoCard(
-            icon: Icons.notes_outlined,
-            title: 'Description',
-            child: Text(job.description!,
-                style: textTheme.bodyMedium
-                    ?.copyWith(color: colorScheme.onSurfaceVariant)),
-          ),
-          const SizedBox(height: 12),
-        ],
-
-        // Site address + map
-        if (job.customerAddress != null && job.customerAddress!.isNotEmpty) ...[
-          _InfoCard(
-            icon: Icons.location_on_outlined,
-            title: 'Site Address',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(job.customerAddress!, style: textTheme.bodyMedium),
-                const SizedBox(height: 12),
-                _MapEmbed(address: job.customerAddress!),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-      ],
-    );
-  }
-
+class _OverviewTabState extends ConsumerState<_OverviewTab> {
   String _formatDuration(Duration d) {
     if (d.inMinutes < 60) return '${d.inMinutes} min';
     final h = d.inHours;
     final m = d.inMinutes.remainder(60);
     return m > 0 ? '${h}h ${m}m' : '${h}h';
+  }
+
+  Future<void> _completeJob() async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(widget.job.id)
+          .update({'status': 'Completed'});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Job completed!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error completing job: $e')),
+        );
+      }
+    }
+  }
+
+  bool _uploading = false;
+  Future<void> _pickAndUpload() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (picked == null || !mounted) return;
+
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+
+    setState(() => _uploading = true);
+    try {
+      final repo = ref.read(jobMediaRepositoryProvider);
+      final file = File(picked.path);
+      final companyId = widget.job.companyId.isNotEmpty
+          ? widget.job.companyId
+          : (ref.read(companyIdProvider) ?? '');
+
+      await repo.uploadMedia(
+        jobId: widget.job.id,
+        companyId: companyId,
+        createdBy: user.uid,
+        file: file,
+        filename: picked.name,
+        mimeType: 'image/jpeg',
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo uploaded successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  // Checklist Helpers
+  List<Map<String, dynamic>> get _checklist {
+    if (widget.job.checklist != null && widget.job.checklist!.isNotEmpty) {
+      return List<Map<String, dynamic>>.from(
+        widget.job.checklist!.map((item) => Map<String, dynamic>.from(item as Map)),
+      );
+    }
+    return [
+      {'title': 'Site Survey', 'checked': false},
+      {'title': 'Foundation Setup', 'checked': false},
+      {'title': 'Wall Construction', 'checked': false},
+      {'title': 'Inspection', 'checked': false},
+    ];
+  }
+
+  Future<void> _updateChecklist(List<Map<String, dynamic>> list) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(widget.job.id)
+          .update({'checklist': list});
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save checklist: $e')),
+        );
+      }
+    }
+  }
+
+  void _toggleChecklistItem(int index, bool checked) {
+    final list = _checklist;
+    list[index]['checked'] = checked;
+    _updateChecklist(list);
+  }
+
+  void _addChecklistItem(String title) {
+    final list = _checklist;
+    list.add({'title': title, 'checked': false});
+    _updateChecklist(list);
+  }
+
+  void _deleteChecklistItem(int index) {
+    final list = _checklist;
+    list.removeAt(index);
+    _updateChecklist(list);
+  }
+
+  void _editChecklistItem(int index, String newTitle) {
+    final list = _checklist;
+    list[index]['title'] = newTitle;
+    _updateChecklist(list);
+  }
+
+  void _showAddItemDialog() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Checklist Item'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'Enter task title...'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                _addChecklistItem(controller.text.trim());
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditItemDialog(int index, String currentTitle) {
+    final controller = TextEditingController(text: currentTitle);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Checklist Item'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'Enter task title...'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                _editChecklistItem(index, controller.text.trim());
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showManageTeamSheet() {
+    final allMembers = ref.read(teamMembersProvider).valueOrNull ?? [];
+    final currentAssigned = List<String>.from(widget.job.assignedUserIds ?? []);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx2, setState2) {
+            return DraggableScrollableSheet(
+              initialChildSize: 0.6,
+              minChildSize: 0.4,
+              maxChildSize: 0.9,
+              expand: false,
+              builder: (ctx3, scrollController) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Column(
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Theme.of(ctx).colorScheme.outlineVariant,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      Text(
+                        'Assign Team Members',
+                        style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: ListView.builder(
+                          controller: scrollController,
+                          itemCount: allMembers.length,
+                          itemBuilder: (context, i) {
+                            final member = allMembers[i];
+                            final isAssigned = currentAssigned.contains(member.uid);
+                            return CheckboxListTile(
+                              title: Text(member.displayName ?? member.email ?? 'Unknown'),
+                              subtitle: Text(member.role),
+                              value: isAssigned,
+                              onChanged: (val) {
+                                setState2(() {
+                                  if (val == true) {
+                                    currentAssigned.add(member.uid);
+                                  } else {
+                                    currentAssigned.remove(member.uid);
+                                  }
+                                });
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () async {
+                            await FirebaseFirestore.instance
+                                .collection('events')
+                                .doc(widget.job.id)
+                                .update({'assignedUserIds': currentAssigned});
+                            if (ctx.mounted) Navigator.pop(ctx);
+                          },
+                          child: const Text('Save Assignments'),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final start = DateTime.tryParse(widget.job.start);
+    final end = DateTime.tryParse(widget.job.end);
+    final dateFormat = DateFormat('MMMM d, yyyy');
+    final timeFormat = DateFormat('h:mm a');
+
+    // Project value: sum of linked quotes
+    final allQuotes = ref.watch(quotationsStreamProvider).valueOrNull ?? [];
+    final linkedQuotes = allQuotes.where((q) => q.jobId == widget.job.id).toList();
+
+    // Invoices list
+    final allInvoices = ref.watch(invoicesStreamProvider).valueOrNull ?? [];
+    final linkedInvoices = allInvoices.where((i) => i.jobId == widget.job.id).toList();
+
+    final status = widget.job.status ?? 'Draft';
+
+    final teamAsync = ref.watch(teamMembersProvider);
+    final assignedIds = widget.job.assignedUserIds ?? [];
+    final allMembers = teamAsync.valueOrNull ?? [];
+    final assignedMembers = allMembers.where((m) => assignedIds.contains(m.uid)).toList();
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      children: [
+        // Summary Header Row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.job.title,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  if (widget.job.customerName != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Client: ${widget.job.customerName}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: colorScheme.primaryContainer.withValues(alpha: 0.24),
+                ),
+              ),
+              child: Text(
+                status,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: colorScheme.primary,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        // Job Schedule Card
+        GlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Schedule & Details',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Date Row
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.calendar_month, color: colorScheme.outline, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          start != null ? '${dateFormat.format(start)}, ${timeFormat.format(start)}' : widget.job.start,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (start != null && end != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            'Estimated duration: ${_formatDuration(end.difference(start))}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Assigned Personnel Row with Avatars
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.group, color: colorScheme.outline, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                assignedMembers.isEmpty
+                                    ? 'No team members assigned'
+                                    : assignedMembers.map((m) => m.displayName ?? m.email ?? 'Unknown').join(', '),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, size: 18),
+                              onPressed: _showManageTeamSheet,
+                            ),
+                          ],
+                        ),
+                        if (assignedMembers.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          SizedBox(
+                            height: 32,
+                            child: Stack(
+                              children: List.generate(assignedMembers.length, (idx) {
+                                final member = assignedMembers[idx];
+                                final name = member.displayName ?? member.email ?? '';
+                                final initials = name.isNotEmpty
+                                    ? (name.split(' ').length >= 2
+                                        ? '${name.split(' ')[0][0]}${name.split(' ')[1][0]}'
+                                        : name[0])
+                                    : '?';
+                                return Positioned(
+                                  left: idx * 24.0,
+                                  child: CircleAvatar(
+                                    radius: 16,
+                                    backgroundColor: colorScheme.primaryContainer,
+                                    child: Text(
+                                      initials.toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: colorScheme.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (widget.job.customerAddress != null && widget.job.customerAddress!.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.location_on, color: colorScheme.primary, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.job.customerAddress!,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          _MapEmbed(address: widget.job.customerAddress!),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Checklist Timeline Card
+        GlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Task Checklist',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: _showAddItemDialog,
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Add Task', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _checklist.length,
+                itemBuilder: (context, index) {
+                  final item = _checklist[index];
+                  final isChecked = item['checked'] as bool;
+
+                  // Determine status:
+                  // 1. Is it completed? (checked == true)
+                  // 2. Is it active? (the first unchecked item)
+                  // 3. Is it pending?
+                  final isFirstUnchecked = !isChecked && _checklist.take(index).every((e) => e['checked'] == true);
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        // Custom checkbox button
+                        InkWell(
+                          onTap: () => _toggleChecklistItem(index, !isChecked),
+                          borderRadius: BorderRadius.circular(100),
+                          child: Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isChecked
+                                  ? Colors.green
+                                  : Colors.transparent,
+                              border: Border.all(
+                                color: isChecked
+                                    ? Colors.green
+                                    : (isFirstUnchecked ? colorScheme.primary : colorScheme.outline.withValues(alpha: 0.5)),
+                                width: 2,
+                              ),
+                            ),
+                            child: isChecked
+                                ? const Icon(Icons.check, size: 14, color: Colors.white)
+                                : (isFirstUnchecked
+                                    ? Center(
+                                        child: Container(
+                                          width: 8,
+                                          height: 8,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: colorScheme.primary,
+                                          ),
+                                        ),
+                                      )
+                                    : null),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            '${index + 1}. ${item['title']}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: isFirstUnchecked ? FontWeight.w700 : FontWeight.w500,
+                              color: isChecked
+                                  ? colorScheme.onSurface.withValues(alpha: 0.5)
+                                  : (isFirstUnchecked ? colorScheme.primary : colorScheme.onSurface),
+                              decoration: isChecked ? TextDecoration.lineThrough : null,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, size: 16),
+                          onPressed: () => _showEditItemDialog(index, item['title'] as String),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                          onPressed: () => _deleteChecklistItem(index),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Associated Documents Card
+        if (linkedQuotes.isNotEmpty || linkedInvoices.isNotEmpty)
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Associated Documents',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (linkedQuotes.isNotEmpty) ...[
+                  ...linkedQuotes.map((q) => ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(Icons.request_quote, color: colorScheme.outline),
+                        title: Text('Quote #${q.quotationNumber.replaceFirst('Q-', '')}'),
+                        subtitle: Text(NumberFormat.currency(symbol: '£').format(q.total)),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => context.push('/quotations/${q.id}'),
+                      )),
+                ],
+                if (linkedInvoices.isNotEmpty) ...[
+                  if (linkedQuotes.isNotEmpty) Divider(color: colorScheme.outline.withValues(alpha: 0.2)),
+                  ...linkedInvoices.map((inv) => ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(Icons.receipt_long, color: colorScheme.outline),
+                        title: Text('Invoice #${inv.invoiceNumber.replaceFirst('INV-', '')}'),
+                        subtitle: Text(NumberFormat.currency(symbol: '£').format(inv.total)),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => context.push('/invoices/${inv.id}'),
+                      )),
+                ],
+              ],
+            ),
+          ),
+        const SizedBox(height: 24),
+
+        // Bottom Actions
+        if (status != 'Completed') ...[
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: colorScheme.primary,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              onPressed: _completeJob,
+              icon: const Icon(Icons.check_circle, size: 18),
+              label: const Text(
+                'Complete Job',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                side: BorderSide(
+                  color: colorScheme.outline,
+                  width: 1.5,
+                ),
+              ),
+              onPressed: _uploading ? null : _pickAndUpload,
+              icon: _uploading
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.add_a_photo, size: 18),
+              label: const Text(
+                'Upload Site Photos',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
+        ],
+      ],
+    );
   }
 }
 
@@ -1003,99 +1617,7 @@ class _MapEmbedState extends State<_MapEmbed> {
   }
 }
 
-class _StatusChip extends StatelessWidget {
-  final String status;
-  const _StatusChip({required this.status});
 
-  Color _color(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    switch (status) {
-      case 'Completed':
-        return Colors.green.shade600;
-      case 'In Progress':
-        return cs.primary;
-      case 'Scheduled':
-        return cs.secondary;
-      case 'Cancelled':
-        return cs.error;
-      default:
-        return cs.onSurfaceVariant;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Chip(
-      label: Text(status,
-          style:
-              TextStyle(color: _color(context), fontWeight: FontWeight.w600)),
-      backgroundColor: _color(context).withAlpha(26),
-      side: BorderSide(color: _color(context).withAlpha(77)),
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-    );
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final Widget child;
-  const _InfoCard(
-      {required this.icon, required this.title, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    return GlassCard(
-      padding: const EdgeInsets.all(16),
-      borderRadius: BorderRadius.circular(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: colorScheme.primary),
-              const SizedBox(width: 6),
-              Text(
-                title.toUpperCase(),
-                style: textTheme.labelSmall?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  final String label;
-  final String value;
-  const _DetailRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label,
-            style: textTheme.bodySmall
-                ?.copyWith(color: colorScheme.onSurfaceVariant)),
-        Text(value,
-            style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
-      ],
-    );
-  }
-}
 
 class _EmptyState extends StatelessWidget {
   final IconData icon;

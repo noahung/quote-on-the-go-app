@@ -24,9 +24,9 @@ class InvoicePortalScreen extends ConsumerWidget {
     }
 
     return MeshBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: CustomScrollView(
+        child: Scaffold(
+      backgroundColor: Colors.transparent,
+      body: CustomScrollView(
         slivers: [
           _PortalAppBar(invoice: invoice),
           SliverPadding(
@@ -81,7 +81,13 @@ class _PortalAppBar extends StatelessWidget {
       backgroundColor: Colors.transparent,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
-        onPressed: () => context.pop(),
+        onPressed: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/invoices/${invoice.id}');
+          }
+        },
       ),
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,13 +177,12 @@ class _CompanyHeader extends StatelessWidget {
                 width: 52,
                 height: 52,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _LogoFallback(
-                    name: company.name, colorScheme: colorScheme),
+                errorBuilder: (_, __, ___) =>
+                    _LogoFallback(name: company.name, colorScheme: colorScheme),
               ),
             )
           else
-            _LogoFallback(
-                name: company?.name ?? 'C', colorScheme: colorScheme),
+            _LogoFallback(name: company?.name ?? 'C', colorScheme: colorScheme),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -194,16 +199,16 @@ class _CompanyHeader extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     company!.email!,
-                    style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant),
+                    style: textTheme.bodySmall
+                        ?.copyWith(color: colorScheme.onSurfaceVariant),
                   ),
                 ],
                 if (company?.phone != null) ...[
                   const SizedBox(height: 2),
                   Text(
                     company!.phone!,
-                    style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant),
+                    style: textTheme.bodySmall
+                        ?.copyWith(color: colorScheme.onSurfaceVariant),
                   ),
                 ],
               ],
@@ -259,8 +264,7 @@ class _InvoiceMetaCard extends StatelessWidget {
           _MetaRow(label: 'Due Date', value: invoice.dueDate),
           if (invoice.quotationNumber != null) ...[
             const Divider(height: 20),
-            _MetaRow(
-                label: 'From Quotation', value: invoice.quotationNumber!),
+            _MetaRow(label: 'From Quotation', value: invoice.quotationNumber!),
           ],
         ],
       ),
@@ -311,8 +315,8 @@ class _ClientAddressCard extends StatelessWidget {
                   letterSpacing: 1)),
           const SizedBox(height: 10),
           Text(invoice.customerName,
-              style: textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w600)),
+              style:
+                  textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(height: 2),
           Text(invoice.customerEmail,
               style: textTheme.bodySmall
@@ -371,8 +375,8 @@ class _ItemsCard extends StatelessWidget {
                                   ?.copyWith(fontWeight: FontWeight.w500)),
                           Text(
                             '${item.quantity} × ${currency.format(item.unitPrice)}',
-                            style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant),
+                            style: textTheme.bodySmall
+                                ?.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -503,7 +507,7 @@ class _StatusBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return GlassCard(
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: color.withOpacity(0.15), width: 1.5),
+      border: Border.all(color: color.withValues(alpha: 0.15), width: 1.5),
       child: Row(
         children: [
           Icon(icon, color: color),

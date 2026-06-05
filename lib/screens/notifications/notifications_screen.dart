@@ -16,20 +16,28 @@ class NotificationsScreen extends ConsumerWidget {
 
     return MeshBackground(
       child: Scaffold(
-        backgroundColor: Colors.transparent, // Transparent to show MeshBackground
+        backgroundColor:
+            Colors.transparent, // Transparent to show MeshBackground
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/');
+              }
+            },
           ),
           title: Row(
             children: [
               Text(
                 'Notifications',
-                style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                style:
+                    textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
               Consumer(builder: (context, ref, _) {
                 final unread = ref.watch(unreadNotificationCountProvider);
@@ -37,7 +45,8 @@ class NotificationsScreen extends ConsumerWidget {
                 return Padding(
                   padding: const EdgeInsets.only(left: 8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: colorScheme.primary,
                       borderRadius: BorderRadius.circular(20),
@@ -96,21 +105,24 @@ class NotificationsScreen extends ConsumerWidget {
                     Text(
                       'You\'re all caught up!',
                       style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        color:
+                            colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
                 ),
               );
             }
-  
+
             final today = notifications
-                .where((n) => DateTime.now().difference(n.createdAt).inHours < 24)
+                .where(
+                    (n) => DateTime.now().difference(n.createdAt).inHours < 24)
                 .toList();
             final earlier = notifications
-                .where((n) => DateTime.now().difference(n.createdAt).inHours >= 24)
+                .where(
+                    (n) => DateTime.now().difference(n.createdAt).inHours >= 24)
                 .toList();
-  
+
             return ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               children: [
@@ -137,7 +149,8 @@ class NotificationsScreen extends ConsumerWidget {
                             Divider(
                               height: 1,
                               thickness: 1,
-                              color: colorScheme.onSurface.withValues(alpha: 0.05),
+                              color:
+                                  colorScheme.onSurface.withValues(alpha: 0.05),
                               indent: 72,
                               endIndent: 16,
                             ),
@@ -170,7 +183,8 @@ class NotificationsScreen extends ConsumerWidget {
                             Divider(
                               height: 1,
                               thickness: 1,
-                              color: colorScheme.onSurface.withValues(alpha: 0.05),
+                              color:
+                                  colorScheme.onSurface.withValues(alpha: 0.05),
                               indent: 72,
                               endIndent: 16,
                             ),
@@ -197,14 +211,29 @@ class NotificationsScreen extends ConsumerWidget {
         case 'quotation_accepted':
         case 'quotation_declined':
         case 'quotation_amended':
+        case 'quotation':
           context.go('/quotations/${n.relatedDocumentId}');
           break;
         case 'invoice_paid':
         case 'invoice_reminder':
+        case 'invoice':
           context.go('/invoices/${n.relatedDocumentId}');
           break;
         case 'team_invitation':
+        case 'team':
           context.go('/team');
+          break;
+        case 'job_assigned':
+        case 'job_updated':
+        case 'job_reminder':
+        case 'job':
+        case 'schedule':
+          context.go('/schedule/${n.relatedDocumentId}');
+          break;
+        case 'customer_created':
+        case 'customer_updated':
+        case 'customer':
+          context.go('/customers/${n.relatedDocumentId}');
           break;
         default:
           break;
@@ -256,6 +285,16 @@ class _NotificationTile extends StatelessWidget {
         return Icons.alarm_outlined;
       case 'team_invitation':
         return Icons.person_add_outlined;
+      case 'job_assigned':
+      case 'job_updated':
+      case 'job_reminder':
+      case 'job':
+      case 'schedule':
+        return Icons.calendar_today_outlined;
+      case 'customer_created':
+      case 'customer_updated':
+      case 'customer':
+        return Icons.people_outline;
       default:
         return Icons.info_outlined;
     }
@@ -275,6 +314,16 @@ class _NotificationTile extends StatelessWidget {
         return cs.error;
       case 'team_invitation':
         return cs.primary;
+      case 'job_assigned':
+      case 'job_updated':
+      case 'job_reminder':
+      case 'job':
+      case 'schedule':
+        return cs.primary;
+      case 'customer_created':
+      case 'customer_updated':
+      case 'customer':
+        return cs.secondary;
       default:
         return cs.onSurfaceVariant;
     }
@@ -325,14 +374,16 @@ class _NotificationTile extends StatelessWidget {
                         child: Text(
                           item.title,
                           style: textTheme.titleSmall?.copyWith(
-                            fontWeight: item.isRead ? FontWeight.w500 : FontWeight.w700,
+                            fontWeight:
+                                item.isRead ? FontWeight.w500 : FontWeight.w700,
                           ),
                         ),
                       ),
                       Text(
                         _relativeTime(item.createdAt),
                         style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                          color: colorScheme.onSurfaceVariant
+                              .withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -341,7 +392,8 @@ class _NotificationTile extends StatelessWidget {
                   Text(
                     item.message,
                     style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                      color:
+                          colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
                       height: 1.3,
                     ),
                   ),

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
+import '../../components/glass_card.dart';
+import '../../components/mesh_background.dart';
 
 const List<String> _kCategories = [
   'Materials',
@@ -105,71 +107,77 @@ class _LogExpenseScreenState extends ConsumerState<LogExpenseScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => context.pop(),
-        ),
-        title: Text('Log Expense',
-            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
-        actions: [
-          FilledButton(
-            onPressed: _isLoading ? null : _submit,
-            child: _isLoading
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Save'),
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/expenses');
+              }
+            },
           ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Amount — hero field
-            Card(
-              elevation: 0,
-              color: colorScheme.primaryContainer,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              child: Padding(
+          title: Text('Log Expense',
+              style:
+                  textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+          actions: [
+            FilledButton(
+              onPressed: _isLoading ? null : _submit,
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save'),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              // Amount — hero field
+              GlassCard(
+                borderRadius: BorderRadius.circular(16),
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Amount',
                         style: textTheme.labelSmall?.copyWith(
-                            color: colorScheme.onPrimaryContainer
-                                .withOpacity(0.75),
+                            color: colorScheme.primary,
                             letterSpacing: 1,
                             fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _amountController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                       style: textTheme.displaySmall?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: colorScheme.onPrimaryContainer),
+                          color: colorScheme.onSurface),
                       decoration: InputDecoration(
                         prefixText: '£ ',
                         prefixStyle: textTheme.displaySmall?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: colorScheme.onPrimaryContainer
-                                .withOpacity(0.6)),
+                            color:
+                                colorScheme.onSurface.withValues(alpha: 0.6)),
                         hintText: '0.00',
                         hintStyle: textTheme.displaySmall?.copyWith(
-                            color: colorScheme.onPrimaryContainer
-                                .withOpacity(0.4)),
+                            color:
+                                colorScheme.onSurface.withValues(alpha: 0.4)),
                         border: InputBorder.none,
-                        errorStyle: TextStyle(
-                            color: colorScheme.error),
+                        errorStyle: TextStyle(color: colorScheme.error),
                       ),
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) {
@@ -187,138 +195,127 @@ class _LogExpenseScreenState extends ConsumerState<LogExpenseScreen> {
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Merchant
-            TextFormField(
-              controller: _merchantController,
-              textCapitalization: TextCapitalization.words,
-              decoration: InputDecoration(
-                labelText: 'Merchant / Supplier',
-                hintText: 'e.g. Screwfix, Travis Perkins',
-                prefixIcon: const Icon(Icons.store_outlined),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Required' : null,
-            ),
-            const SizedBox(height: 12),
-
-            // Category
-            DropdownButtonFormField<String>(
-              initialValue: _selectedCategory,
-              decoration: InputDecoration(
-                labelText: 'Category',
-                prefixIcon: const Icon(Icons.category_outlined),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              items: _kCategories
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                  .toList(),
-              onChanged: (v) =>
-                  setState(() => _selectedCategory = v ?? _kCategories.first),
-            ),
-            const SizedBox(height: 12),
-
-            // Date
-            InkWell(
-              onTap: _pickDate,
-              borderRadius: BorderRadius.circular(12),
-              child: InputDecorator(
+              // Merchant
+              TextFormField(
+                controller: _merchantController,
+                textCapitalization: TextCapitalization.words,
                 decoration: InputDecoration(
-                  labelText: 'Date',
-                  prefixIcon: const Icon(Icons.calendar_today_outlined),
+                  labelText: 'Merchant / Supplier',
+                  hintText: 'e.g. Screwfix, Travis Perkins',
+                  prefixIcon: const Icon(Icons.store_outlined),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12)),
-                  suffixIcon: const Icon(Icons.arrow_drop_down),
                 ),
-                child: Text(
-                  DateFormat('EEE, d MMMM yyyy').format(_selectedDate),
-                  style: textTheme.bodyLarge,
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+
+              // Category
+              DropdownButtonFormField<String>(
+                initialValue: _selectedCategory,
+                decoration: InputDecoration(
+                  labelText: 'Category',
+                  prefixIcon: const Icon(Icons.category_outlined),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
+                items: _kCategories
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
+                onChanged: (v) =>
+                    setState(() => _selectedCategory = v ?? _kCategories.first),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-            // Description (optional)
-            TextFormField(
-              controller: _descriptionController,
-              maxLines: 3,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                labelText: 'Notes (optional)',
-                hintText: 'Add any additional details...',
-                prefixIcon: const Icon(Icons.notes_outlined),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                alignLabelWithHint: true,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Receipt upload placeholder
-            Card(
-              elevation: 0,
-              color: colorScheme.surfaceContainerLow,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(
-                      color: colorScheme.outlineVariant,
-                      style: BorderStyle.solid)),
-              child: InkWell(
+              // Date
+              InkWell(
+                onTap: _pickDate,
                 borderRadius: BorderRadius.circular(12),
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Date',
+                    prefixIcon: const Icon(Icons.calendar_today_outlined),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    suffixIcon: const Icon(Icons.arrow_drop_down),
+                  ),
+                  child: Text(
+                    DateFormat('EEE, d MMMM yyyy').format(_selectedDate),
+                    style: textTheme.bodyLarge,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Description (optional)
+              TextFormField(
+                controller: _descriptionController,
+                maxLines: 3,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(
+                  labelText: 'Notes (optional)',
+                  hintText: 'Add any additional details...',
+                  prefixIcon: const Icon(Icons.notes_outlined),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  alignLabelWithHint: true,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Receipt upload placeholder
+              GlassCard(
+                borderRadius: BorderRadius.circular(12),
+                padding: const EdgeInsets.all(20),
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                         content: Text('Receipt upload — coming soon')),
                   );
                 },
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      Icon(Icons.upload_file_outlined,
-                          size: 36, color: colorScheme.onSurfaceVariant),
-                      const SizedBox(height: 8),
-                      Text('Attach Receipt',
-                          style: textTheme.titleSmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant)),
-                      const SizedBox(height: 4),
-                      Text('Tap to upload photo or PDF',
-                          style: textTheme.bodySmall?.copyWith(
-                              color: colorScheme.outline)),
-                    ],
-                  ),
+                child: Column(
+                  children: [
+                    Icon(Icons.upload_file_outlined,
+                        size: 36, color: colorScheme.onSurfaceVariant),
+                    const SizedBox(height: 8),
+                    Text('Attach Receipt',
+                        style: textTheme.titleSmall
+                            ?.copyWith(color: colorScheme.onSurfaceVariant)),
+                    const SizedBox(height: 4),
+                    Text('Tap to upload photo or PDF',
+                        style: textTheme.bodySmall
+                            ?.copyWith(color: colorScheme.outline)),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(height: 32),
+              const SizedBox(height: 32),
 
-            // Submit button (also in app bar, but good to have here too)
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+              // Submit button (also in app bar, but good to have here too)
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: _isLoading ? null : _submit,
+                  icon: _isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: const Text('Log Expense'),
                 ),
-                onPressed: _isLoading ? null : _submit,
-                icon: _isLoading
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.save_outlined),
-                label: const Text('Log Expense'),
               ),
-            ),
-            const SizedBox(height: 16),
-          ],
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );

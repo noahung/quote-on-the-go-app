@@ -24,6 +24,8 @@ class CalendarEvent with _$CalendarEvent {
     String? customerName,
     String? customerAddress,
     String? status,
+    List<dynamic>? checklist,
+    List<String>? assignedUserIds,
   }) = _CalendarEvent;
 
   factory CalendarEvent.fromJson(Map<String, dynamic> json) =>

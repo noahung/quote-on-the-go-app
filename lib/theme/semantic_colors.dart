@@ -9,14 +9,14 @@ class SemanticColors extends ThemeExtension<SemanticColors> {
   final Color info;
 
   // Luminous accents for KPIs, charts, and key interface cards
-  final Color accentPrimary;     // Luminous brand orange
-  final Color accentOrange;      // Soft glow orange
-  final Color accentBlue;        // Luminous sky blue
-  final Color accentPurple;      // Luminous royal purple
-  final Color accentGreen;       // Luminous mint green
-  final Color accentDeepOrange;  // Luminous coral/rose
-  final Color accentTeal;        // Luminous electric teal
-  final Color accentIndigo;      // Luminous royal indigo
+  final Color accentPrimary; // Luminous brand orange
+  final Color accentOrange; // Soft glow orange
+  final Color accentBlue; // Luminous sky blue
+  final Color accentPurple; // Luminous royal purple
+  final Color accentGreen; // Luminous mint green
+  final Color accentDeepOrange; // Luminous coral/rose
+  final Color accentTeal; // Luminous electric teal
+  final Color accentIndigo; // Luminous royal indigo
 
   const SemanticColors({
     required this.success,
@@ -82,41 +82,42 @@ class SemanticColors extends ThemeExtension<SemanticColors> {
       accentBlue: Color.lerp(accentBlue, other.accentBlue, t)!,
       accentPurple: Color.lerp(accentPurple, other.accentPurple, t)!,
       accentGreen: Color.lerp(accentGreen, other.accentGreen, t)!,
-      accentDeepOrange: Color.lerp(accentDeepOrange, other.accentDeepOrange, t)!,
+      accentDeepOrange:
+          Color.lerp(accentDeepOrange, other.accentDeepOrange, t)!,
       accentTeal: Color.lerp(accentTeal, other.accentTeal, t)!,
       accentIndigo: Color.lerp(accentIndigo, other.accentIndigo, t)!,
     );
   }
 
-  /// Light mode luminous color palette
+  /// Light mode desaturated, clean color palette
   static const light = SemanticColors(
-    success: Color(0xFF10B981),          // Emerald
-    warning: Color(0xFFF59E0B),          // Amber
-    error: Color(0xFFEF4444),            // Coral Red
-    info: Color(0xFF3B82F6),             // Blue
-    accentPrimary: Color(0xFFF4781F),    // Brand Orange
-    accentOrange: Color(0xFFF97316),     // Orange
-    accentBlue: Color(0xFF0EA5E9),       // Sky Blue
-    accentPurple: Color(0xFF8B5CF6),     // Violet
-    accentGreen: Color(0xFF10B981),      // Success Emerald
-    accentDeepOrange: Color(0xFFE11D48), // Rose/Ruby
-    accentTeal: Color(0xFF0D9488),       // Teal
-    accentIndigo: Color(0xFF6366F1),     // Indigo
+    success: Color(0xFF00966C), // Vibrant Emerald Green
+    warning: Color(0xFFE28200), // Vibrant Amber
+    error: Color(0xFFBA1A1A), // Vibrant Crimson
+    info: Color(0xFF1A73E8), // Vibrant Info Blue
+    accentPrimary: Color(0xFFF4781F), // Brand Orange
+    accentOrange: Color(0xFFFF6B00), // Bright Orange
+    accentBlue: Color(0xFF1A73E8), // Sky Blue
+    accentPurple: Color(0xFF6200EE), // Royal Purple
+    accentGreen: Color(0xFF00966C), // Mint Green / Success
+    accentDeepOrange: Color(0xFFFF5722), // Coral / Rose
+    accentTeal: Color(0xFF009688), // Teal
+    accentIndigo: Color(0xFF3F51B5), // Royal Indigo
   );
 
-  /// Dark mode soft-glowing luminous palette
+  /// Dark mode soft-glowing desaturated palette
   static const dark = SemanticColors(
-    success: Color(0xFF34D399),          // Luminous Mint
-    warning: Color(0xFFFBBF24),          // Glowing Gold
-    error: Color(0xFFF87171),            // Peach Coral
-    info: Color(0xFF60A5FA),             // Luminous Blue
-    accentPrimary: Color(0xFFFF9E59),    // Luminous Orange Accent
-    accentOrange: Color(0xFFFB923C),     // Pastel Orange
-    accentBlue: Color(0xFF38BDF8),       // Glowing Cyan
-    accentPurple: Color(0xFFA78BFA),     // Lavender
-    accentGreen: Color(0xFF34D399),      // Mint Green
-    accentDeepOrange: Color(0xFFFB7185), // Soft Rose
-    accentTeal: Color(0xFF2DD4BF),       // Electric Teal
-    accentIndigo: Color(0xFF818CF8),     // Neon Indigo
+    success: Color(0xFF00BFA5), // Glowing Mint Green
+    warning: Color(0xFFFFB300), // Glowing Amber
+    error: Color(0xFFFF5252), // Glowing Coral Red
+    info: Color(0xFF40C4FF), // Glowing Info Blue
+    accentPrimary: Color(0xFFFF8F00), // Glowing Brand Orange
+    accentOrange: Color(0xFFFF6B00), // Bright Orange
+    accentBlue: Color(0xFF40C4FF), // Cyan Accent
+    accentPurple: Color(0xFFB388FF), // Lavender Accent
+    accentGreen: Color(0xFF00BFA5), // Mint Green
+    accentDeepOrange: Color(0xFFFF8A80), // Rose Accent
+    accentTeal: Color(0xFF1DE9B6), // Teal Accent
+    accentIndigo: Color(0xFF8C9EFF), // Indigo Accent
   );
 }

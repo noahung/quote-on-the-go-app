@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../../components/mesh_background.dart';
 import '../../models/service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/service_provider.dart';
@@ -75,80 +75,93 @@ class _CreateServiceScreenState extends ConsumerState<CreateServiceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'New Service',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/services');
+              }
+            },
+          ),
+          title: const Text(
+            'New Service',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
         ),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Service Name',
-                prefixIcon: Icon(Icons.construction),
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Service Name',
+                  prefixIcon: Icon(Icons.construction),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter a service name';
+                  }
+                  return null;
+                },
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter a service name';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _priceController,
-              decoration: const InputDecoration(
-                labelText: 'Price (£)',
-                prefixIcon: Icon(Icons.attach_money),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _priceController,
+                decoration: const InputDecoration(
+                  labelText: 'Price (£)',
+                  prefixIcon: Icon(Icons.attach_money),
+                ),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter a price';
+                  }
+                  final price = double.tryParse(value.trim());
+                  if (price == null || price < 0) {
+                    return 'Please enter a valid price';
+                  }
+                  return null;
+                },
               ),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter a price';
-                }
-                final price = double.tryParse(value.trim());
-                if (price == null || price < 0) {
-                  return 'Please enter a valid price';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description (optional)',
-                prefixIcon: Icon(Icons.notes),
-                alignLabelWithHint: true,
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description (optional)',
+                  prefixIcon: Icon(Icons.notes),
+                  alignLabelWithHint: true,
+                ),
+                maxLines: 3,
               ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _isLoading ? null : _saveService,
-              icon: _isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Icon(Icons.save),
-              label: Text(_isLoading ? 'Creating...' : 'Create Service'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _isLoading ? null : _saveService,
+                icon: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.save),
+                label: Text(_isLoading ? 'Creating...' : 'Create Service'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

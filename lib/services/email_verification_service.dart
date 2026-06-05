@@ -5,7 +5,8 @@ import 'package:http/http.dart' as http;
 
 class EmailVerificationService {
   String get _baseUrl {
-    final url = dotenv.maybeGet('APP_BASE_URL') ?? 'https://app.quoteonthego.co.uk';
+    final url =
+        dotenv.maybeGet('APP_BASE_URL') ?? 'https://app.quoteonthego.co.uk';
     return url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }
 

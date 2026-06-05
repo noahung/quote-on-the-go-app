@@ -26,15 +26,16 @@ class GlassCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
     final isDark = brightness == Brightness.dark;
-    
+
     final effectiveBorderRadius = borderRadius ?? BorderRadius.circular(24);
-    
-    final effectiveBorder = border ?? Border.all(
-      color: isDark 
-          ? Colors.white.withValues(alpha: 0.08) 
-          : Colors.black.withValues(alpha: 0.05),
-      width: 1,
-    );
+
+    final effectiveBorder = border ??
+        Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.black.withValues(alpha: 0.05),
+          width: 1,
+        );
 
     final backgroundColor = isDark
         ? Colors.black.withValues(alpha: 0.35)

@@ -92,10 +92,9 @@ class OnboardingNotifier extends StateNotifier<OnboardingFormState> {
   void updateCompanyAddress(String value) =>
       state = state.copyWith(companyAddress: value);
 
-  void updateLogoFile(File? file) =>
-      state = file == null
-          ? state.copyWith(clearLogo: true)
-          : state.copyWith(logoFile: file);
+  void updateLogoFile(File? file) => state = file == null
+      ? state.copyWith(clearLogo: true)
+      : state.copyWith(logoFile: file);
 
   void nextStep() {
     if (state.currentStep < 2) {
@@ -118,8 +117,7 @@ class OnboardingNotifier extends StateNotifier<OnboardingFormState> {
         email: state.companyEmail,
         companyName: state.companyName,
         companyEmail: state.companyEmail,
-        companyPhone:
-            state.companyPhone.isEmpty ? null : state.companyPhone,
+        companyPhone: state.companyPhone.isEmpty ? null : state.companyPhone,
         companyAddress:
             state.companyAddress.isEmpty ? null : state.companyAddress,
         logoFile: state.logoFile,

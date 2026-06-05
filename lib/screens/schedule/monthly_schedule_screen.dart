@@ -75,11 +75,11 @@ class _MonthlyScheduleScreenState extends ConsumerState<MonthlyScheduleScreen> {
     final scheduleAsync = ref.watch(scheduleStreamProvider);
 
     return MeshBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: Text('Monthly Schedule',
-              style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+        child: Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: Text('Monthly Schedule',
+            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
             icon: const Icon(Icons.today),
@@ -106,7 +106,8 @@ class _MonthlyScheduleScreenState extends ConsumerState<MonthlyScheduleScreen> {
           return Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: GlassCard(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Column(
@@ -137,7 +138,15 @@ class _MonthlyScheduleScreenState extends ConsumerState<MonthlyScheduleScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: Row(
-                          children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                          children: [
+                            'Mon',
+                            'Tue',
+                            'Wed',
+                            'Thu',
+                            'Fri',
+                            'Sat',
+                            'Sun'
+                          ]
                               .map((d) => Expanded(
                                     child: Center(
                                       child: Text(
@@ -162,9 +171,10 @@ class _MonthlyScheduleScreenState extends ConsumerState<MonthlyScheduleScreen> {
                           events: events,
                           onDaySelected: (day) {
                             setState(() {
-                              _selectedDay = _selectedDay?.isAtSameMomentAs(day) == true
-                                  ? null
-                                  : day;
+                              _selectedDay =
+                                  _selectedDay?.isAtSameMomentAs(day) == true
+                                      ? null
+                                      : day;
                             });
                           },
                           eventsForDay: _eventsForDay,
