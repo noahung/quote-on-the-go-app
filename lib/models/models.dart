@@ -10,3 +10,5 @@ export 'calendar_event.dart' hide TimestampConverter;
 export 'workflow.dart' hide TimestampConverter;
 export 'job_note.dart';
 export 'job_media.dart';
+export 'interaction_log.dart' hide _TimestampConverter;
+export 'checklist_template.dart' hide _TemplateTimestampConverter;

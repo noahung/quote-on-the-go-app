@@ -9,3 +9,5 @@ export 'workflow_provider.dart';
 export 'notification_provider.dart';
 export 'theme_provider.dart';
 export 'ai_provider.dart';
+export 'interaction_log_provider.dart';
+export 'checklist_template_provider.dart';

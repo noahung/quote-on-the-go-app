@@ -31,6 +31,7 @@ class Company with _$Company {
     String? logoUrl,
     List<BankAccount>? bankAccounts,
     double? defaultTaxRate,
+    double? defaultHourlyRate,
     required String tier,
     String? subscriptionStatus,
     String? referredBy,

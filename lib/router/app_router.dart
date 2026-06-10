@@ -24,6 +24,7 @@ import '../screens/customers/customers_screen.dart';
 import '../screens/customers/customer_detail_screen.dart';
 import '../screens/customers/add_edit_customer_screen.dart';
 import '../screens/quotations/create_quotation_screen.dart';
+import '../screens/quotations/kanban_board_screen.dart';
 import '../screens/invoices/create_invoice_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/settings/company_branding_screen.dart';
@@ -183,6 +184,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           final title = extra?['title'] as String? ?? state.uri.queryParameters['title'] ?? 'Preview';
           return InAppWebViewScreen(url: url, title: title);
         },
+      ),
+      GoRoute(
+        path: '/pipeline',
+        builder: (context, state) => const KanbanBoardScreen(),
       ),
       GoRoute(
         path: '/quotations/new',

@@ -15,6 +15,8 @@ import '../../components/glass_card.dart';
 import '../../components/mesh_background.dart';
 import '../../components/curved_header.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/interaction_log_provider.dart';
+import '../../providers/checklist_template_provider.dart';
 import '../../providers/job_note_provider.dart';
 import '../../providers/job_media_provider.dart';
 import '../../providers/quotation_provider.dart';
@@ -185,158 +187,125 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final brandGradientColors = isDark
-        ? const [
-            Color(0xFFBA6935), // Deep dark brand orange
-            Color(0xFF9A5228), // Sunset amber dark
-          ]
-        : const [
-            Color(0xFFF4781F), // Bright brand orange
-            Color(0xFFFF9845), // Peach glow brand orange
-          ];
-
     final hasSignature = widget.job.signatureUrl != null &&
         widget.job.signatureUrl!.isNotEmpty;
 
     return MeshBackground(
-        child: Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: _currentTabIndex == 0 && !hasSignature
-          ? FloatingActionButton.extended(
-              onPressed: _showSignaturePad,
-              backgroundColor: const Color(0xFFF4781F),
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.draw_outlined),
-              label: const Text(
-                'Get Signature',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-            )
-          : null,
-      body: NestedScrollView(
-        headerSliverBuilder: (_, __) => [
-          SliverAppBar(
-            expandedHeight: 110,
-            pinned: true,
-            backgroundColor:
-                isDark ? const Color(0xFFBA6935) : const Color(0xFFF4781F),
-            foregroundColor: Colors.white,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
-            ),
-            title: Text(
-              widget.job.title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () {
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        floatingActionButton: _currentTabIndex == 0
+            ? FloatingActionButton.extended(
+                onPressed: _showSignaturePad,
+                backgroundColor: hasSignature
+                    ? const Color(0xFF2E7D32)
+                    : const Color(0xFFF4781F),
+                foregroundColor: Colors.white,
+                icon: Icon(hasSignature
+                    ? Icons.check_circle_outline
+                    : Icons.draw_outlined),
+                label: Text(
+                  hasSignature ? 'Signed ✓' : 'Get Sign-off',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              )
+            : null,
+        body: Column(
+          children: [
+            // ── Flat CurvedHeader (matches Quotations / other screens) ──
+            CurvedHeader(
+              title: widget.job.title,
+              onBackPressed: () {
                 if (context.canPop()) {
                   context.pop();
                 } else {
                   context.go('/schedule');
                 }
               },
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.edit_outlined),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => CreateJobScreen(event: widget.job),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CreateJobScreen(event: widget.job),
+                    ),
                   ),
                 ),
-              ),
-              PopupMenuButton<String>(
-                iconColor: Colors.white,
-                onSelected: (v) {
-                  if (v == 'delete') _confirmDelete();
-                },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child:
-                        Text('Delete Job', style: TextStyle(color: Colors.red)),
+                PopupMenuButton<String>(
+                  iconColor: Colors.white,
+                  onSelected: (v) {
+                    if (v == 'delete') _confirmDelete();
+                  },
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Delete Job',
+                          style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            // ── Pill TabBar (matches Quotations screen) ──────────────
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Container(
+                height: 44,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.04)
+                      : Colors.black.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                padding: const EdgeInsets.all(4),
+                child: TabBar(
+                  controller: _tabController,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  padding: EdgeInsets.zero,
+                  dividerColor: Colors.transparent,
+                  indicatorColor: Colors.transparent,
+                  labelColor: Colors.white,
+                  unselectedLabelColor:
+                      isDark ? Colors.white70 : Colors.black87,
+                  indicator: BoxDecoration(
+                    color: const Color(0xFFF4781F),
+                    borderRadius: BorderRadius.circular(24),
                   ),
+                  labelStyle: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 13),
+                  unselectedLabelStyle: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 13),
+                  tabs: _tabs,
+                ),
+              ),
+            ),
+
+            // ── Tab content ──────────────────────────────────────────
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _OverviewTab(job: widget.job),
+                  _QuotesTab(jobId: widget.job.id, job: widget.job),
+                  _InvoicesTab(jobId: widget.job.id, job: widget.job),
+                  _ExpensesTab(jobId: widget.job.id, job: widget.job),
+                  _MaterialsTab(job: widget.job),
+                  _SignatureTab(job: widget.job),
+                  _MediaTab(
+                      jobId: widget.job.id,
+                      companyId: widget.job.companyId),
+                  _NotesTab(
+                      jobId: widget.job.id,
+                      companyId: widget.job.companyId),
                 ],
               ),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: brandGradientColors,
-                  ),
-                  borderRadius: const BorderRadius.vertical(
-                    bottom: Radius.circular(32),
-                  ),
-                ),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 24),
-                    child: Icon(Icons.work_outline,
-                        size: 60, color: Colors.white.withAlpha(38)),
-                  ),
-                ),
-              ),
             ),
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(56),
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
-                child: Container(
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  padding: const EdgeInsets.all(4),
-                  child: TabBar(
-                    controller: _tabController,
-                    isScrollable: true,
-                    tabAlignment: TabAlignment.start,
-                    dividerColor: Colors.transparent,
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    labelColor: const Color(0xFFF4781F),
-                    unselectedLabelColor: Colors.white,
-                    labelStyle: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 13),
-                    unselectedLabelStyle: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 13),
-                    indicator: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    tabs: _tabs,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _OverviewTab(job: widget.job),
-            _QuotesTab(jobId: widget.job.id, job: widget.job),
-            _InvoicesTab(jobId: widget.job.id, job: widget.job),
-            _ExpensesTab(jobId: widget.job.id, job: widget.job),
-            _MaterialsTab(job: widget.job),
-            _SignatureTab(job: widget.job),
-            _MediaTab(jobId: widget.job.id, companyId: widget.job.companyId),
-            _NotesTab(jobId: widget.job.id, companyId: widget.job.companyId),
           ],
         ),
       ),
-    ));
+    );
   }
 }
 
@@ -359,23 +328,57 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
     return m > 0 ? '${h}h ${m}m' : '${h}h';
   }
 
-  Future<void> _completeJob() async {
+  bool _statusUpdating = false;
+
+  Future<void> _updateStatus(String newStatus) async {
+    setState(() => _statusUpdating = true);
+    final now = DateTime.now().toIso8601String();
+    final updates = <String, dynamic>{'status': newStatus};
+
+    if (newStatus == 'En Route') {
+      updates['enRouteAt'] = now;
+      // Write CRM interaction log
+      final companyId = widget.job.companyId.isNotEmpty
+          ? widget.job.companyId
+          : (ref.read(companyIdProvider) ?? '');
+      final user = ref.read(currentUserProvider);
+      final customerId = widget.job.customerId ?? widget.job.customerName ?? '';
+      if (customerId.isNotEmpty) {
+        try {
+          await ref.read(interactionLogRepositoryProvider).addLog(
+                companyId: companyId,
+                customerId: customerId,
+                type: 'job_log',
+                title: 'Technician is En Route',
+                description:
+                    'Technician began travel to site at ${DateTime.now().toLocal().toString().substring(0, 16)}',
+                createdBy: user?.displayName ?? user?.email ?? 'Technician',
+              );
+        } catch (_) {}
+      }
+    } else if (newStatus == 'In Progress') {
+      updates['startedAt'] = now;
+    } else if (newStatus == 'Completed') {
+      updates['completedAt'] = now;
+    }
+
     try {
       await FirebaseFirestore.instance
           .collection('events')
           .doc(widget.job.id)
-          .update({'status': 'Completed'});
+          .update(updates);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Job completed!')),
+          SnackBar(content: Text('Job status updated to $newStatus')),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error completing job: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
       }
+    } finally {
+      if (mounted) setState(() => _statusUpdating = false);
     }
   }
 
@@ -531,6 +534,92 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
     );
   }
 
+  void _showApplyTemplateSheet() {
+    final templatesAsync = ref.read(checklistTemplatesProvider);
+    final templates = templatesAsync.valueOrNull ?? [];
+
+    if (templates.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No checklist templates found. Create one in Settings.')),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (_, scrollCtrl) => Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.black12,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Apply Template',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView.builder(
+                controller: scrollCtrl,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: templates.length,
+                itemBuilder: (_, i) {
+                  final t = templates[i];
+                  return Card(
+                    elevation: 0,
+                    margin: const EdgeInsets.symmetric(vertical: 5),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: const BorderSide(color: Colors.black12)),
+                    child: ListTile(
+                      leading: const Icon(Icons.checklist_outlined),
+                      title: Text(t.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text('${t.items.length} tasks'),
+                      trailing: FilledButton(
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          shape: const StadiumBorder(),
+                        ),
+                        onPressed: () {
+                          final newItems = t.items.map((text) =>
+                              {'title': text, 'checked': false}).toList();
+                          _updateChecklist(newItems);
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Applied "${t.name}"')),
+                          );
+                        },
+                        child: const Text('Apply'),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showManageTeamSheet() {
     final allMembers = ref.read(teamMembersProvider).valueOrNull ?? [];
     final currentAssigned = List<String>.from(widget.job.assignedUserIds ?? []);
@@ -640,9 +729,85 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
     final allMembers = teamAsync.valueOrNull ?? [];
     final assignedMembers = allMembers.where((m) => assignedIds.contains(m.uid)).toList();
 
+    final hasSignature = widget.job.signatureUrl != null &&
+        widget.job.signatureUrl!.isNotEmpty;
+
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       children: [
+        // ── Sign-off Banner ─────────────────────────────────────
+        if (!hasSignature && status == 'Completed') ...[
+          GestureDetector(
+            onTap: () {
+              // Switch to Signature tab (index 5)
+              final state = context.findAncestorStateOfType<_JobDetailViewState>();
+              state?._tabController.animateTo(5);
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFFB74D), width: 1.5),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.draw_outlined,
+                      color: Color(0xFFF57F17), size: 22),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Client Sign-off Required',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: Color(0xFFE65100))),
+                        SizedBox(height: 2),
+                        Text('Tap "Get Sign-off" below to capture signature',
+                            style: TextStyle(
+                                fontSize: 12, color: Color(0xFFF57F17))),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right,
+                      color: Color(0xFFF57F17), size: 20),
+                ],
+              ),
+            ),
+          ),
+        ],
+        if (hasSignature) ...[
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F5E9),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Color(0xFF2E7D32), size: 20),
+                SizedBox(width: 10),
+                Text('Client signature captured',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Color(0xFF2E7D32))),
+              ],
+            ),
+          ),
+        ],
+        // ── CURRENT STATUS CARD ─────────────────────────────────
+        _CurrentStatusCard(
+          status: status,
+          isUpdating: _statusUpdating,
+          onAction: _updateStatus,
+        ),
+        const SizedBox(height: 16),
+
         // Summary Header Row
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -855,10 +1020,20 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  TextButton.icon(
-                    onPressed: _showAddItemDialog,
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Add Task', style: TextStyle(fontSize: 12)),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton.icon(
+                        onPressed: _showApplyTemplateSheet,
+                        icon: const Icon(Icons.copy_outlined, size: 14),
+                        label: const Text('Template', style: TextStyle(fontSize: 12)),
+                      ),
+                      TextButton.icon(
+                        onPressed: _showAddItemDialog,
+                        icon: const Icon(Icons.add, size: 16),
+                        label: const Text('Add', style: TextStyle(fontSize: 12)),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -991,57 +1166,614 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
               ],
             ),
           ),
+        const SizedBox(height: 16),
+
+        // ── Labor Time Tracker Card ──────────────────────────────
+        _LaborTrackerCard(job: widget.job),
         const SizedBox(height: 24),
 
-        // Bottom Actions
-        if (status != 'Completed') ...[
+        // ── Status Action Button ─────────────────────────────────
+        if (status == 'Scheduled' || status == 'Draft') ...[
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
               style: FilledButton.styleFrom(
-                backgroundColor: colorScheme.primary,
+                backgroundColor: Colors.blue.shade600,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: const StadiumBorder(),
               ),
-              onPressed: _completeJob,
-              icon: const Icon(Icons.check_circle, size: 18),
-              label: const Text(
-                'Complete Job',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              onPressed: _statusUpdating ? null : () => _updateStatus('En Route'),
+              icon: _statusUpdating
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Icon(Icons.directions_car_outlined, size: 18),
+              label: const Text('Start Travel (En Route)',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
             ),
           ),
           const SizedBox(height: 12),
+        ],
+        if (status == 'En Route') ...[
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.orange.shade700,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: const StadiumBorder(),
+              ),
+              onPressed: _statusUpdating ? null : () => _updateStatus('In Progress'),
+              icon: _statusUpdating
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Icon(Icons.play_circle_outline, size: 18),
+              label: const Text('Arrive & Start Work',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (status == 'In Progress') ...[
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.green.shade600,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: const StadiumBorder(),
+              ),
+              onPressed: _statusUpdating ? null : () => _updateStatus('Completed'),
+              icon: _statusUpdating
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Icon(Icons.check_circle_outline, size: 18),
+              label: const Text('Mark as Completed',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (status == 'Completed') ...[
+          _ConvertToInvoiceButton(job: widget.job),
+          const SizedBox(height: 12),
+        ],
+        if (status != 'Completed')
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: const StadiumBorder(),
-                side: BorderSide(
-                  color: colorScheme.outline,
-                  width: 1.5,
-                ),
+                side: BorderSide(color: colorScheme.outline, width: 1.5),
               ),
               onPressed: _uploading ? null : _pickAndUpload,
               icon: _uploading
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.add_a_photo, size: 18),
-              label: const Text(
-                'Upload Site Photos',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              label: const Text('Upload Site Photos',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
             ),
           ),
-          const SizedBox(height: 32),
-        ],
+        const SizedBox(height: 32),
       ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Labor Time Tracker Card
+// ─────────────────────────────────────────────────────────────────
+class _LaborTrackerCard extends StatelessWidget {
+  final CalendarEvent job;
+  const _LaborTrackerCard({required this.job});
+
+  String _fmt(Duration d) {
+    if (d.inSeconds < 0) return '—';
+    if (d.inMinutes < 60) return '${d.inMinutes}m';
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60);
+    return m > 0 ? '${h}h ${m}m' : '${h}h';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+    final timeFmt = DateFormat('HH:mm');
+
+    final enRouteAt = job.enRouteAt != null ? DateTime.tryParse(job.enRouteAt!) : null;
+    final startedAt = job.startedAt != null ? DateTime.tryParse(job.startedAt!) : null;
+    final completedAt = job.completedAt != null ? DateTime.tryParse(job.completedAt!) : null;
+
+    final travelDuration = (enRouteAt != null && startedAt != null)
+        ? startedAt.difference(enRouteAt)
+        : null;
+    final workDuration = (startedAt != null && completedAt != null)
+        ? completedAt.difference(startedAt)
+        : null;
+
+    // Only show this card if at least one timestamp exists
+    if (enRouteAt == null && startedAt == null && completedAt == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      elevation: 0,
+      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+            color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.timer_outlined, size: 18, color: colorScheme.primary),
+                const SizedBox(width: 8),
+                const Text('Labor Time Tracker',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              ],
+            ),
+            const SizedBox(height: 14),
+            _TimeRow(
+              icon: Icons.directions_car_outlined,
+              label: 'En Route',
+              time: enRouteAt != null ? timeFmt.format(enRouteAt.toLocal()) : null,
+              color: Colors.blue.shade600,
+            ),
+            _TimeRow(
+              icon: Icons.play_circle_outline,
+              label: 'Work Started',
+              time: startedAt != null ? timeFmt.format(startedAt.toLocal()) : null,
+              color: Colors.orange.shade700,
+              detail: travelDuration != null ? 'Travel: ${_fmt(travelDuration)}' : null,
+            ),
+            _TimeRow(
+              icon: Icons.check_circle_outline,
+              label: 'Completed',
+              time: completedAt != null ? timeFmt.format(completedAt.toLocal()) : null,
+              color: Colors.green.shade600,
+              detail: workDuration != null ? 'On-site: ${_fmt(workDuration)}' : null,
+            ),
+            if (workDuration != null) ...[
+              const Divider(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Billable Hours',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface.withValues(alpha: 0.7))),
+                  Text(
+                    _fmt(workDuration),
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: colorScheme.primary),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TimeRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String? time;
+  final Color color;
+  final String? detail;
+  const _TimeRow({required this.icon, required this.label, this.time, required this.color, this.detail});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: time != null ? color : colorScheme.outline.withValues(alpha: 0.4)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(label,
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: time != null
+                        ? colorScheme.onSurface
+                        : colorScheme.onSurface.withValues(alpha: 0.4))),
+          ),
+          if (detail != null) ...[
+            Text(detail!,
+                style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onSurface.withValues(alpha: 0.5))),
+            const SizedBox(width: 10),
+          ],
+          Text(time ?? '—',
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: time != null ? color : colorScheme.outline.withValues(alpha: 0.4))),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// CURRENT STATUS CARD  (mirrors web app)
+// ─────────────────────────────────────────────────────────────────
+class _CurrentStatusCard extends StatefulWidget {
+  final String status;
+  final bool isUpdating;
+  final Future<void> Function(String) onAction;
+
+  const _CurrentStatusCard({
+    required this.status,
+    required this.isUpdating,
+    required this.onAction,
+  });
+
+  @override
+  State<_CurrentStatusCard> createState() => _CurrentStatusCardState();
+}
+
+class _CurrentStatusCardState extends State<_CurrentStatusCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  // ── Status metadata ─────────────────────────────────────────────
+  ({Color dot, Color bg, Color textColor, String label}) _meta(String s) {
+    switch (s) {
+      case 'En Route':
+        return (
+          dot: Colors.blue,
+          bg: const Color(0xFFE3F2FD),
+          textColor: const Color(0xFF1565C0),
+          label: s,
+        );
+      case 'In Progress':
+        return (
+          dot: Colors.orange,
+          bg: const Color(0xFFFFF3E0),
+          textColor: const Color(0xFFE65100),
+          label: s,
+        );
+      case 'Completed':
+        return (
+          dot: Colors.green,
+          bg: const Color(0xFFE8F5E9),
+          textColor: const Color(0xFF1B5E20),
+          label: s,
+        );
+      case 'Scheduled':
+        return (
+          dot: const Color(0xFF7B61FF),
+          bg: const Color(0xFFEDE7F6),
+          textColor: const Color(0xFF4527A0),
+          label: s,
+        );
+      default:
+        return (
+          dot: Colors.grey,
+          bg: const Color(0xFFF5F5F5),
+          textColor: Colors.grey.shade700,
+          label: s,
+        );
+    }
+  }
+
+  // ── Next-action button config ────────────────────────────────────
+  ({String? label, IconData? icon, Color color, String? nextStatus})
+      _nextAction(String s) {
+    switch (s) {
+      case 'Scheduled':
+      case 'Draft':
+        return (
+          label: 'Start Travel',
+          icon: Icons.directions_car_outlined,
+          color: Colors.blue.shade600,
+          nextStatus: 'En Route',
+        );
+      case 'En Route':
+        return (
+          label: 'Arrive & Start Work',
+          icon: Icons.play_circle_outline,
+          color: Colors.orange.shade700,
+          nextStatus: 'In Progress',
+        );
+      case 'In Progress':
+        return (
+          label: 'Complete Job',
+          icon: Icons.check_circle_outline,
+          color: Colors.green.shade600,
+          nextStatus: 'Completed',
+        );
+      default:
+        return (label: null, icon: null, color: Colors.transparent, nextStatus: null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final meta = _meta(widget.status);
+    final next = _nextAction(widget.status);
+    final isActive = widget.status != 'Completed';
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.black.withValues(alpha: 0.06),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Left: label block
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'CURRENT STATUS',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.0,
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.4)
+                        : const Color(0xFF9E9E9E),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    // Pulsing dot (only when active)
+                    if (isActive)
+                      AnimatedBuilder(
+                        animation: _pulse,
+                        builder: (_, __) => Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: meta.dot.withValues(
+                                alpha: 0.4 + 0.6 * _pulse.value),
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: meta.dot,
+                        ),
+                      ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? meta.dot.withValues(alpha: 0.2)
+                            : meta.bg,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(
+                        meta.label,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? meta.dot : meta.textColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // Right: action button
+          if (next.label != null && next.nextStatus != null) ...[
+            const SizedBox(width: 12),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: next.color,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 10),
+                shape: const StadiumBorder(),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: widget.isUpdating
+                  ? null
+                  : () => widget.onAction(next.nextStatus!),
+              icon: widget.isUpdating
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
+                  : Icon(next.icon, size: 16),
+              label: Text(
+                next.label!,
+                style: const TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+          if (widget.status == 'Completed') ...[
+            const SizedBox(width: 8),
+            Icon(Icons.verified_outlined,
+                color: Colors.green.shade600, size: 24),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Convert Completed Job → Invoice
+// ─────────────────────────────────────────────────────────────────
+class _ConvertToInvoiceButton extends ConsumerStatefulWidget {
+  final CalendarEvent job;
+  const _ConvertToInvoiceButton({required this.job});
+
+  @override
+  ConsumerState<_ConvertToInvoiceButton> createState() => _ConvertToInvoiceButtonState();
+}
+
+class _ConvertToInvoiceButtonState extends ConsumerState<_ConvertToInvoiceButton> {
+  bool _loading = false;
+
+  Future<void> _convert() async {
+    setState(() => _loading = true);
+    try {
+      final companyId = widget.job.companyId.isNotEmpty
+          ? widget.job.companyId
+          : (ref.read(companyIdProvider) ?? '');
+      final user = ref.read(currentUserProvider);
+      if (user == null || companyId.isEmpty) return;
+
+      final company = ref.read(companyProvider);
+      final hourlyRate = company?.defaultHourlyRate ?? 0.0;
+
+      // Build line items
+      final lineItems = <Map<String, dynamic>>[];
+
+      // 1. Labor from statusTimes
+      final startedAt = widget.job.startedAt != null
+          ? DateTime.tryParse(widget.job.startedAt!)
+          : null;
+      final completedAt = widget.job.completedAt != null
+          ? DateTime.tryParse(widget.job.completedAt!)
+          : null;
+
+      if (startedAt != null && completedAt != null && hourlyRate > 0) {
+        final hours = completedAt.difference(startedAt).inSeconds / 3600.0;
+        lineItems.add({
+          'description': 'Labor Hours (Time Tracker)',
+          'quantity': double.parse(hours.toStringAsFixed(2)),
+          'unitPrice': hourlyRate,
+          'total': double.parse((hours * hourlyRate).toStringAsFixed(2)),
+        });
+      }
+
+      // 2. Materials from job_materials sub-collection
+      final materialsSnap = await FirebaseFirestore.instance
+          .collection('job_materials')
+          .where('jobId', isEqualTo: widget.job.id)
+          .where('companyId', isEqualTo: companyId)
+          .get();
+
+      for (final doc in materialsSnap.docs) {
+        final d = doc.data();
+        lineItems.add({
+          'description': d['description'] ?? 'Material',
+          'quantity': (d['quantity'] as num?)?.toDouble() ?? 1.0,
+          'unitPrice': (d['unitPrice'] as num?)?.toDouble() ?? 0.0,
+          'total': ((d['quantity'] as num?)?.toDouble() ?? 1.0) *
+              ((d['unitPrice'] as num?)?.toDouble() ?? 0.0),
+        });
+      }
+
+      final subtotal =
+          lineItems.fold(0.0, (acc, item) => acc + ((item['total'] as num).toDouble()));
+
+      // Generate invoice number
+      final count = await FirebaseFirestore.instance
+          .collection('invoices')
+          .where('companyId', isEqualTo: companyId)
+          .count()
+          .get();
+      final invoiceNumber = 'INV-${(count.count ?? 0) + 1001}';
+
+      await FirebaseFirestore.instance.collection('invoices').add({
+        'companyId': companyId,
+        'jobId': widget.job.id,
+        'customerName': widget.job.customerName ?? '',
+        'customerEmail': '',
+        'invoiceNumber': invoiceNumber,
+        'status': 'Draft',
+        'items': lineItems,
+        'subtotal': subtotal,
+        'taxRate': 0.0,
+        'taxAmount': 0.0,
+        'total': subtotal,
+        'createdBy': user.uid,
+        'createdAt': FieldValue.serverTimestamp(),
+        'dueDate': DateTime.now().add(const Duration(days: 30)).toIso8601String(),
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Invoice $invoiceNumber created!'),
+            action: SnackBarAction(
+              label: 'View',
+              onPressed: () => context.push('/invoices'),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error creating invoice: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.icon(
+        style: FilledButton.styleFrom(
+          backgroundColor: Colors.green.shade600,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: const StadiumBorder(),
+        ),
+        onPressed: _loading ? null : _convert,
+        icon: _loading
+            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+            : const Icon(Icons.receipt_long_outlined, size: 18),
+        label: const Text('Convert to Invoice',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+      ),
     );
   }
 }
@@ -1752,7 +2484,7 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
     final colorScheme = Theme.of(context).colorScheme;
     final materials = _materials;
     final totalCost = materials.fold<double>(
-        0, (sum, m) => sum + ((m['cost'] as num?) ?? 0).toDouble() * ((m['quantity'] as num?) ?? 1).toDouble());
+        0, (acc, m) => acc + ((m['cost'] as num?) ?? 0).toDouble() * ((m['quantity'] as num?) ?? 1).toDouble());
 
     return Scaffold(
       body: materials.isEmpty

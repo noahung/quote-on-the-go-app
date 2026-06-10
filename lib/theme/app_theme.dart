@@ -12,7 +12,7 @@ class AppTheme {
   /// Builds a customized TextTheme with premium Inter typography,
   /// adjusting weights and letter spacing (tracking) for an AI-native feel.
   static TextTheme _buildTextTheme(TextTheme base, Brightness brightness) {
-    final baseTextTheme = GoogleFonts.interTextTheme(base);
+    final baseTextTheme = GoogleFonts.dmSansTextTheme(base);
     return baseTextTheme.copyWith(
       displayLarge: baseTextTheme.displayLarge?.copyWith(
         fontWeight: FontWeight.w800,
@@ -81,7 +81,7 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         iconTheme: IconThemeData(color: colorScheme.onSurface),
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: GoogleFonts.dmSans(
           fontSize: 20,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.5,
@@ -225,7 +225,7 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         iconTheme: IconThemeData(color: colorScheme.onSurface),
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: GoogleFonts.dmSans(
           fontSize: 20,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.5,

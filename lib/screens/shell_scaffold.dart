@@ -120,6 +120,17 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
                     ),
                     _buildActionCard(
                       context,
+                      title: 'Pipeline',
+                      desc: 'Sales kanban',
+                      icon: Icons.view_kanban_outlined,
+                      color: Colors.indigo,
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.push('/pipeline');
+                      },
+                    ),
+                    _buildActionCard(
+                      context,
                       title: 'Analytics',
                       desc: 'Advanced insights',
                       icon: Icons.insights,

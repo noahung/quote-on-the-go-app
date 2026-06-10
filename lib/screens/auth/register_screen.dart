@@ -289,8 +289,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFFF4781F),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
+                    shape: const StadiumBorder(),
                   ),
                   onPressed: _isLoading ? null : _register,
                   child: _isLoading
@@ -329,15 +328,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 height: 52,
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                    side: BorderSide(color: dividerColor),
+                    shape: const StadiumBorder(),
+                    side: BorderSide(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.18)
+                            : Colors.black.withValues(alpha: 0.15)),
                     backgroundColor: isDark
                         ? Colors.white.withValues(alpha: 0.04)
                         : Colors.white,
                   ),
                   onPressed: _isLoading ? null : _signInWithGoogle,
-                  icon: const Icon(Icons.g_mobiledata, size: 22),
+                  icon: _GoogleIcon(dark: isDark),
                   label: Text(
                     'Continue with Google',
                     style: TextStyle(
@@ -375,4 +376,60 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       ),
     );
   }
+}
+
+// ── Monochrome Google "G" icon ──────────────────────────────────
+class _GoogleIcon extends StatelessWidget {
+  final bool dark;
+  const _GoogleIcon({required this.dark});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = dark ? Colors.white : const Color(0xFF444444);
+    return SizedBox(
+      width: 20,
+      height: 20,
+      child: CustomPaint(painter: _GoogleGPainter(color: color)),
+    );
+  }
+}
+
+class _GoogleGPainter extends CustomPainter {
+  final Color color;
+  const _GoogleGPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * 0.13
+      ..strokeCap = StrokeCap.round;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width * 0.44;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      0.45,
+      5.1,
+      false,
+      paint,
+    );
+
+    final barPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * 0.13
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawLine(
+      Offset(center.dx, center.dy),
+      Offset(center.dx + radius, center.dy),
+      barPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_GoogleGPainter old) => old.color != color;
 }
