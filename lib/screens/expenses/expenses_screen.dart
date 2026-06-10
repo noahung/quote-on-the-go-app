@@ -65,7 +65,10 @@ class ExpensesScreen extends ConsumerWidget {
               itemCount: expenses.length,
               itemBuilder: (context, index) {
                 final expense = expenses[index];
-                return _ExpenseCard(expense: expense);
+                return _ExpenseCard(
+                  expense: expense,
+                  onTap: () => context.push('/expenses/${expense.id}'),
+                );
               },
             );
           },
@@ -77,8 +80,9 @@ class ExpensesScreen extends ConsumerWidget {
 
 class _ExpenseCard extends StatelessWidget {
   final Expense expense;
+  final VoidCallback? onTap;
 
-  const _ExpenseCard({required this.expense});
+  const _ExpenseCard({required this.expense, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -87,6 +91,7 @@ class _ExpenseCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GlassCard(
+        onTap: onTap,
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

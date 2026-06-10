@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../components/mesh_background.dart';
+import 'package:go_router/go_router.dart';
+import '../../components/curved_header.dart';
 import '../../theme/semantic_colors.dart';
 import '../../models/service.dart';
 import '../../providers/providers.dart';
@@ -102,54 +102,13 @@ class _SmartPricingScreenState extends ConsumerState<SmartPricingScreen> with Si
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final servicesAsync = ref.watch(servicesStreamProvider);
 
-    return MeshBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(100),
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFFF6B00), Color(0xFFF4781F)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(32),
-                bottomRight: Radius.circular(32),
-              ),
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                child: Row(
-                  children: [
-                    if (!const {'/', '/quotations', '/invoices', '/customers', '/schedule', '/workflows', '/analytics', '/pricing'}.contains(GoRouterState.of(context).uri.path) && GoRouter.of(context).canPop())
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => GoRouter.of(context).pop(),
-                      ),
-                    const Expanded(
-                      child: Text(
-                        'Smart Pricing',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.psychology, color: Colors.white),
-                      onPressed: () {},
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        body: servicesAsync.when(
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Column(
+        children: [
+          CurvedHeader(title: 'Smart Pricing'),
+          Expanded(
+            child: servicesAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, stack) => Center(child: Text('Error loading services: $err')),
           data: (services) {
@@ -249,6 +208,8 @@ class _SmartPricingScreenState extends ConsumerState<SmartPricingScreen> with Si
             );
           },
         ),
+          ),
+        ],
       ),
     );
   }

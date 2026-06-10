@@ -6,16 +6,46 @@ import '../../models/models.dart';
 import '../../components/glass_card.dart';
 import '../../components/curved_header.dart';
 
-class CustomersScreen extends ConsumerWidget {
+class CustomersScreen extends ConsumerStatefulWidget {
   const CustomersScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final customers = ref.watch(customersProvider);
+  ConsumerState<CustomersScreen> createState() => _CustomersScreenState();
+}
+
+class _CustomersScreenState extends ConsumerState<CustomersScreen> {
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() => _searchQuery = _searchController.text.toLowerCase());
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final allCustomers = ref.watch(customersProvider);
     final isLoading = ref.watch(customersStreamProvider).isLoading;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final customers = _searchQuery.isEmpty
+        ? allCustomers
+        : allCustomers.where((c) =>
+            c.name.toLowerCase().contains(_searchQuery) ||
+            c.email.toLowerCase().contains(_searchQuery) ||
+            (c.phone ?? '').toLowerCase().contains(_searchQuery)).toList();
 
     return Scaffold(
-      backgroundColor: Colors.transparent, // Let global mesh gradient flow underneath
+      backgroundColor: Colors.transparent,
       body: Column(
         children: [
           CurvedHeader(
@@ -27,17 +57,50 @@ class CustomersScreen extends ConsumerWidget {
               ),
             ],
           ),
+
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search customers…',
+                hintStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                  fontSize: 14,
+                ),
+                prefixIcon: Icon(Icons.search,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        onPressed: () => _searchController.clear(),
+                      )
+                    : null,
+                filled: true,
+                fillColor: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black.withValues(alpha: 0.05),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : customers.isEmpty
                     ? const _EmptyState()
                     : ListView.builder(
-                        padding: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 80),
+                        padding: const EdgeInsets.only(left: 16, right: 16, top: 4, bottom: 80),
                         itemCount: customers.length,
                         itemBuilder: (context, index) {
-                          final customer = customers[index];
-                          return _CustomerCard(customer: customer);
+                          return _CustomerCard(customer: customers[index]);
                         },
                       ),
           ),
@@ -158,11 +221,6 @@ class _CustomerCard extends StatelessWidget {
                     ],
                   ],
                 ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: colorScheme.onSurface.withValues(alpha: 0.3),
               ),
             ],
           ),

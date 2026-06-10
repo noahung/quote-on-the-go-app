@@ -19,6 +19,8 @@ class QuotationsScreen extends ConsumerStatefulWidget {
 class _QuotationsScreenState extends ConsumerState<QuotationsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
 
   final List<_StatusTab> _tabs = const [
     _StatusTab(label: 'All', status: null),
@@ -33,20 +35,28 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
-    _tabController.addListener(() {
-      setState(() {});
+    _tabController.addListener(() => setState(() {}));
+    _searchController.addListener(() {
+      setState(() => _searchQuery = _searchController.text.toLowerCase());
     });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   List<Quotation> _filterByStatus(List<Quotation> quotations, String? status) {
-    if (status == null) return quotations;
-    return quotations.where((q) => q.status == status).toList();
+    var list = status == null ? quotations : quotations.where((q) => q.status == status).toList();
+    if (_searchQuery.isNotEmpty) {
+      list = list.where((q) =>
+        q.customerName.toLowerCase().contains(_searchQuery) ||
+        q.quotationNumber.toLowerCase().contains(_searchQuery)
+      ).toList();
+    }
+    return list;
   }
 
   @override
@@ -72,7 +82,40 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen>
               ),
             ],
           ),
-          
+
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search quotations…',
+                hintStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                  fontSize: 14,
+                ),
+                prefixIcon: Icon(Icons.search,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        onPressed: () => _searchController.clear(),
+                      )
+                    : null,
+                filled: true,
+                fillColor: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black.withValues(alpha: 0.05),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+
           // Horizontal Tab Bar Filter List (Stitch style)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
@@ -176,7 +219,7 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen>
                 ),
               ),
               data: (quotations) {
-                if (quotations.isEmpty) {
+                if (quotations.isEmpty && _searchQuery.isEmpty) {
                   return _EmptyState(
                     isPremium: isPremium,
                     currentCount: activeCount,
@@ -188,12 +231,16 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen>
                     final filtered = _filterByStatus(quotations, tab.status);
                     return _QuotationList(
                       quotations: filtered,
-                      emptyTitle: tab.status == null
-                          ? 'No Quotations Yet'
-                          : 'No ${tab.label} Quotations',
-                      emptySubtitle: tab.status == null
-                          ? 'Create your first quotation to get started'
-                          : 'Quotations with ${tab.label.toLowerCase()} status will appear here',
+                      emptyTitle: _searchQuery.isNotEmpty
+                          ? 'No results for "$_searchQuery"'
+                          : tab.status == null
+                              ? 'No Quotations Yet'
+                              : 'No ${tab.label} Quotations',
+                      emptySubtitle: _searchQuery.isNotEmpty
+                          ? 'Try a different name or reference number'
+                          : tab.status == null
+                              ? 'Create your first quotation to get started'
+                              : 'Quotations with ${tab.label.toLowerCase()} status will appear here',
                       onAddTap: () => context.push('/quotations/new'),
                       isPremium: isPremium,
                       currentCount: activeCount,
@@ -318,25 +365,6 @@ class _QuotationCard extends StatelessWidget {
     final statusColor = _getStatusColor(quotation.status, semanticColors);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Map status to appropriate Icon
-    IconData statusIcon;
-    switch (quotation.status) {
-      case 'Accepted':
-        statusIcon = Icons.description;
-        break;
-      case 'Sent':
-        statusIcon = Icons.calendar_month;
-        break;
-      case 'Declined':
-        statusIcon = Icons.cancel_outlined;
-        break;
-      case 'Draft':
-        statusIcon = Icons.edit_document;
-        break;
-      default:
-        statusIcon = Icons.description;
-    }
-
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GlassCard(
@@ -348,22 +376,7 @@ class _QuotationCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Circular avatar icon container on the left
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFF4781F).withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  statusIcon,
-                  color: const Color(0xFFF4781F),
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Details in the middle
+              // Details
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

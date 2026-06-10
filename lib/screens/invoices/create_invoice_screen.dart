@@ -897,15 +897,19 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
     final aiState = ref.watch(aiGenerationStateProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
-    return GlassCard(
+    final isDarkSheet = Theme.of(context).brightness == Brightness.dark;
+
+    return Material(
+      color: isDarkSheet ? const Color(0xFF1C1C1E) : Colors.white,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        left: 20,
-        right: 20,
-        top: 24,
-      ),
-      child: SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          left: 20,
+          right: 20,
+          top: 24,
+        ),
+        child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -977,6 +981,25 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
           ],
         ),
       ),
+      ),
+    );
+  }
+
+  InputDecoration _fieldDeco(String hint, {String? prefix}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return InputDecoration(
+      hintText: hint,
+      prefixText: prefix,
+      filled: true,
+      fillColor: isDark
+          ? Colors.white.withValues(alpha: 0.08)
+          : const Color(0xFFF2F2F7),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
     );
   }
 
@@ -985,13 +1008,10 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TextFormField(
+        TextField(
           controller: _descriptionController,
           style: const TextStyle(fontSize: 14),
-          decoration: const InputDecoration(
-            labelText: 'Description *',
-            labelStyle: TextStyle(fontSize: 13),
-          ),
+          decoration: _fieldDeco('Description'),
           textCapitalization: TextCapitalization.sentences,
         ),
         const SizedBox(height: 12),
@@ -1002,10 +1022,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
               child: TextFormField(
                 controller: _quantityController,
                 style: const TextStyle(fontSize: 14),
-                decoration: const InputDecoration(
-                  labelText: 'Qty *',
-                  labelStyle: TextStyle(fontSize: 13),
-                ),
+                decoration: _fieldDeco('Qty'),
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
@@ -1017,10 +1034,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
               child: TextFormField(
                 controller: _priceController,
                 style: const TextStyle(fontSize: 14),
-                decoration: const InputDecoration(
-                  labelText: 'Unit Price *',
-                  labelStyle: TextStyle(fontSize: 13),
-                ),
+                decoration: _fieldDeco('Unit Price', prefix: '£ '),
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),

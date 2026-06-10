@@ -75,10 +75,8 @@ class _ServiceDetailView extends ConsumerWidget {
                 ),
               ],
             ),
-            Transform.translate(
-              offset: const Offset(0, -24),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+            Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -185,8 +183,7 @@ class _ServiceDetailView extends ConsumerWidget {
                       child: FilledButton.icon(
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                          shape: const StadiumBorder(),
                         ),
                         onPressed: () => context.push('/quotations/new'),
                         icon: const Icon(Icons.add),
@@ -199,8 +196,7 @@ class _ServiceDetailView extends ConsumerWidget {
                       child: OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                          shape: const StadiumBorder(),
                         ),
                         onPressed: () => _showEditSheet(context, ref),
                         icon: const Icon(Icons.edit_outlined),
@@ -210,7 +206,6 @@ class _ServiceDetailView extends ConsumerWidget {
                     const SizedBox(height: 16),
                   ],
                 ),
-              ),
             ),
           ],
         ),

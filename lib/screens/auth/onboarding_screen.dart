@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../components/mesh_background.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/onboarding_provider.dart';
 
@@ -98,57 +98,83 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final formState = ref.watch(onboardingNotifierProvider);
-    final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Column(
           children: [
-            // ── Header ──────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-              child: Column(
-                children: [
-                  Row(
+            // ── Gradient header ──────────────────────────────────────────
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFFF6B00), Color(0xFFF4781F)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(32),
+                  bottomRight: Radius.circular(32),
+                ),
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.asset(
-                          'assets/images/app_icon.png',
-                          width: 40,
-                          height: 40,
-                          fit: BoxFit.cover,
-                        ),
+                      Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.asset(
+                              'assets/images/app_icon.png',
+                              width: 36,
+                              height: 36,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          const Text(
+                            'Quote On The Go',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.white24,
+                              borderRadius: BorderRadius.circular(100),
+                            ),
+                            child: Text(
+                              'Step ${formState.currentStep + 1} of 3',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Quote On The Go',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      const SizedBox(height: 16),
+                      _StepProgressBar(
+                        currentStep: formState.currentStep,
+                        totalSteps: 3,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  // Progress indicator
-                  _StepProgressBar(
-                    currentStep: formState.currentStep,
-                    totalSteps: 3,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Step ${formState.currentStep + 1} of 3',
-                    style: TextStyle(
-                      color: colorScheme.onSurfaceVariant,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
 
-            // ── Pages ────────────────────────────────────────────────────────
+            // ── Pages ────────────────────────────────────────────────────
             Expanded(
               child: PageView(
                 controller: _pageController,
@@ -237,7 +263,6 @@ class _StepProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Row(
       children: List.generate(totalSteps, (i) {
         final active = i <= currentStep;
@@ -247,9 +272,7 @@ class _StepProgressBar extends StatelessWidget {
             height: 4,
             margin: EdgeInsets.only(right: i < totalSteps - 1 ? 6 : 0),
             decoration: BoxDecoration(
-              color: active
-                  ? colorScheme.primary
-                  : colorScheme.surfaceContainerHighest,
+              color: active ? Colors.white : Colors.white38,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -276,55 +299,91 @@ class _Step1PersonalInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
       child: Form(
         key: formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 8),
-            Text(
+            const Text(
               'Welcome aboard!',
-              style: GoogleFonts.poppins(
+              style: TextStyle(
                 fontSize: 24,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.6,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               "Let's start with your name so we can personalise your experience.",
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: colorScheme.onSurfaceVariant,
+                fontSize: 14,
               ),
             ),
-            const SizedBox(height: 32),
-            TextFormField(
-              controller: displayNameCtrl,
-              textCapitalization: TextCapitalization.words,
-              decoration: InputDecoration(
-                labelText: 'Your Full Name',
-                hintText: 'e.g. Jane Smith',
-                prefixIcon: const Icon(Icons.person_outline),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white10
+                      : Colors.black.withValues(alpha: 0.05),
                 ),
+                boxShadow: isDark
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        )
+                      ],
               ),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return 'Please enter your name';
-                }
-                return null;
-              },
+              child: TextFormField(
+                controller: displayNameCtrl,
+                textCapitalization: TextCapitalization.words,
+                decoration: InputDecoration(
+                  labelText: 'Your Full Name',
+                  hintText: 'e.g. Jane Smith',
+                  prefixIcon: const Icon(Icons.person_outline),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Please enter your name';
+                  }
+                  return null;
+                },
+              ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              height: 50,
+              height: 52,
               child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF6B00),
+                  foregroundColor: Colors.white,
+                  shape: const StadiumBorder(),
+                ),
                 onPressed: onNext,
-                icon: const Icon(Icons.arrow_forward),
-                label: const Text('Continue'),
+                icon: const Icon(Icons.arrow_forward, size: 18),
+                label: const Text(
+                  'Continue',
+                  style:
+                      TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                ),
               ),
             ),
           ],
@@ -359,110 +418,162 @@ class _Step2CompanyInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
       child: Form(
         key: formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 8),
-            Text(
+            const Text(
               'Set up your company',
-              style: GoogleFonts.poppins(
+              style: TextStyle(
                 fontSize: 24,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.6,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              "This information will appear on your quotes and invoices.",
+              'This information will appear on your quotes and invoices.',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: colorScheme.onSurfaceVariant,
+                fontSize: 14,
               ),
             ),
-            const SizedBox(height: 32),
-            TextFormField(
-              controller: companyNameCtrl,
-              textCapitalization: TextCapitalization.words,
-              decoration: InputDecoration(
-                labelText: 'Company Name *',
-                hintText: 'e.g. Smith Electrical Ltd.',
-                prefixIcon: const Icon(Icons.business_outlined),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white10
+                      : Colors.black.withValues(alpha: 0.05),
                 ),
+                boxShadow: isDark
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        )
+                      ],
               ),
-              validator: (v) {
-                if (v == null || v.trim().length < 2) {
-                  return 'Company name must be at least 2 characters';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: companyEmailCtrl,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                labelText: 'Company Contact Email *',
-                hintText: 'contact@yourcompany.com',
-                prefixIcon: const Icon(Icons.email_outlined),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: companyNameCtrl,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: InputDecoration(
+                      labelText: 'Company Name *',
+                      hintText: 'e.g. Smith Electrical Ltd.',
+                      prefixIcon: const Icon(Icons.business_outlined),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().length < 2) {
+                        return 'Company name must be at least 2 characters';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: companyEmailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      labelText: 'Company Contact Email *',
+                      hintText: 'contact@yourcompany.com',
+                      prefixIcon: const Icon(Icons.email_outlined),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    validator: (v) {
+                      if (v == null || !v.contains('@')) {
+                        return 'Please enter a valid email';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: companyPhoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: 'Company Phone (optional)',
+                      hintText: '+44 7700 900000',
+                      prefixIcon: const Icon(Icons.phone_outlined),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: companyAddressCtrl,
+                    maxLines: 2,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      labelText: 'Company Address (optional)',
+                      hintText: '123 High Street, London, EC1A 1BB',
+                      prefixIcon: const Icon(Icons.location_on_outlined),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                ],
               ),
-              validator: (v) {
-                if (v == null || !v.contains('@')) {
-                  return 'Please enter a valid email';
-                }
-                return null;
-              },
             ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: companyPhoneCtrl,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                labelText: 'Company Phone (optional)',
-                hintText: '+44 7700 900000',
-                prefixIcon: const Icon(Icons.phone_outlined),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: companyAddressCtrl,
-              maxLines: 2,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                labelText: 'Company Address (optional)',
-                hintText: '123 High Street, London, EC1A 1BB',
-                prefixIcon: const Icon(Icons.location_on_outlined),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                alignLabelWithHint: true,
-              ),
-            ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
             Row(
               children: [
-                OutlinedButton.icon(
-                  onPressed: onBack,
-                  icon: const Icon(Icons.arrow_back),
-                  label: const Text('Back'),
+                SizedBox(
+                  height: 52,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      shape: const StadiumBorder(),
+                      side: BorderSide(
+                        color: isDark
+                            ? Colors.white24
+                            : Colors.black.withValues(alpha: 0.12),
+                      ),
+                    ),
+                    onPressed: onBack,
+                    icon: const Icon(Icons.arrow_back, size: 18),
+                    label: const Text('Back',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: SizedBox(
-                    height: 50,
+                    height: 52,
                     child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF6B00),
+                        foregroundColor: Colors.white,
+                        shape: const StadiumBorder(),
+                      ),
                       onPressed: onNext,
-                      icon: const Icon(Icons.arrow_forward),
-                      label: const Text('Continue'),
+                      icon: const Icon(Icons.arrow_forward, size: 18),
+                      label: const Text(
+                        'Continue',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 15),
+                      ),
                     ),
                   ),
                 ),
@@ -497,27 +608,28 @@ class _Step3Branding extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final logoFile = formState.logoFile;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 8),
-          Text(
+          const Text(
             'Add your logo',
-            style: GoogleFonts.poppins(
+            style: TextStyle(
               fontSize: 24,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.6,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Your logo will appear on quotes and invoices. This is optional — you can add it later in Settings.',
-            style: TextStyle(color: colorScheme.onSurfaceVariant),
+            'Your logo will appear on quotes and invoices. Optional — you can add it later in Settings.',
+            style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
           // Logo picker
           Center(
@@ -528,12 +640,14 @@ class _Step3Branding extends StatelessWidget {
                 width: 140,
                 height: 140,
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(16),
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : const Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: logoFile != null
-                        ? colorScheme.primary
-                        : colorScheme.outlineVariant,
+                        ? const Color(0xFFFF6B00)
+                        : (isDark ? Colors.white24 : Colors.black12),
                     width: 2,
                   ),
                 ),
@@ -542,11 +656,8 @@ class _Step3Branding extends StatelessWidget {
                         fit: StackFit.expand,
                         children: [
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: Image.file(
-                              logoFile,
-                              fit: BoxFit.cover,
-                            ),
+                            borderRadius: BorderRadius.circular(18),
+                            child: Image.file(logoFile, fit: BoxFit.cover),
                           ),
                           Positioned(
                             top: 6,
@@ -559,11 +670,8 @@ class _Step3Branding extends StatelessWidget {
                                   color: colorScheme.error,
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(
-                                  Icons.close,
-                                  size: 14,
-                                  color: colorScheme.onError,
-                                ),
+                                child: Icon(Icons.close,
+                                    size: 14, color: colorScheme.onError),
                               ),
                             ),
                           ),
@@ -572,11 +680,8 @@ class _Step3Branding extends StatelessWidget {
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.add_photo_alternate_outlined,
-                            size: 40,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
+                          Icon(Icons.add_photo_alternate_outlined,
+                              size: 40, color: colorScheme.onSurfaceVariant),
                           const SizedBox(height: 8),
                           Text(
                             'Tap to add logo',
@@ -590,10 +695,8 @@ class _Step3Branding extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 8),
-
-          // Skip logo hint
-          if (logoFile == null)
+          if (logoFile == null) ...[
+            const SizedBox(height: 4),
             Center(
               child: TextButton(
                 onPressed: onSubmit,
@@ -603,26 +706,38 @@ class _Step3Branding extends StatelessWidget {
                 ),
               ),
             ),
-
+          ],
           const SizedBox(height: 16),
 
           // Summary card
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: colorScheme.outlineVariant),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white10
+                    : Colors.black.withValues(alpha: 0.05),
+              ),
+              boxShadow: isDark
+                  ? []
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      )
+                    ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Summary',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
                 ),
                 const SizedBox(height: 12),
                 _SummaryRow(
@@ -658,52 +773,76 @@ class _Step3Branding extends StatelessWidget {
           const SizedBox(height: 16),
 
           // Error message
-          if (formState.errorMessage != null)
+          if (formState.errorMessage != null) ...[
             Container(
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 16),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                    color: colorScheme.error.withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.error_outline, color: colorScheme.error),
-                  const SizedBox(width: 8),
+                  Icon(Icons.error_outline,
+                      color: colorScheme.error, size: 18),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       formState.errorMessage!,
-                      style: TextStyle(color: colorScheme.error),
+                      style:
+                          TextStyle(color: colorScheme.error, fontSize: 13),
                     ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+          ],
 
           Row(
             children: [
-              OutlinedButton.icon(
-                onPressed: formState.isSubmitting ? null : onBack,
-                icon: const Icon(Icons.arrow_back),
-                label: const Text('Back'),
+              SizedBox(
+                height: 52,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    shape: const StadiumBorder(),
+                    side: BorderSide(
+                      color: isDark
+                          ? Colors.white24
+                          : Colors.black.withValues(alpha: 0.12),
+                    ),
+                  ),
+                  onPressed: formState.isSubmitting ? null : onBack,
+                  icon: const Icon(Icons.arrow_back, size: 18),
+                  label: const Text('Back',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: SizedBox(
-                  height: 50,
+                  height: 52,
                   child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF6B00),
+                      foregroundColor: Colors.white,
+                      shape: const StadiumBorder(),
+                    ),
                     onPressed: formState.isSubmitting ? null : onSubmit,
                     icon: formState.isSubmitting
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
                           )
-                        : const Icon(Icons.check),
+                        : const Icon(Icons.check, size: 18),
                     label: Text(
-                      formState.isSubmitting
-                          ? 'Setting up...'
-                          : 'Complete Setup',
+                      formState.isSubmitting ? 'Setting up...' : 'Complete Setup',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 15),
                     ),
                   ),
                 ),

@@ -221,7 +221,7 @@ class _CustomDateTimePickerSheetState extends State<CustomDateTimePickerSheet> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: isSelected
-                          ? const Color(0xFF00966C) // Premium green selector from mockup
+                          ? colorScheme.primary
                           : Colors.transparent,
                     ),
                     child: Center(
@@ -282,7 +282,7 @@ class _CustomDateTimePickerSheetState extends State<CustomDateTimePickerSheet> {
           // Continue Button
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF005F43), // Deep emerald matching standard UAT styling
+              backgroundColor: colorScheme.primary,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

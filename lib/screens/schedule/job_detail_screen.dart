@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../../models/models.dart';
 import '../../components/glass_card.dart';
@@ -101,12 +104,15 @@ class _JobDetailView extends ConsumerStatefulWidget {
 class _JobDetailViewState extends ConsumerState<_JobDetailView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int _currentTabIndex = 0;
 
   static const _tabs = [
     Tab(text: 'Overview'),
     Tab(text: 'Quotes'),
     Tab(text: 'Invoices'),
     Tab(text: 'Expenses'),
+    Tab(text: 'Materials'),
+    Tab(text: 'Signature'),
     Tab(text: 'Media'),
     Tab(text: 'Notes'),
   ];
@@ -114,7 +120,25 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 8, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging ||
+          _tabController.index != _currentTabIndex) {
+        setState(() => _currentTabIndex = _tabController.index);
+      }
+    });
+  }
+
+  void _showSignaturePad() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _SignaturePadSheet(
+        jobId: widget.job.id,
+        companyId: widget.job.companyId,
+      ),
+    );
   }
 
   @override
@@ -171,9 +195,24 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
             Color(0xFFFF9845), // Peach glow brand orange
           ];
 
+    final hasSignature = widget.job.signatureUrl != null &&
+        widget.job.signatureUrl!.isNotEmpty;
+
     return MeshBackground(
         child: Scaffold(
       backgroundColor: Colors.transparent,
+      floatingActionButton: _currentTabIndex == 0 && !hasSignature
+          ? FloatingActionButton.extended(
+              onPressed: _showSignaturePad,
+              backgroundColor: const Color(0xFFF4781F),
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.draw_outlined),
+              label: const Text(
+                'Get Signature',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            )
+          : null,
       body: NestedScrollView(
         headerSliverBuilder: (_, __) => [
           SliverAppBar(
@@ -290,6 +329,8 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
             _QuotesTab(jobId: widget.job.id, job: widget.job),
             _InvoicesTab(jobId: widget.job.id, job: widget.job),
             _ExpensesTab(jobId: widget.job.id, job: widget.job),
+            _MaterialsTab(job: widget.job),
+            _SignatureTab(job: widget.job),
             _MediaTab(jobId: widget.job.id, companyId: widget.job.companyId),
             _NotesTab(jobId: widget.job.id, companyId: widget.job.companyId),
           ],
@@ -382,9 +423,12 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
   // Checklist Helpers
   List<Map<String, dynamic>> get _checklist {
     if (widget.job.checklist != null && widget.job.checklist!.isNotEmpty) {
-      return List<Map<String, dynamic>>.from(
-        widget.job.checklist!.map((item) => Map<String, dynamic>.from(item as Map)),
-      );
+      return widget.job.checklist!.map((item) {
+        final m = Map<String, dynamic>.from(item as Map);
+        // Normalise 'checked' — Firestore may return null for old documents
+        m['checked'] = (m['checked'] as bool?) ?? false;
+        return m;
+      }).toList();
     }
     return [
       {'title': 'Site Survey', 'checked': false},
@@ -825,7 +869,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                 itemCount: _checklist.length,
                 itemBuilder: (context, index) {
                   final item = _checklist[index];
-                  final isChecked = item['checked'] as bool;
+                  final isChecked = (item['checked'] as bool?) ?? false;
 
                   // Determine status:
                   // 1. Is it completed? (checked == true)
@@ -957,9 +1001,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
               style: FilledButton.styleFrom(
                 backgroundColor: colorScheme.primary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999),
-                ),
+                shape: const StadiumBorder(),
               ),
               onPressed: _completeJob,
               icon: const Icon(Icons.check_circle, size: 18),
@@ -978,9 +1020,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999),
-                ),
+                shape: const StadiumBorder(),
                 side: BorderSide(
                   color: colorScheme.outline,
                   width: 1.5,
@@ -1553,6 +1593,696 @@ class _NotesTabState extends ConsumerState<_NotesTab> {
         child: const Icon(Icons.add),
       ),
     );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// TAB 5: Materials Tracker
+// ─────────────────────────────────────────────────────────────────
+class _MaterialsTab extends ConsumerStatefulWidget {
+  final CalendarEvent job;
+  const _MaterialsTab({required this.job});
+
+  @override
+  ConsumerState<_MaterialsTab> createState() => _MaterialsTabState();
+}
+
+class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
+  List<Map<String, dynamic>> get _materials {
+    final raw = widget.job.materials;
+    if (raw != null && raw.isNotEmpty) {
+      return List<Map<String, dynamic>>.from(
+        raw.map((item) => Map<String, dynamic>.from(item as Map)),
+      );
+    }
+    return [];
+  }
+
+  Future<void> _saveMaterials(List<Map<String, dynamic>> list) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(widget.job.id)
+          .update({'materials': list});
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to save: $e')));
+      }
+    }
+  }
+
+  void _showAddMaterialSheet() {
+    final nameController = TextEditingController();
+    final qtyController = TextEditingController(text: '1');
+    final unitController = TextEditingController();
+    final costController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(ctx).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('Add Material',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: nameController,
+                textCapitalization: TextCapitalization.words,
+                decoration: InputDecoration(
+                  labelText: 'Material Name',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: qtyController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Quantity',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: unitController,
+                      decoration: InputDecoration(
+                        labelText: 'Unit (e.g. kg, m)',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: costController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Cost (£)',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () {
+                  final name = nameController.text.trim();
+                  if (name.isEmpty) return;
+                  final list = _materials;
+                  list.add({
+                    'name': name,
+                    'quantity': double.tryParse(qtyController.text) ?? 1,
+                    'unit': unitController.text.trim(),
+                    'cost': double.tryParse(costController.text.trim()) ?? 0,
+                    'used': false,
+                  });
+                  _saveMaterials(list);
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Add Material'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _toggleUsed(int index, bool used) {
+    final list = _materials;
+    list[index]['used'] = used;
+    _saveMaterials(list);
+  }
+
+  void _deleteMaterial(int index) {
+    final list = _materials;
+    list.removeAt(index);
+    _saveMaterials(list);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final materials = _materials;
+    final totalCost = materials.fold<double>(
+        0, (sum, m) => sum + ((m['cost'] as num?) ?? 0).toDouble() * ((m['quantity'] as num?) ?? 1).toDouble());
+
+    return Scaffold(
+      body: materials.isEmpty
+          ? _EmptyState(
+              icon: Icons.inventory_2_outlined,
+              color: Colors.teal,
+              label: 'No materials listed yet',
+            )
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                // Total cost header
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Total Material Cost',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: colorScheme.onSurface.withValues(alpha: 0.7))),
+                      Text(
+                        '£${totalCost.toStringAsFixed(2)}',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
+                            color: colorScheme.primary),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...List.generate(materials.length, (index) {
+                  final m = materials[index];
+                  final isUsed = m['used'] == true;
+                  return GlassCard(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        Checkbox(
+                          value: isUsed,
+                          activeColor: Colors.teal,
+                          onChanged: (v) =>
+                              _toggleUsed(index, v ?? false),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                m['name'] as String? ?? '',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  decoration: isUsed
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                  color: isUsed
+                                      ? colorScheme.onSurface
+                                          .withValues(alpha: 0.4)
+                                      : null,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Qty: ${m['quantity']} ${m['unit'] ?? ''}  •  £${((m['cost'] as num?) ?? 0).toStringAsFixed(2)}',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: colorScheme.onSurface
+                                        .withValues(alpha: 0.5)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline,
+                              size: 18, color: Colors.red),
+                          onPressed: () => _deleteMaterial(index),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddMaterialSheet,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Material'),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// TAB 6: Signature Capture
+// ─────────────────────────────────────────────────────────────────
+class _SignatureTab extends ConsumerStatefulWidget {
+  final CalendarEvent job;
+  const _SignatureTab({required this.job});
+
+  @override
+  ConsumerState<_SignatureTab> createState() => _SignatureTabState();
+}
+
+class _SignatureTabState extends ConsumerState<_SignatureTab> {
+  String? get _signatureUrl => widget.job.signatureUrl;
+
+  Future<void> _clearSignature() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear Signature'),
+        content: const Text(
+            'Remove the existing signature? The client will need to sign again.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(widget.job.id)
+          .update({'signatureUrl': FieldValue.delete()});
+    }
+  }
+
+  void _showSignaturePad() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _SignaturePadSheet(
+        jobId: widget.job.id,
+        companyId: widget.job.companyId,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            GlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Client Sign-off',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Capture the client\'s signature to confirm job completion.',
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                  ),
+                  const SizedBox(height: 16),
+                  if (_signatureUrl != null && _signatureUrl!.isNotEmpty) ...[
+                    Container(
+                      width: double.infinity,
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                            color:
+                                colorScheme.outline.withValues(alpha: 0.3)),
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.white,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          _signatureUrl!,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Center(
+                            child: Icon(Icons.broken_image),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.check_circle,
+                                    color: Colors.green, size: 16),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Signed by client',
+                                  style: TextStyle(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          onPressed: _clearSignature,
+                          icon: const Icon(Icons.clear, size: 16),
+                          label: const Text('Clear'),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: colorScheme.error),
+                            foregroundColor: colorScheme.error,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 32),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHigh
+                            .withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: colorScheme.outline.withValues(alpha: 0.3),
+                            style: BorderStyle.solid),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.draw_outlined,
+                              size: 48, color: colorScheme.outline),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No signature yet',
+                            style: TextStyle(color: colorScheme.outline),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFF4781F),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: const StadiumBorder(),
+                        ),
+                        onPressed: _showSignaturePad,
+                        icon: const Icon(Icons.draw_outlined),
+                        label: const Text('Capture Signature',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SignaturePadSheet extends ConsumerStatefulWidget {
+  final String jobId;
+  final String companyId;
+  const _SignaturePadSheet(
+      {required this.jobId, required this.companyId});
+
+  @override
+  ConsumerState<_SignaturePadSheet> createState() =>
+      _SignaturePadSheetState();
+}
+
+class _SignaturePadSheetState extends ConsumerState<_SignaturePadSheet> {
+  final List<List<Offset?>> _strokes = [];
+  List<Offset?> _currentStroke = [];
+  bool _isSaving = false;
+
+  void _onPanStart(DragStartDetails d) {
+    setState(() {
+      _currentStroke = [d.localPosition];
+    });
+  }
+
+  void _onPanUpdate(DragUpdateDetails d) {
+    setState(() {
+      _currentStroke.add(d.localPosition);
+    });
+  }
+
+  void _onPanEnd(DragEndDetails d) {
+    setState(() {
+      _strokes.add(List.from(_currentStroke));
+      _currentStroke = [];
+    });
+  }
+
+  void _clear() => setState(() {
+        _strokes.clear();
+        _currentStroke.clear();
+      });
+
+  bool get _hasSignature =>
+      _strokes.isNotEmpty || _currentStroke.isNotEmpty;
+
+  Future<void> _save() async {
+    if (!_hasSignature) return;
+    setState(() => _isSaving = true);
+
+    try {
+      // Render signature to PNG bytes using a RepaintBoundary
+      final recorder = _SignatureRecorder(_strokes);
+      final bytes = await recorder.toPng(300, 150);
+
+      final storageRef = FirebaseStorage.instance
+          .ref('signatures/${widget.companyId}/${widget.jobId}.png');
+      await storageRef.putData(bytes,
+          SettableMetadata(contentType: 'image/png'));
+      final url = await storageRef.getDownloadURL();
+
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(widget.jobId)
+          .update({
+        'signatureUrl': url,
+        'signedAt': FieldValue.serverTimestamp(),
+      });
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Signature saved!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving signature: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Sign Here',
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w700)),
+              TextButton.icon(
+                onPressed: _clear,
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Clear'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            height: 200,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                  color: colorScheme.outline.withValues(alpha: 0.3)),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: GestureDetector(
+                onPanStart: _onPanStart,
+                onPanUpdate: _onPanUpdate,
+                onPanEnd: _onPanEnd,
+                child: CustomPaint(
+                  painter: _SignaturePainter(
+                    strokes: _strokes,
+                    currentStroke: _currentStroke,
+                  ),
+                  size: Size.infinite,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Draw your signature above',
+            style: TextStyle(
+                fontSize: 12,
+                color: colorScheme.onSurface.withValues(alpha: 0.5)),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFF4781F),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: const StadiumBorder(),
+              ),
+              onPressed: (_hasSignature && !_isSaving) ? _save : null,
+              child: _isSaving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Text('Confirm & Save Signature',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _SignaturePainter extends CustomPainter {
+  final List<List<Offset?>> strokes;
+  final List<Offset?> currentStroke;
+
+  _SignaturePainter({required this.strokes, required this.currentStroke});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.black87
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+
+    void drawStroke(List<Offset?> points) {
+      for (int i = 0; i < points.length - 1; i++) {
+        final a = points[i];
+        final b = points[i + 1];
+        if (a != null && b != null) {
+          canvas.drawLine(a, b, paint);
+        }
+      }
+    }
+
+    for (final stroke in strokes) {
+      drawStroke(stroke);
+    }
+    drawStroke(currentStroke);
+  }
+
+  @override
+  bool shouldRepaint(_SignaturePainter oldDelegate) => true;
+}
+
+class _SignatureRecorder {
+  final List<List<Offset?>> strokes;
+  _SignatureRecorder(this.strokes);
+
+  Future<Uint8List> toPng(double width, double height) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder,
+        Rect.fromLTWH(0, 0, width, height));
+
+    // White background
+    canvas.drawRect(
+        Rect.fromLTWH(0, 0, width, height),
+        Paint()..color = Colors.white);
+
+    final paint = Paint()
+      ..color = Colors.black87
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    for (final stroke in strokes) {
+      for (int i = 0; i < stroke.length - 1; i++) {
+        final a = stroke[i];
+        final b = stroke[i + 1];
+        if (a != null && b != null) {
+          canvas.drawLine(a, b, paint);
+        }
+      }
+    }
+
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(width.toInt(), height.toInt());
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    return byteData!.buffer.asUint8List();
   }
 }
 

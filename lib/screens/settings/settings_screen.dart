@@ -338,6 +338,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(height: 16),
 
+            // Business Section
+            const _SectionHeader(title: 'Business'),
+            GlassCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.construction, color: colorScheme.primary),
+                    title: const Text('Services',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text('Manage your service catalogue & pricing',
+                        style: TextStyle(
+                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => context.push('/services'),
+                  ),
+                  _buildSubtleDivider(isDark),
+                  ListTile(
+                    leading: Icon(Icons.receipt_long_outlined, color: colorScheme.primary),
+                    title: const Text('Expenses',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text('Track business expenses & receipts',
+                        style: TextStyle(
+                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => context.push('/expenses'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
             // Account Section
             const _SectionHeader(title: 'Account'),
             GlassCard(
@@ -376,15 +408,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: 16),
 
             // Subscription Section
-            const _SectionHeader(title: 'Subscription'),
+            const _SectionHeader(title: 'Subscription & Rewards'),
             GlassCard(
               padding: EdgeInsets.zero,
-              child: _SubscriptionTile(
-                tier: company?.tier ?? 'free',
-                subscriptionStatus: company?.subscriptionStatus,
-                trialEndsAt: company?.trialEndsAt,
-                isLoading: _isSubscriptionLoading,
-                onTap: () => _manageSubscription(context),
+              child: Column(
+                children: [
+                  _SubscriptionTile(
+                    tier: company?.tier ?? 'free',
+                    subscriptionStatus: company?.subscriptionStatus,
+                    trialEndsAt: company?.trialEndsAt,
+                    isLoading: _isSubscriptionLoading,
+                    onTap: () => context.push('/billing'),
+                  ),
+                  _buildSubtleDivider(isDark),
+                  ListTile(
+                    leading: Icon(Icons.card_giftcard,
+                        color: const Color(0xFFF4781F)),
+                    title: const Text('Referral Programme',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text('Earn free months by referring friends',
+                        style: TextStyle(
+                            color:
+                                colorScheme.onSurface.withValues(alpha: 0.6))),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => context.push('/referral'),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),

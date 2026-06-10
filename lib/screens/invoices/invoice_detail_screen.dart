@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
@@ -598,20 +599,18 @@ class InvoiceDetailScreen extends ConsumerWidget {
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(999),
-                              ),
+                              shape: const StadiumBorder(),
                               side: BorderSide(color: colorScheme.outline),
                             ),
-                            onPressed: () {
-                              final url = '$_webAppBaseUrl/portal/invoices/${invoice.id}';
-                              context.push(
-                                '/web-preview',
-                                extra: {
-                                  'url': url,
-                                  'title': 'Invoice PDF',
-                                },
-                              );
+                            onPressed: () async {
+                              final uri = Uri.parse('$_webAppBaseUrl/api/invoices/${invoice.id}/pdf');
+                              if (await canLaunchUrl(uri)) {
+                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              } else if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Could not open PDF.')),
+                                );
+                              }
                             },
                             child: Text(
                               'View PDF',
@@ -634,9 +633,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
                           style: FilledButton.styleFrom(
                             backgroundColor: colorScheme.primary,
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(999),
-                            ),
+                            shape: const StadiumBorder(),
                           ),
                           onPressed: () => _markPaid(context, ref, invoice.id),
                           child: const Text(
@@ -654,9 +651,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(999),
-                            ),
+                            shape: const StadiumBorder(),
                             side: BorderSide(
                               color: colorScheme.outline,
                               width: 1.5,

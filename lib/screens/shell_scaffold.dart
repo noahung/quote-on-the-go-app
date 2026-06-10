@@ -109,13 +109,13 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
                     ),
                     _buildActionCard(
                       context,
-                      title: 'Smart Pricing',
-                      desc: 'Optimize margins',
-                      icon: Icons.psychology,
+                      title: 'Services',
+                      desc: 'Service catalogue',
+                      icon: Icons.construction_outlined,
                       color: Colors.teal,
                       onTap: () {
                         Navigator.pop(context);
-                        context.go('/pricing');
+                        context.push('/services');
                       },
                     ),
                     _buildActionCard(

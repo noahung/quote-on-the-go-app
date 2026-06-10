@@ -26,6 +26,9 @@ class CalendarEvent with _$CalendarEvent {
     String? status,
     List<dynamic>? checklist,
     List<String>? assignedUserIds,
+    List<dynamic>? materials,
+    String? signatureUrl,
+    @TimestampConverter() DateTime? signedAt,
   }) = _CalendarEvent;
 
   factory CalendarEvent.fromJson(Map<String, dynamic> json) =>

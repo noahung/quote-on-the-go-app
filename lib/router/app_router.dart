@@ -28,7 +28,10 @@ import '../screens/invoices/create_invoice_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/settings/company_branding_screen.dart';
 import '../screens/expenses/expenses_screen.dart';
+import '../screens/expenses/expense_detail_screen.dart';
 import '../screens/expenses/log_expense_screen.dart';
+import '../screens/settings/referral_screen.dart';
+import '../screens/settings/billing_screen.dart';
 import '../screens/services/services_screen.dart';
 import '../screens/services/create_service_screen.dart';
 import '../screens/services/service_detail_screen.dart';
@@ -290,6 +293,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/expenses/new',
         builder: (context, state) => const LogExpenseScreen(),
+      ),
+      GoRoute(
+        path: '/expenses/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return ExpenseDetailScreen(expenseId: id);
+        },
+      ),
+      GoRoute(
+        path: '/referral',
+        builder: (context, state) => const ReferralScreen(),
+      ),
+      GoRoute(
+        path: '/billing',
+        builder: (context, state) => const BillingScreen(),
       ),
       GoRoute(
         path: '/services',

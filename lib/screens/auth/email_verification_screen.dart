@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../../components/mesh_background.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/email_verification_service.dart';
 
@@ -157,154 +157,256 @@ class _EmailVerificationScreenState
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = FirebaseAuth.instance.currentUser;
     final email = user?.email ?? '';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Verify Your Email'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: _signOut,
-          tooltip: 'Sign out',
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Icon
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
-                  shape: BoxShape.circle,
+    return MeshBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Column(
+          children: [
+            // ── Gradient header ───────────────────────────────────────────
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFFF6B00), Color(0xFFF4781F)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                child: Icon(
-                  Icons.mark_email_unread_outlined,
-                  size: 40,
-                  color: colorScheme.primary,
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(32),
+                  bottomRight: Radius.circular(32),
                 ),
               ),
-              const SizedBox(height: 24),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: _signOut,
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white24,
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: const Icon(Icons.arrow_back,
+                              color: Colors.white, size: 18),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Verify your email',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.8,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _codeSent
+                            ? 'Enter the 6-digit code we sent you'
+                            : 'Sending your verification code…',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
-              // Heading
-              Text(
-                'Check your inbox',
-                style: GoogleFonts.poppins(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _codeSent
-                    ? "We've sent a 6-digit verification code to"
-                    : 'Sending your verification code to',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: colorScheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                email,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Sending indicator
-              if (_isSending)
-                const CircularProgressIndicator()
-              else ...[
-                // OTP boxes
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children:
-                      List.generate(6, (i) => _buildDigitBox(i, colorScheme)),
-                ),
-                const SizedBox(height: 24),
-
-                // Error
-                if (_errorMessage != null)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(8),
+            // ── Body ──────────────────────────────────────────────────────
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+                child: Column(
+                  children: [
+                    // Email indicator
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6B00).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.email_outlined,
+                              size: 16, color: Color(0xFFFF6B00)),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              email,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFFF6B00),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.error_outline,
-                            color: colorScheme.error, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _errorMessage!,
-                            style: TextStyle(
-                                color: colorScheme.error, fontSize: 13),
+                    const SizedBox(height: 28),
+
+                    if (_isSending)
+                      const CircularProgressIndicator()
+                    else ...[
+                      // OTP card
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.05)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white10
+                                : Colors.black.withValues(alpha: 0.05),
+                          ),
+                          boxShadow: isDark
+                              ? []
+                              : [
+                                  BoxShadow(
+                                    color:
+                                        Colors.black.withValues(alpha: 0.03),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 4),
+                                  )
+                                ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: List.generate(
+                              6, (i) => _buildDigitBox(i, colorScheme, isDark)),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Error banner
+                      if (_errorMessage != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: colorScheme.errorContainer,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                                color: colorScheme.error
+                                    .withValues(alpha: 0.2)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.error_outline,
+                                  color: colorScheme.error, size: 18),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  _errorMessage!,
+                                  style: TextStyle(
+                                      color: colorScheme.error, fontSize: 13),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
+                        const SizedBox(height: 20),
                       ],
+
+                      // Verify pill button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF6B00),
+                            foregroundColor: Colors.white,
+                            shape: const StadiumBorder(),
+                          ),
+                          onPressed:
+                              (_isVerifying || _enteredCode.length != 6)
+                                  ? null
+                                  : _verifyCode,
+                          child: _isVerifying
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Text(
+                                  'Verify Code',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Resend
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            shape: const StadiumBorder(),
+                            side: BorderSide(
+                              color: isDark
+                                  ? Colors.white24
+                                  : Colors.black.withValues(alpha: 0.12),
+                            ),
+                          ),
+                          onPressed:
+                              _resendCountdown > 0 ? null : _sendCode,
+                          child: Text(
+                            _resendCountdown > 0
+                                ? 'Resend code in ${_resendCountdown}s'
+                                : 'Resend code',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 14),
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 28),
+                    Text(
+                      'Tap the back arrow to sign out if this is the wrong account.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                if (_errorMessage != null) const SizedBox(height: 16),
-
-                // Verify button
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: FilledButton(
-                    onPressed: (_isVerifying || _enteredCode.length != 6)
-                        ? null
-                        : _verifyCode,
-                    child: _isVerifying
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Verify Code'),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Resend
-                TextButton(
-                  onPressed: _resendCountdown > 0 ? null : _sendCode,
-                  child: Text(
-                    _resendCountdown > 0
-                        ? 'Resend code in ${_resendCountdown}s'
-                        : 'Resend code',
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 32),
-              Text(
-                "Wrong account? Tap the back arrow to sign out.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: colorScheme.onSurfaceVariant,
-                  fontSize: 12,
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildDigitBox(int index, ColorScheme colorScheme) {
+  Widget _buildDigitBox(int index, ColorScheme colorScheme, bool isDark) {
     return SizedBox(
-      width: 46,
-      height: 56,
+      width: 44,
+      height: 54,
       child: TextFormField(
         controller: _controllers[index],
         focusNode: _focusNodes[index],
@@ -312,20 +414,26 @@ class _EmailVerificationScreenState
         textAlign: TextAlign.center,
         maxLength: 1,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        style: GoogleFonts.poppins(
+        style: TextStyle(
           fontSize: 22,
-          fontWeight: FontWeight.bold,
-          color: colorScheme.primary,
+          fontWeight: FontWeight.w800,
+          color: const Color(0xFFFF6B00),
         ),
         decoration: InputDecoration(
           counterText: '',
           contentPadding: EdgeInsets.zero,
+          filled: true,
+          fillColor: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : const Color(0xFFF5F5F5),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: colorScheme.primary, width: 2),
+            borderRadius: BorderRadius.circular(12),
+            borderSide:
+                const BorderSide(color: Color(0xFFFF6B00), width: 2),
           ),
         ),
         onChanged: (value) => _onDigitChanged(index, value),

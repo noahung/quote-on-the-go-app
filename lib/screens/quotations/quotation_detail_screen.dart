@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../providers/providers.dart';
 import '../../models/models.dart';
 import '../../theme/semantic_colors.dart';
@@ -258,6 +261,46 @@ class QuotationDetailScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _archiveQuotation(
+      BuildContext context, WidgetRef ref, Quotation quotation) async {
+    final isArchived = quotation.status == 'Archived';
+    try {
+      await ref
+          .read(quotationRepositoryProvider)
+          .updateQuotationStatus(quotation.id, isArchived ? 'Draft' : 'Archived');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  isArchived ? 'Quotation unarchived.' : 'Quotation archived.')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e')),
+        );
+      }
+    }
+  }
+
+  void _copyPortalLink(BuildContext context, Quotation quotation) {
+    final link = '$_webAppBaseUrl/portal/quotations/${quotation.id}';
+    Clipboard.setData(ClipboardData(text: link));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Client portal link copied to clipboard!')),
+    );
+  }
+
+  void _sharePdf(BuildContext context, Quotation quotation) {
+    final link = '$_webAppBaseUrl/portal/quotations/${quotation.id}';
+    Share.share(
+      'View your quotation here: $link',
+      subject:
+          'Quotation #${quotation.quotationNumber.replaceFirst('Q-', '')}',
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -310,6 +353,12 @@ class QuotationDetailScreen extends ConsumerWidget {
                           extra: quotation);
                     } else if (value == 'send') {
                       await _showSendOptions(context, ref, quotation);
+                    } else if (value == 'copy_link') {
+                      _copyPortalLink(context, quotation);
+                    } else if (value == 'share_pdf') {
+                      _sharePdf(context, quotation);
+                    } else if (value == 'archive') {
+                      await _archiveQuotation(context, ref, quotation);
                     } else if (value == 'delete') {
                       await _deleteQuotation(context, ref, quotation.id);
                     }
@@ -329,6 +378,40 @@ class QuotationDetailScreen extends ConsumerWidget {
                         Icon(Icons.email_outlined, color: semanticColors.info),
                         const SizedBox(width: 8),
                         const Text('Send by Email')
+                      ]),
+                    ),
+                    PopupMenuItem(
+                      value: 'copy_link',
+                      child: Row(children: [
+                        Icon(Icons.link, color: semanticColors.info),
+                        const SizedBox(width: 8),
+                        const Text('Copy Portal Link')
+                      ]),
+                    ),
+                    PopupMenuItem(
+                      value: 'share_pdf',
+                      child: Row(children: [
+                        Icon(Icons.share_outlined, color: semanticColors.info),
+                        const SizedBox(width: 8),
+                        const Text('Share PDF Link')
+                      ]),
+                    ),
+                    PopupMenuItem(
+                      value: 'archive',
+                      child: Row(children: [
+                        Icon(
+                          quotation.status == 'Archived'
+                              ? Icons.unarchive_outlined
+                              : Icons.archive_outlined,
+                          color: semanticColors.warning,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          quotation.status == 'Archived'
+                              ? 'Unarchive'
+                              : 'Archive',
+                          style: TextStyle(color: semanticColors.warning),
+                        ),
                       ]),
                     ),
                     PopupMenuItem(
@@ -638,20 +721,18 @@ class QuotationDetailScreen extends ConsumerWidget {
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(999),
-                              ),
+                              shape: const StadiumBorder(),
                               side: BorderSide(color: colorScheme.outline),
                             ),
-                            onPressed: () {
-                              final url = '$_webAppBaseUrl/portal/quotations/${quotation.id}';
-                              context.push(
-                                '/web-preview',
-                                extra: {
-                                  'url': url,
-                                  'title': 'Quotation PDF',
-                                },
-                              );
+                            onPressed: () async {
+                              final uri = Uri.parse('$_webAppBaseUrl/api/quotations/${quotation.id}/pdf');
+                              if (await canLaunchUrl(uri)) {
+                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              } else if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Could not open PDF.')),
+                                );
+                              }
                             },
                             child: Text(
                               'View PDF',
@@ -674,9 +755,7 @@ class QuotationDetailScreen extends ConsumerWidget {
                           style: FilledButton.styleFrom(
                             backgroundColor: colorScheme.primary,
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(999),
-                            ),
+                            shape: const StadiumBorder(),
                           ),
                           onPressed: () =>
                               _convertToInvoice(context, ref, quotation),

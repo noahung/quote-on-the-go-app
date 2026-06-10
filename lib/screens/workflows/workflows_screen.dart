@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../../components/mesh_background.dart';
+import '../../components/curved_header.dart';
 import '../../models/workflow.dart';
 import '../../providers/providers.dart';
 import '../../theme/semantic_colors.dart';
+import 'create_workflow_screen.dart';
 
 class WorkflowsScreen extends ConsumerStatefulWidget {
   const WorkflowsScreen({super.key});
@@ -45,59 +45,25 @@ class _WorkflowsScreenState extends ConsumerState<WorkflowsScreen> with SingleTi
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return MeshBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(100),
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFFF6B00), Color(0xFFF4781F)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(32),
-                bottomRight: Radius.circular(32),
-              ),
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                child: Row(
-                  children: [
-                    if (!const {'/', '/quotations', '/invoices', '/customers', '/schedule', '/workflows', '/analytics', '/pricing'}.contains(GoRouterState.of(context).uri.path) && GoRouter.of(context).canPop())
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => GoRouter.of(context).pop(),
-                      ),
-                    const Expanded(
-                      child: Text(
-                        'Workflow Automations',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Column(
+        children: [
+          CurvedHeader(
+            title: 'Workflows',
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.add, color: Colors.white),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const CreateWorkflowScreen(),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.add, color: Colors.white),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Create Workflow Template - coming soon')),
-                        );
-                      },
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
-            ),
+            ],
           ),
-        ),
-        body: Column(
-          children: [
             const SizedBox(height: 16),
             // Tab Controls
             Padding(
@@ -154,7 +120,6 @@ class _WorkflowsScreenState extends ConsumerState<WorkflowsScreen> with SingleTi
             ),
           ],
         ),
-      ),
     );
   }
 

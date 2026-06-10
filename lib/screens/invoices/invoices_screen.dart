@@ -19,6 +19,8 @@ class InvoicesScreen extends ConsumerStatefulWidget {
 class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
 
   final List<_StatusTab> _tabs = const [
     _StatusTab(label: 'All', status: null),
@@ -32,20 +34,28 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
-    _tabController.addListener(() {
-      setState(() {});
+    _tabController.addListener(() => setState(() {}));
+    _searchController.addListener(() {
+      setState(() => _searchQuery = _searchController.text.toLowerCase());
     });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   List<Invoice> _filterByStatus(List<Invoice> invoices, String? status) {
-    if (status == null) return invoices;
-    return invoices.where((i) => i.status == status).toList();
+    var list = status == null ? invoices : invoices.where((i) => i.status == status).toList();
+    if (_searchQuery.isNotEmpty) {
+      list = list.where((i) =>
+        i.customerName.toLowerCase().contains(_searchQuery) ||
+        i.invoiceNumber.toLowerCase().contains(_searchQuery)
+      ).toList();
+    }
+    return list;
   }
 
   @override
@@ -74,7 +84,40 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
               ),
             ],
           ),
-          
+
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search invoices…',
+                hintStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                  fontSize: 14,
+                ),
+                prefixIcon: Icon(Icons.search,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        onPressed: () => _searchController.clear(),
+                      )
+                    : null,
+                filled: true,
+                fillColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black.withValues(alpha: 0.05),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+
           // Horizontal Tab Bar Filter List (Stitch style)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
@@ -178,7 +221,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
                 ),
               ),
               data: (invoices) {
-                if (invoices.isEmpty) {
+                if (invoices.isEmpty && _searchQuery.isEmpty) {
                   return _EmptyState(
                     isPremium: isPremium,
                     currentCount: activeCount,
@@ -190,12 +233,16 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
                     final filtered = _filterByStatus(invoices, tab.status);
                     return _InvoiceList(
                       invoices: filtered,
-                      emptyTitle: tab.status == null
-                          ? 'No Invoices Yet'
-                          : 'No ${tab.label} Invoices',
-                      emptySubtitle: tab.status == null
-                          ? 'Create your first invoice to get started'
-                          : 'Invoices with ${tab.label.toLowerCase()} status will appear here',
+                      emptyTitle: _searchQuery.isNotEmpty
+                          ? 'No results for "$_searchQuery"'
+                          : tab.status == null
+                              ? 'No Invoices Yet'
+                              : 'No ${tab.label} Invoices',
+                      emptySubtitle: _searchQuery.isNotEmpty
+                          ? 'Try a different name or invoice number'
+                          : tab.status == null
+                              ? 'Create your first invoice to get started'
+                              : 'Invoices with ${tab.label.toLowerCase()} status will appear here',
                       onAddTap: () => context.push('/invoices/new'),
                       isPremium: isPremium,
                       currentCount: activeCount,
@@ -318,25 +365,6 @@ class _InvoiceCard extends StatelessWidget {
     final statusColor = _getStatusColor(invoice.status, semanticColors);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Map status to appropriate Icon
-    IconData statusIcon;
-    switch (invoice.status) {
-      case 'Paid':
-        statusIcon = Icons.receipt_long;
-        break;
-      case 'Sent':
-        statusIcon = Icons.receipt_long;
-        break;
-      case 'Overdue':
-        statusIcon = Icons.warning;
-        break;
-      case 'Draft':
-        statusIcon = Icons.edit_document;
-        break;
-      default:
-        statusIcon = Icons.receipt_long;
-    }
-
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GlassCard(
@@ -348,24 +376,7 @@ class _InvoiceCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Circular avatar icon container on the left
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: invoice.status == 'Overdue'
-                      ? (isDark ? Colors.red.withValues(alpha: 0.15) : const Color(0xFFFFDAD6))
-                      : (isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFF4781F).withValues(alpha: 0.12)),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  statusIcon,
-                  color: invoice.status == 'Overdue' ? semanticColors.error : const Color(0xFFF4781F),
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Details in the middle
+              // Details
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
