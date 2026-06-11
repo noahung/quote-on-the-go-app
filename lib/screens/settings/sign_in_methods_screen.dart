@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../components/glass_card.dart';
 import '../../components/mesh_background.dart';
 import '../../theme/semantic_colors.dart';
+import '../../utils/feedback_controller.dart';
 
 final authProvidersProvider = StreamProvider.autoDispose<List<String>>((ref) {
   return FirebaseAuth.instance.authStateChanges().map((user) {
@@ -246,18 +247,14 @@ class SignInMethodsScreen extends ConsumerWidget {
 
                         if (ctx.mounted) {
                           Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Password set successfully'),
-                            ),
-                          );
+                          ProviderContainer container = ProviderScope.containerOf(context);
+                          container.read(feedbackControllerProvider).success(context, 'Password set successfully');
                         }
                       } catch (e) {
                         setState(() => isLoading = false);
                         if (ctx.mounted) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
+                          ProviderContainer container = ProviderScope.containerOf(context);
+                          container.read(feedbackControllerProvider).error(context, 'Error: $e');
                         }
                       }
                     },
@@ -370,11 +367,8 @@ class SignInMethodsScreen extends ConsumerWidget {
 
                         if (ctx.mounted) {
                           Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Password changed successfully'),
-                            ),
-                          );
+                          final container = ProviderScope.containerOf(context);
+                          container.read(feedbackControllerProvider).success(context, 'Password changed successfully');
                         }
                       } on FirebaseAuthException catch (e) {
                         setState(() => isLoading = false);
@@ -383,16 +377,14 @@ class SignInMethodsScreen extends ConsumerWidget {
                           if (e.code == 'wrong-password') {
                             message = 'Current password is incorrect';
                           }
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text(message)),
-                          );
+                          final container = ProviderScope.containerOf(context);
+                          container.read(feedbackControllerProvider).error(context, message);
                         }
                       } catch (e) {
                         setState(() => isLoading = false);
                         if (ctx.mounted) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
+                          final container = ProviderScope.containerOf(context);
+                          container.read(feedbackControllerProvider).error(context, 'Error: $e');
                         }
                       }
                     },
@@ -443,15 +435,13 @@ class SignInMethodsScreen extends ConsumerWidget {
       await user.unlink(providerId);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Sign-in method removed')),
-        );
+        final container = ProviderScope.containerOf(context);
+        container.read(feedbackControllerProvider).success(context, 'Sign-in method removed');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        final container = ProviderScope.containerOf(context);
+        container.read(feedbackControllerProvider).error(context, 'Error: $e');
       }
     }
   }
@@ -479,9 +469,8 @@ class SignInMethodsScreen extends ConsumerWidget {
       );
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        final container = ProviderScope.containerOf(context);
+        container.read(feedbackControllerProvider).error(context, 'Error: $e');
       }
     }
   }

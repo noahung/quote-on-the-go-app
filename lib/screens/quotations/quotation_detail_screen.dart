@@ -14,6 +14,8 @@ import '../../components/curved_header.dart';
 import '../../components/mesh_background.dart';
 import '../../components/glass_card.dart';
 import '../../components/custom_date_time_picker.dart';
+import '../../utils/feedback_controller.dart';
+import '../../models/feedback_type.dart';
 
 const _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
 
@@ -57,33 +59,25 @@ class QuotationDetailScreen extends ConsumerWidget {
       if (context.mounted) {
         if (response.statusCode == 200) {
           final isScheduled = sendAt != null;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(isScheduled
-                    ? 'Quotation scheduled successfully via email'
-                    : 'Quotation sent successfully via email')),
+          await ref.read(feedbackControllerProvider).showCelebration(
+            context: context,
+            type: CelebrationType.send,
+            title: isScheduled ? 'Email Scheduled' : 'Email Sent',
+            subtitle: isScheduled
+                ? 'Your quotation will be sent at the scheduled time'
+                : 'Your quotation has been sent to the customer',
           );
         } else {
           String err = 'Send failed (${response.statusCode})';
           try {
             err = jsonDecode(response.body)['error'] ?? err;
           } catch (_) {}
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: $err'),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
+          ref.read(feedbackControllerProvider).error(context, 'Error: $err');
         }
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        ref.read(feedbackControllerProvider).error(context, 'Error: $e');
       }
     }
   }
@@ -150,12 +144,7 @@ class QuotationDetailScreen extends ConsumerWidget {
                 );
                 if (scheduledDateTime != null && context.mounted) {
                   if (scheduledDateTime.isBefore(DateTime.now())) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Scheduled time must be in the future.'),
-                        backgroundColor: Colors.redAccent,
-                      ),
-                    );
+                    ref.read(feedbackControllerProvider).error(context, 'Scheduled time must be in the future.');
                     return;
                   }
                   _sendByEmail(context, ref, quotation, sendAt: scheduledDateTime);
@@ -227,16 +216,12 @@ class QuotationDetailScreen extends ConsumerWidget {
       final invoiceId = await invoiceRepository.createInvoice(invoice);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Converted to Invoice successfully!')),
-        );
+        ref.read(feedbackControllerProvider).success(context, 'Converted to Invoice successfully!');
         context.push('/invoices/$invoiceId');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to convert to invoice: $e')),
-        );
+        ref.read(feedbackControllerProvider).error(context, 'Failed to convert to invoice: $e');
       }
     }
   }
@@ -248,15 +233,11 @@ class QuotationDetailScreen extends ConsumerWidget {
           .read(quotationRepositoryProvider)
           .updateQuotationStatus(id, 'Declined');
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Quotation declined.')),
-        );
+        ref.read(feedbackControllerProvider).success(context, 'Quotation declined.');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update status: $e')),
-        );
+        ref.read(feedbackControllerProvider).error(context, 'Failed to update status: $e');
       }
     }
   }
@@ -269,27 +250,22 @@ class QuotationDetailScreen extends ConsumerWidget {
           .read(quotationRepositoryProvider)
           .updateQuotationStatus(quotation.id, isArchived ? 'Draft' : 'Archived');
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  isArchived ? 'Quotation unarchived.' : 'Quotation archived.')),
+        ref.read(feedbackControllerProvider).success(
+          context,
+          isArchived ? 'Quotation unarchived.' : 'Quotation archived.',
         );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
-        );
+        ref.read(feedbackControllerProvider).error(context, 'Failed: $e');
       }
     }
   }
 
-  void _copyPortalLink(BuildContext context, Quotation quotation) {
+  void _copyPortalLink(BuildContext context, WidgetRef ref, Quotation quotation) {
     final link = '$_webAppBaseUrl/portal/quotations/${quotation.id}';
     Clipboard.setData(ClipboardData(text: link));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Client portal link copied to clipboard!')),
-    );
+    ref.read(feedbackControllerProvider).success(context, 'Client portal link copied to clipboard!');
   }
 
   void _sharePdf(BuildContext context, Quotation quotation) {
@@ -354,7 +330,7 @@ class QuotationDetailScreen extends ConsumerWidget {
                     } else if (value == 'send') {
                       await _showSendOptions(context, ref, quotation);
                     } else if (value == 'copy_link') {
-                      _copyPortalLink(context, quotation);
+                      _copyPortalLink(context, ref, quotation);
                     } else if (value == 'share_pdf') {
                       _sharePdf(context, quotation);
                     } else if (value == 'archive') {
@@ -729,9 +705,7 @@ class QuotationDetailScreen extends ConsumerWidget {
                               if (await canLaunchUrl(uri)) {
                                 await launchUrl(uri, mode: LaunchMode.externalApplication);
                               } else if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Could not open PDF.')),
-                                );
+                                ref.read(feedbackControllerProvider).error(context, 'Could not open PDF.');
                               }
                             },
                             child: Text(

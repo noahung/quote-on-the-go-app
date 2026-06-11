@@ -10,7 +10,9 @@ import '../../components/glass_card.dart';
 import '../../components/curved_header.dart';
 
 class InvoicesScreen extends ConsumerStatefulWidget {
-  const InvoicesScreen({super.key});
+  final String? initialTab;
+
+  const InvoicesScreen({super.key, this.initialTab});
 
   @override
   ConsumerState<InvoicesScreen> createState() => _InvoicesScreenState();
@@ -33,7 +35,17 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    // Calculate initial tab index based on the initialTab parameter
+    final initialTabLabel = (widget.initialTab ?? '').toLowerCase();
+    int initialIndex = 0;
+    for (int i = 0; i < _tabs.length; i++) {
+      if (_tabs[i].label.toLowerCase() == initialTabLabel ||
+          (_tabs[i].status?.toLowerCase() == initialTabLabel)) {
+        initialIndex = i;
+        break;
+      }
+    }
+    _tabController = TabController(length: _tabs.length, vsync: this, initialIndex: initialIndex);
     _tabController.addListener(() => setState(() {}));
     _searchController.addListener(() {
       setState(() => _searchQuery = _searchController.text.toLowerCase());

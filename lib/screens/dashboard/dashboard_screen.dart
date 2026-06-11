@@ -189,6 +189,7 @@ class DashboardScreen extends ConsumerWidget {
                         color: semanticColors.error,
                         icon: Icons.warning_amber_rounded,
                         showDivider: true,
+                        onTap: () => context.push('/invoices?tab=overdue'),
                       ),
                       _StatusListRow(
                         label: 'Accepted Quotes',
@@ -196,6 +197,7 @@ class DashboardScreen extends ConsumerWidget {
                         color: semanticColors.success,
                         icon: Icons.check_circle_outline,
                         showDivider: true,
+                        onTap: () => context.push('/quotations?tab=accepted'),
                       ),
                       _StatusListRow(
                         label: 'Pending Quotes',
@@ -203,6 +205,7 @@ class DashboardScreen extends ConsumerWidget {
                         color: semanticColors.warning,
                         icon: Icons.schedule_outlined,
                         showDivider: false,
+                        onTap: () => context.push('/quotations?tab=sent'),
                       ),
                     ],
                   ),
@@ -791,6 +794,7 @@ class _StatusListRow extends StatelessWidget {
   final Color color;
   final IconData icon;
   final bool showDivider;
+  final VoidCallback? onTap;
 
   const _StatusListRow({
     required this.label,
@@ -798,6 +802,7 @@ class _StatusListRow extends StatelessWidget {
     required this.color,
     required this.icon,
     required this.showDivider,
+    this.onTap,
   });
 
   @override
@@ -805,40 +810,44 @@ class _StatusListRow extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-          child: Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: color, size: 18),
                 ),
-                child: Icon(icon, color: color, size: 18),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: color,
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
-            ],
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
+              ],
+            ),
           ),
         ),
         if (showDivider)

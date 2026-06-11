@@ -7,6 +7,7 @@ import '../../providers/providers.dart';
 import '../../components/glass_card.dart';
 import '../../components/curved_header.dart';
 import '../../components/mesh_background.dart';
+import '../../utils/feedback_controller.dart';
 
 class CustomerDetailScreen extends ConsumerStatefulWidget {
   final String customerId;
@@ -21,12 +22,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
   String get customerId => widget.customerId;
 
   void _action(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    ref.read(feedbackControllerProvider).success(context, message);
   }
 
   void _showLogInteractionSheet() {

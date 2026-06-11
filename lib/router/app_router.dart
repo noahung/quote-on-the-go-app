@@ -150,11 +150,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/quotations',
-            builder: (context, state) => const QuotationsScreen(),
+            builder: (context, state) {
+              final tab = state.uri.queryParameters['tab'];
+              return QuotationsScreen(initialTab: tab);
+            },
           ),
           GoRoute(
             path: '/invoices',
-            builder: (context, state) => const InvoicesScreen(),
+            builder: (context, state) {
+              final tab = state.uri.queryParameters['tab'];
+              return InvoicesScreen(initialTab: tab);
+            },
           ),
           GoRoute(
             path: '/customers',

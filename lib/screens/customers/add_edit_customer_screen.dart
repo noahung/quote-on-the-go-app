@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../components/mesh_background.dart';
+import '../../utils/feedback_controller.dart';
+import '../../models/feedback_type.dart';
 
 class AddEditCustomerScreen extends ConsumerStatefulWidget {
   final String? customerId;
@@ -84,6 +86,12 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
                 : _addressController.text.trim(),
           },
         );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Customer updated successfully')),
+          );
+          context.pop();
+        }
       } else {
         final customer = Customer(
           id: '',
@@ -98,19 +106,15 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
               : _addressController.text.trim(),
         );
         await repository.createCustomer(customer);
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _isEditing
-                  ? 'Customer updated successfully'
-                  : 'Customer created successfully',
-            ),
-          ),
-        );
-        context.pop();
+        if (mounted) {
+          await ref.read(feedbackControllerProvider).showCelebration(
+            context: context,
+            type: CelebrationType.checkmark,
+            title: 'Customer Added',
+            subtitle: 'New customer has been added to your database',
+            onDone: () => context.pop(),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

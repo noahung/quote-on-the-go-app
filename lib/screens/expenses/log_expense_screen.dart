@@ -6,6 +6,8 @@ import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../components/glass_card.dart';
 import '../../components/mesh_background.dart';
+import '../../utils/feedback_controller.dart';
+import '../../models/feedback_type.dart';
 
 const List<String> _kCategories = [
   'Materials',
@@ -87,15 +89,17 @@ class _LogExpenseScreenState extends ConsumerState<LogExpenseScreen> {
       await repo.createExpense(expense);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Expense logged successfully')),
+        await ref.read(feedbackControllerProvider).showCelebration(
+          context: context,
+          type: CelebrationType.checkmark,
+          title: 'Expense Logged',
+          subtitle: 'Your expense has been recorded successfully',
+          onDone: () => context.pop(),
         );
-        context.pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ref.read(feedbackControllerProvider).error(context, 'Error: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

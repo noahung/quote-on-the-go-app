@@ -7,6 +7,7 @@ import '../../models/checklist_template.dart';
 import '../../providers/checklist_template_provider.dart';
 import '../../providers/providers.dart';
 import '../../theme/semantic_colors.dart';
+import '../../utils/feedback_controller.dart';
 
 class ChecklistTemplatesScreen extends ConsumerStatefulWidget {
   const ChecklistTemplatesScreen({super.key});
@@ -97,9 +98,7 @@ class _ChecklistTemplatesScreenState extends ConsumerState<ChecklistTemplatesScr
         .toList();
 
     if (items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add at least one checklist item')),
-      );
+      ref.read(feedbackControllerProvider).warning(context, 'Please add at least one checklist item');
       return;
     }
 
@@ -112,9 +111,7 @@ class _ChecklistTemplatesScreenState extends ConsumerState<ChecklistTemplatesScr
         // Update existing
         await repository.updateTemplate(_editingTemplate!.id, name, items);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Template updated successfully')),
-          );
+          ref.read(feedbackControllerProvider).success(context, 'Template updated successfully');
         }
       } else {
         // Create new
@@ -124,18 +121,14 @@ class _ChecklistTemplatesScreenState extends ConsumerState<ChecklistTemplatesScr
           items: items,
         );
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Template created successfully')),
-          );
+          ref.read(feedbackControllerProvider).success(context, 'Template created successfully');
         }
       }
 
       _startCreate();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ref.read(feedbackControllerProvider).error(context, 'Error: $e');
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -175,15 +168,11 @@ class _ChecklistTemplatesScreenState extends ConsumerState<ChecklistTemplatesScr
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Template deleted')),
-        );
+        ref.read(feedbackControllerProvider).success(context, 'Template deleted');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ref.read(feedbackControllerProvider).error(context, 'Error: $e');
       }
     }
   }
@@ -196,7 +185,8 @@ class _ChecklistTemplatesScreenState extends ConsumerState<ChecklistTemplatesScr
     final userProfile = ref.watch(userProfileProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final canEdit = userProfile?.role == 'owner' || userProfile?.role == 'admin';
+    final role = userProfile?.role.toLowerCase();
+    final canEdit = role == 'owner' || role == 'admin';
 
     return MeshBackground(
       child: Scaffold(

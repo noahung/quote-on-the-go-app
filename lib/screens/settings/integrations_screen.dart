@@ -30,7 +30,8 @@ class IntegrationsScreen extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final isPremium = company?.tier == 'premium';
-    final canManage = userProfile?.role == 'owner' || userProfile?.role == 'admin';
+    final role = userProfile?.role.toLowerCase();
+    final canManage = role == 'owner' || role == 'admin';
 
     final quickbooksConnected = company?.quickbooksEnabled == true;
     final mondayConnected = company?.mondayEnabled == true;

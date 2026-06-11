@@ -9,6 +9,8 @@ import '../../components/mesh_background.dart';
 import '../../models/company.dart';
 import '../../providers/providers.dart';
 import 'package:go_router/go_router.dart';
+import '../../utils/feedback_controller.dart';
+import '../../models/feedback_type.dart';
 
 class CompanyBrandingScreen extends ConsumerStatefulWidget {
   const CompanyBrandingScreen({super.key});
@@ -226,18 +228,17 @@ class _CompanyBrandingScreenState extends ConsumerState<CompanyBrandingScreen> {
           .update(updates);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Company branding saved')),
+        await ref.read(feedbackControllerProvider).showCelebration(
+          context: context,
+          type: CelebrationType.sparkle,
+          title: 'Branding Updated',
+          subtitle: 'Your company profile has been saved',
+          onDone: () => context.pop(),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        ref.read(feedbackControllerProvider).error(context, 'Error saving: $e');
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -249,8 +250,8 @@ class _CompanyBrandingScreenState extends ConsumerState<CompanyBrandingScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final company = ref.watch(companyProvider);
     final userProfile = ref.watch(userProfileProvider);
-    final canEdit =
-        userProfile?.role == 'owner' || userProfile?.role == 'admin';
+    final role = userProfile?.role.toLowerCase();
+    final canEdit = role == 'owner' || role == 'admin';
 
     if (company != null) {
       _company = company;

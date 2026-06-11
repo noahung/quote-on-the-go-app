@@ -65,6 +65,7 @@ Stream<List<UserNotification>> notificationsStream(NotificationsStreamRef ref) {
   return firestore
       .collection('user_notifications')
       .where('userId', isEqualTo: user.uid)
+      .orderBy('createdAt', descending: true)
       .snapshots()
       .map((snapshot) {
     final list = snapshot.docs

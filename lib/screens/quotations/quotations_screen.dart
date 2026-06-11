@@ -10,7 +10,9 @@ import '../../components/glass_card.dart';
 import '../../components/curved_header.dart';
 
 class QuotationsScreen extends ConsumerStatefulWidget {
-  const QuotationsScreen({super.key});
+  final String? initialTab;
+
+  const QuotationsScreen({super.key, this.initialTab});
 
   @override
   ConsumerState<QuotationsScreen> createState() => _QuotationsScreenState();
@@ -34,7 +36,17 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    // Calculate initial tab index based on the initialTab parameter
+    final initialTabLabel = (widget.initialTab ?? '').toLowerCase();
+    int initialIndex = 0;
+    for (int i = 0; i < _tabs.length; i++) {
+      if (_tabs[i].label.toLowerCase() == initialTabLabel ||
+          (_tabs[i].status?.toLowerCase() == initialTabLabel)) {
+        initialIndex = i;
+        break;
+      }
+    }
+    _tabController = TabController(length: _tabs.length, vsync: this, initialIndex: initialIndex);
     _tabController.addListener(() => setState(() {}));
     _searchController.addListener(() {
       setState(() => _searchQuery = _searchController.text.toLowerCase());

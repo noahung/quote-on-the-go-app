@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../../models/models.dart';
@@ -23,6 +24,8 @@ import '../../providers/quotation_provider.dart';
 import '../../providers/invoice_provider.dart';
 import '../../providers/expense_provider.dart';
 import '../../providers/customer_provider.dart';
+import '../../utils/feedback_controller.dart';
+import '../../models/feedback_type.dart';
 import 'create_job_screen.dart';
 import '../quotations/create_quotation_screen.dart';
 import '../invoices/create_invoice_screen.dart';
@@ -177,8 +180,7 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
         if (mounted) context.pop();
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('Error: $e')));
+          ref.read(feedbackControllerProvider).error(context, 'Error: $e');
         }
       }
     }
@@ -368,15 +370,33 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
           .collection('events')
           .doc(widget.job.id)
           .update(updates);
+
+      // Send email notification to customer when status changes to 'En Route'
+      if (newStatus == 'En Route') {
+        try {
+          final companyId = widget.job.companyId.isNotEmpty
+              ? widget.job.companyId
+              : (ref.read(companyIdProvider) ?? '');
+          if (companyId.isNotEmpty) {
+            final callable = FirebaseFunctions.instance.httpsCallable('sendJobStatusEmail');
+            await callable.call({
+              'jobId': widget.job.id,
+              'status': newStatus,
+              'companyId': companyId,
+            });
+          }
+        } catch (emailErr) {
+          // Log but don't fail the status update if email fails
+          debugPrint('Failed to send status email: $emailErr');
+        }
+      }
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Job status updated to $newStatus')),
-        );
+        ref.read(feedbackControllerProvider).success(context, 'Job status updated to $newStatus');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ref.read(feedbackControllerProvider).error(context, 'Error: $e');
       }
     } finally {
       if (mounted) setState(() => _statusUpdating = false);
@@ -409,15 +429,11 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
         mimeType: 'image/jpeg',
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Photo uploaded successfully!')),
-        );
+        ref.read(feedbackControllerProvider).success(context, 'Photo uploaded successfully!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e')),
-        );
+        ref.read(feedbackControllerProvider).error(context, 'Upload failed: $e');
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -450,9 +466,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
           .update({'checklist': list});
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save checklist: $e')),
-        );
+        ref.read(feedbackControllerProvider).error(context, 'Failed to save checklist: $e');
       }
     }
   }
@@ -540,9 +554,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
     final templates = templatesAsync.valueOrNull ?? [];
 
     if (templates.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No checklist templates found. Create one in Settings.')),
-      );
+      ref.read(feedbackControllerProvider).info(context, 'No checklist templates found. Create one in Settings.');
       return;
     }
 
@@ -603,9 +615,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                               {'title': text, 'checked': false}).toList();
                           _updateChecklist(newItems);
                           Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Applied "${t.name}"')),
-                          );
+                          ref.read(feedbackControllerProvider).success(context, 'Applied "${t.name}"');
                         },
                         child: const Text('Apply'),
                       ),
@@ -1738,20 +1748,12 @@ class _ConvertToInvoiceButtonState extends ConsumerState<_ConvertToInvoiceButton
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Invoice $invoiceNumber created!'),
-            action: SnackBarAction(
-              label: 'View',
-              onPressed: () => context.push('/invoices'),
-            ),
-          ),
-        );
+        ref.read(feedbackControllerProvider).success(context, 'Invoice $invoiceNumber created!');
+        context.push('/invoices');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error creating invoice: $e')));
+        ref.read(feedbackControllerProvider).error(context, 'Error creating invoice: $e');
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -2063,14 +2065,11 @@ class _MediaTabState extends ConsumerState<_MediaTab> {
         mimeType: mimeType,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Media uploaded')),
-        );
+        ref.read(feedbackControllerProvider).success(context, 'Media uploaded');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+        ref.read(feedbackControllerProvider).error(context, 'Upload failed: $e');
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -2392,8 +2391,7 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
           .update({'materials': list});
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Failed to save: $e')));
+        ref.read(feedbackControllerProvider).error(context, 'Failed to save: $e');
       }
     }
   }
@@ -2883,15 +2881,11 @@ class _SignaturePadSheetState extends ConsumerState<_SignaturePadSheet> {
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Signature saved!')),
-        );
+        ref.read(feedbackControllerProvider).success(context, 'Signature saved!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving signature: $e')),
-        );
+        ref.read(feedbackControllerProvider).error(context, 'Error saving signature: $e');
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

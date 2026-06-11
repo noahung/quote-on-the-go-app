@@ -7,6 +7,7 @@ import '../../components/mesh_background.dart';
 import '../../components/curved_header.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
+import '../../utils/feedback_controller.dart';
 
 class ServiceDetailScreen extends ConsumerWidget {
   final String serviceId;
@@ -295,14 +296,11 @@ class _ServiceDetailView extends ConsumerWidget {
                         description: descController.text.trim(),
                       ));
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Service updated')),
-                        );
+                        ref.read(feedbackControllerProvider).success(context, 'Service updated');
                       }
                     } catch (e) {
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(content: Text('Error: $e')));
+                        ref.read(feedbackControllerProvider).error(context, 'Error: $e');
                       }
                     }
                   },
@@ -342,8 +340,7 @@ class _ServiceDetailView extends ConsumerWidget {
         if (context.mounted) context.pop();
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('Error: $e')));
+          ref.read(feedbackControllerProvider).error(context, 'Error: $e');
         }
       }
     }

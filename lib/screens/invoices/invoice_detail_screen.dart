@@ -11,6 +11,8 @@ import '../../components/curved_header.dart';
 import '../../components/mesh_background.dart';
 import '../../components/glass_card.dart';
 import '../../components/custom_date_time_picker.dart';
+import '../../utils/feedback_controller.dart';
+import '../../models/feedback_type.dart';
 
 const _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
 
@@ -54,33 +56,25 @@ class InvoiceDetailScreen extends ConsumerWidget {
       if (context.mounted) {
         if (response.statusCode == 200) {
           final isScheduled = sendAt != null;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(isScheduled
-                    ? 'Invoice scheduled successfully via email'
-                    : 'Invoice sent successfully via email')),
+          await ref.read(feedbackControllerProvider).showCelebration(
+            context: context,
+            type: CelebrationType.send,
+            title: isScheduled ? 'Email Scheduled' : 'Email Sent',
+            subtitle: isScheduled
+                ? 'Your invoice will be sent at the scheduled time'
+                : 'Your invoice has been sent to the customer',
           );
         } else {
           String err = 'Send failed (${response.statusCode})';
           try {
             err = jsonDecode(response.body)['error'] ?? err;
           } catch (_) {}
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: $err'),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
+          ref.read(feedbackControllerProvider).error(context, 'Error: $err');
         }
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        ref.read(feedbackControllerProvider).error(context, 'Error: $e');
       }
     }
   }
@@ -173,12 +167,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
                 );
                 if (scheduledDateTime != null && context.mounted) {
                   if (scheduledDateTime.isBefore(DateTime.now())) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Scheduled time must be in the future.'),
-                        backgroundColor: Colors.redAccent,
-                      ),
-                    );
+                    ref.read(feedbackControllerProvider).error(context, 'Scheduled time must be in the future.');
                     return;
                   }
                   _sendByEmail(context, ref, invoice, sendAt: scheduledDateTime);
@@ -199,15 +188,11 @@ class InvoiceDetailScreen extends ConsumerWidget {
           .read(invoiceRepositoryProvider)
           .updateInvoiceStatus(id, 'Paid');
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invoice marked as paid.')),
-        );
+        ref.read(feedbackControllerProvider).success(context, 'Invoice marked as paid.');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update status: $e')),
-        );
+        ref.read(feedbackControllerProvider).error(context, 'Failed to update status: $e');
       }
     }
   }
@@ -607,9 +592,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
                               if (await canLaunchUrl(uri)) {
                                 await launchUrl(uri, mode: LaunchMode.externalApplication);
                               } else if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Could not open PDF.')),
-                                );
+                                ref.read(feedbackControllerProvider).error(context, 'Could not open PDF.');
                               }
                             },
                             child: Text(

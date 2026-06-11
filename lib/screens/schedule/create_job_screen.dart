@@ -10,6 +10,8 @@ import '../../providers/schedule_provider.dart';
 import '../../components/mesh_background.dart';
 import '../../components/glass_card.dart';
 import '../../components/custom_date_time_picker.dart';
+import '../../utils/feedback_controller.dart';
+import '../../models/feedback_type.dart';
 
 const List<String> _jobStatuses = [
   'Draft',
@@ -206,15 +208,23 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
 
       if (isEditing) {
         await repository.updateEvent(event);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Job updated')),
+          );
+          context.pop();
+        }
       } else {
-        await repository.createEvent(event);
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(isEditing ? 'Job updated' : 'Job created')),
-        );
-        context.pop();
+        final newId = await repository.createEvent(event);
+        if (mounted) {
+          await ref.read(feedbackControllerProvider).showCelebration(
+            context: context,
+            type: CelebrationType.checkmark,
+            title: 'Job Created',
+            subtitle: 'Your job has been scheduled successfully',
+            onDone: () => context.pop(),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

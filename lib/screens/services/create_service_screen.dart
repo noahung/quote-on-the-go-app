@@ -6,6 +6,8 @@ import '../../components/mesh_background.dart';
 import '../../models/service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/service_provider.dart';
+import '../../utils/feedback_controller.dart';
+import '../../models/feedback_type.dart';
 
 class CreateServiceScreen extends ConsumerStatefulWidget {
   const CreateServiceScreen({super.key});
@@ -58,10 +60,13 @@ class _CreateServiceScreenState extends ConsumerState<CreateServiceScreen> {
       await repository.createService(service);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Service created successfully')),
+        await ref.read(feedbackControllerProvider).showCelebration(
+          context: context,
+          type: CelebrationType.checkmark,
+          title: 'Service Created',
+          subtitle: 'New service added to your catalog',
+          onDone: () => context.pop(),
         );
-        context.pop();
       }
     } catch (e) {
       if (mounted) {

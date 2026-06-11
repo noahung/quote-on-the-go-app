@@ -8,6 +8,7 @@ import '../../components/mesh_background.dart';
 import '../../components/glass_card.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
+import '../../utils/feedback_controller.dart';
 
 // Stream all users in the same company
 final teamMembersProvider = StreamProvider<List<UserProfile>>((ref) {
@@ -93,8 +94,8 @@ class TeamManagementScreen extends ConsumerWidget {
     final teamAsync = ref.watch(teamMembersProvider);
     final pendingAsync = ref.watch(pendingInvitationsProvider);
 
-    final isOwner =
-        currentUser?.role == 'owner' || currentUser?.role == 'admin';
+    final role = currentUser?.role.toLowerCase();
+    final isOwner = role == 'owner' || role == 'admin';
 
     return MeshBackground(
       child: Scaffold(
@@ -314,15 +315,11 @@ class TeamManagementScreen extends ConsumerWidget {
           .update({'status': 'cancelled'});
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invitation cancelled')),
-        );
+        ref.read(feedbackControllerProvider).success(context, 'Invitation cancelled');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ref.read(feedbackControllerProvider).error(context, 'Error: $e');
       }
     }
   }
@@ -407,9 +404,7 @@ class TeamManagementScreen extends ConsumerWidget {
 
                       if (companyId == null) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Company not found')),
-                          );
+                          ref.read(feedbackControllerProvider).error(context, 'Company not found');
                         }
                         return;
                       }
@@ -430,22 +425,14 @@ class TeamManagementScreen extends ConsumerWidget {
                         final result =
                             jsonDecode(response.body) as Map<String, dynamic>;
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                result['success'] == true
-                                    ? 'Invitation sent to $email'
-                                    : 'Error: ${result['error'] ?? 'Unknown error'}',
-                              ),
-                            ),
-                          );
+                          final message = result['success'] == true
+                              ? 'Invitation sent to $email'
+                              : 'Error: ${result['error'] ?? 'Unknown error'}';
+                          ref.read(feedbackControllerProvider).success(context, message);
                         }
                       } catch (e) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text('Error sending invitation: $e')),
-                          );
+                          ref.read(feedbackControllerProvider).error(context, 'Error sending invitation: $e');
                         }
                       }
                     }
@@ -468,13 +455,11 @@ class TeamManagementScreen extends ConsumerWidget {
           .doc(uid)
           .update({'role': newRole});
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Role updated successfully')));
+        ref.read(feedbackControllerProvider).success(context, 'Role updated successfully');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ref.read(feedbackControllerProvider).error(context, 'Error: $e');
       }
     }
   }
@@ -501,9 +486,7 @@ class TeamManagementScreen extends ConsumerWidget {
       ),
     );
     if (confirmed == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Member removed — coming soon')),
-      );
+      ref.read(feedbackControllerProvider).info(context, 'Member removed — coming soon');
     }
   }
 }

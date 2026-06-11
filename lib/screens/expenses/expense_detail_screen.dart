@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../../models/expense.dart';
 import '../../providers/providers.dart';
+import '../../utils/feedback_controller.dart';
 import '../../components/glass_card.dart';
 import '../../components/mesh_background.dart';
 import '../../theme/semantic_colors.dart';
@@ -98,15 +99,11 @@ class _ExpenseDetailScreenState extends ConsumerState<ExpenseDetailScreen> {
           );
       if (mounted) {
         setState(() => _currentReceiptUrl = url);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Receipt uploaded successfully')),
-        );
+        this.ref.read(feedbackControllerProvider).success(context, 'Receipt uploaded successfully');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e')),
-        );
+        this.ref.read(feedbackControllerProvider).error(context, 'Upload failed: $e');
       }
     } finally {
       if (mounted) setState(() => _isUploadingReceipt = false);
@@ -129,15 +126,11 @@ class _ExpenseDetailScreenState extends ConsumerState<ExpenseDetailScreen> {
       await ref.read(expenseRepositoryProvider).updateExpense(updated);
       if (mounted) {
         setState(() => _isEditMode = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Expense updated')),
-        );
+        this.ref.read(feedbackControllerProvider).success(context, 'Expense updated');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        this.ref.read(feedbackControllerProvider).error(context, 'Error: $e');
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -165,7 +158,7 @@ class _ExpenseDetailScreenState extends ConsumerState<ExpenseDetailScreen> {
       ),
     );
     if (confirmed == true && mounted) {
-      await ref.read(expenseRepositoryProvider).deleteExpense(expense.id);
+      await this.ref.read(expenseRepositoryProvider).deleteExpense(expense.id);
       if (mounted) context.pop();
     }
   }

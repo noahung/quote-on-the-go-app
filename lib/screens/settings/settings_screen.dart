@@ -9,6 +9,8 @@ import '../../providers/providers.dart';
 import '../../theme/semantic_colors.dart';
 import '../../components/mesh_background.dart';
 import '../../components/glass_card.dart';
+import '../../utils/feedback_controller.dart';
+import '../../models/feedback_type.dart';
 
 const String _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
 
@@ -79,12 +81,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        ref.read(feedbackControllerProvider).error(context, 'Error: $e');
       }
     } finally {
       if (mounted) setState(() => _isSubscriptionLoading = false);
@@ -99,11 +96,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         user.providerData.any((p) => p.providerId == 'google.com');
     if (isGoogleUser) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text(
-                  'Password change is not available for Google sign-in accounts.')),
-        );
+        ref.read(feedbackControllerProvider).warning(context, 'Password change is not available for Google sign-in accounts.');
       }
       return;
     }
@@ -112,16 +105,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       try {
         await FirebaseAuth.instance.sendPasswordResetEmail(email: user.email!);
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('Password reset email sent to ${user.email}')),
-          );
+          ref.read(feedbackControllerProvider).success(context, 'Password reset email sent to ${user.email}');
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
-          );
+          ref.read(feedbackControllerProvider).error(context, 'Error: $e');
         }
       }
     }
@@ -162,15 +150,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       try {
         await user.updateDisplayName(result);
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profile updated')),
+          await ref.read(feedbackControllerProvider).showCelebration(
+            context: context,
+            type: CelebrationType.sparkle,
+            title: 'Profile Updated',
+            subtitle: 'Your changes have been saved',
           );
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
-          );
+          ref.read(feedbackControllerProvider).error(context, 'Error: $e');
         }
       }
     }
@@ -406,7 +395,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: 16),
 
             // SUBSCRIPTION & REWARDS Section (Owner only)
-            if (userProfile?.role == 'owner') ...[
+            if (userProfile?.role.toLowerCase() == 'owner') ...[
               const _SectionHeader(title: 'Subscription & Rewards'),
               GlassCard(
                 padding: EdgeInsets.zero,
@@ -439,7 +428,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
 
             // INTEGRATIONS Section (Owner/Admin only)
-            if (userProfile?.role == 'owner' || userProfile?.role == 'admin') ...[
+            if (userProfile?.role.toLowerCase() == 'owner' ||
+                userProfile?.role.toLowerCase() == 'admin') ...[
               const _SectionHeader(title: 'Integrations'),
               GlassCard(
                 padding: EdgeInsets.zero,
