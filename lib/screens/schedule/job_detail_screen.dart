@@ -426,7 +426,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
 
   // Checklist Helpers
   List<Map<String, dynamic>> get _checklist {
-    if (widget.job.checklist != null && widget.job.checklist!.isNotEmpty) {
+    if (widget.job.checklist != null) {
       return widget.job.checklist!.map((item) {
         final m = Map<String, dynamic>.from(item as Map);
         // Normalise 'checked' — Firestore may return null for old documents

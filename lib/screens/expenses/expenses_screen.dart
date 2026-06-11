@@ -7,6 +7,7 @@ import '../../providers/providers.dart';
 import '../../widgets/widgets.dart';
 import '../../components/glass_card.dart';
 import '../../components/mesh_background.dart';
+import '../../components/curved_header.dart';
 
 class ExpensesScreen extends ConsumerWidget {
   const ExpensesScreen({super.key});
@@ -18,60 +19,47 @@ class ExpensesScreen extends ConsumerWidget {
     return MeshBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/');
-              }
-            },
-          ),
-          title: Text(
-            'Expenses',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () => context.push('/expenses/new'),
+        body: Column(
+          children: [
+            CurvedHeader(
+              title: 'Expenses',
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.add, color: Colors.white),
+                  onPressed: () => context.push('/expenses/new'),
+                ),
+              ],
+            ),
+            Expanded(
+              child: expensesAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => Center(child: Text('Error: $err')),
+                data: (expenses) {
+                  if (expenses.isEmpty) {
+                    return AppEmptyState(
+                      icon: Icons.receipt_long,
+                      title: 'No expenses yet',
+                      subtitle: 'Track your business spending here.',
+                      actionLabel: 'Add Expense',
+                      onAction: () => context.push('/expenses/new'),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: expenses.length,
+                    itemBuilder: (context, index) {
+                      final expense = expenses[index];
+                      return _ExpenseCard(
+                        expense: expense,
+                        onTap: () => context.push('/expenses/${expense.id}'),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ],
-        ),
-        body: expensesAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err')),
-          data: (expenses) {
-            if (expenses.isEmpty) {
-              return AppEmptyState(
-                icon: Icons.receipt_long,
-                title: 'No expenses yet',
-                subtitle: 'Track your business spending here.',
-                actionLabel: 'Add Expense',
-                onAction: () => context.push('/expenses/new'),
-              );
-            }
-
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: expenses.length,
-              itemBuilder: (context, index) {
-                final expense = expenses[index];
-                return _ExpenseCard(
-                  expense: expense,
-                  onTap: () => context.push('/expenses/${expense.id}'),
-                );
-              },
-            );
-          },
         ),
       ),
     );

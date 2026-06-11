@@ -17,7 +17,6 @@ class ShellScaffold extends ConsumerStatefulWidget {
 }
 
 class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _currentIndex = 0;
 
   void _showQuickActionsBottomSheet(BuildContext context) {
@@ -178,22 +177,24 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
     final isEffectivelyFreeTier = company?.tier == 'free' || company?.tier == null;
 
     // Update current index based on location
-    // Bottom Nav: 0=Dashboard, 1=Schedule, 2=Customers, 3=Profile
+    // Bottom Nav: 0=Dashboard, 1=Schedule, 2=Customers, 3=Profile (Settings)
     if (location == '/') {
       _currentIndex = 0;
     } else if (location.startsWith('/schedule')) {
       _currentIndex = 1;
     } else if (location.startsWith('/customers')) {
       _currentIndex = 2;
-    } else if (location.startsWith('/profile')) {
+    } else if (location.startsWith('/settings')) {
       _currentIndex = 3;
     } else {
       _currentIndex = -1; // No tab selected for subroutes/other routes
     }
 
+    final drawerKey = ref.watch(drawerControllerProvider);
+
     return MeshBackground(
       child: Scaffold(
-        key: _scaffoldKey,
+        key: drawerKey,
         backgroundColor: Colors.transparent, // Transparent to show global MeshBackground
         drawer: _buildNavigationDrawer(context, company),
         body: widget.child,
@@ -373,7 +374,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
               context.go('/customers');
               break;
             case 3:
-              context.go('/profile');
+              context.go('/settings');
               break;
           }
         },

@@ -317,29 +317,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
 
-            // Company Section
-            const _SectionHeader(title: 'Company'),
+            // PROFILE & COMPANY Section
+            const _SectionHeader(title: 'Profile & Company'),
             GlassCard(
               padding: EdgeInsets.zero,
-              child: ListTile(
-                leading: Icon(Icons.business, color: colorScheme.primary),
-                title: Text(
-                  company?.name ?? 'Company',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                subtitle: Text(
-                  company?.email ?? 'Tap to edit branding',
-                  style: TextStyle(
-                      color: colorScheme.onSurface.withValues(alpha: 0.6)),
-                ),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                onTap: () => context.push('/company-branding'),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.business, color: colorScheme.primary),
+                    title: const Text('Company Branding',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text(
+                      company?.name ?? 'Tap to edit company details',
+                      style: TextStyle(
+                          color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => context.push('/company-branding'),
+                  ),
+                  _buildSubtleDivider(isDark),
+                  ListTile(
+                    leading: Icon(Icons.people_outline, color: colorScheme.primary),
+                    title: const Text('Team Management',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text('Invite and manage team members',
+                        style: TextStyle(
+                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => context.push('/team'),
+                  ),
+                  _buildSubtleDivider(isDark),
+                  ListTile(
+                    leading: Icon(Icons.person_outline, color: colorScheme.primary),
+                    title: const Text('Sign-in Methods',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text('Manage passwords and linked accounts',
+                        style: TextStyle(
+                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => context.push('/sign-in-methods'),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
 
-            // Business Section
-            const _SectionHeader(title: 'Business'),
+            // BUSINESS SETTINGS Section
+            const _SectionHeader(title: 'Business Settings'),
             GlassCard(
               padding: EdgeInsets.zero,
               child: Column(
@@ -365,49 +389,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () => context.push('/expenses'),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Account Section
-            const _SectionHeader(title: 'Account'),
-            GlassCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  ListTile(
-                    leading:
-                        Icon(Icons.person_outline, color: colorScheme.primary),
-                    title: const Text('Edit Profile',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                    onTap: () => _showEditProfileDialog(context, ref),
-                  ),
                   _buildSubtleDivider(isDark),
                   ListTile(
-                    leading:
-                        Icon(Icons.lock_outline, color: colorScheme.primary),
-                    title: const Text('Change Password',
+                    leading: Icon(Icons.checklist_outlined, color: colorScheme.primary),
+                    title: const Text('Checklist Templates',
                         style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text('Create templates for job checklists',
+                        style: TextStyle(
+                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                    onTap: () => _showChangePasswordDialog(context),
-                  ),
-                  _buildSubtleDivider(isDark),
-                  ListTile(
-                    leading:
-                        Icon(Icons.people_outline, color: colorScheme.primary),
-                    title: const Text('Team Management',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                    onTap: () => context.push('/team'),
+                    onTap: () => context.push('/checklist-templates'),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
 
-            // Subscription Section
+            // SUBSCRIPTION & REWARDS Section
             const _SectionHeader(title: 'Subscription & Rewards'),
             GlassCard(
               padding: EdgeInsets.zero,
@@ -438,117 +436,104 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Integrations Section
-            const _SectionHeader(title: 'Integrations'),
-            GlassCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: Icon(Icons.sync, color: colorScheme.primary),
-                    title: const Text('QuickBooks',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(
-                      company?.quickbooksEnabled == true
-                          ? 'Connected'
-                          : 'Not connected',
-                      style: TextStyle(
-                          color: colorScheme.onSurface.withValues(alpha: 0.6)),
+            // INTEGRATIONS Section (Owner/Admin only)
+            if (userProfile?.role == 'owner' || userProfile?.role == 'admin') ...[
+              const _SectionHeader(title: 'Integrations'),
+              GlassCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: Icon(Icons.sync, color: colorScheme.primary),
+                      title: const Text('QuickBooks',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text(
+                        company?.quickbooksEnabled == true
+                            ? 'Connected'
+                            : 'Not connected',
+                        style: TextStyle(
+                            color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                      ),
+                      trailing: Icon(
+                        company?.quickbooksEnabled == true
+                            ? Icons.check_circle
+                            : Icons.arrow_forward_ios,
+                        color: company?.quickbooksEnabled == true
+                            ? semanticColors.success
+                            : colorScheme.onSurface.withValues(alpha: 0.3),
+                        size: 20,
+                      ),
+                      onTap: () => context.push('/integrations'),
                     ),
-                    trailing: Icon(
-                      company?.quickbooksEnabled == true
-                          ? Icons.check_circle
-                          : Icons.radio_button_unchecked,
-                      color: company?.quickbooksEnabled == true
-                          ? semanticColors.success
-                          : colorScheme.onSurface.withValues(alpha: 0.3),
-                      size: 20,
+                    _buildSubtleDivider(isDark),
+                    ListTile(
+                      leading:
+                          Icon(Icons.calendar_today, color: colorScheme.primary),
+                      title: const Text('Google Calendar',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text(
+                        company?.googleCalendarEnabled == true
+                            ? 'Connected'
+                            : 'Not connected',
+                        style: TextStyle(
+                            color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                      ),
+                      trailing: Icon(
+                        company?.googleCalendarEnabled == true
+                            ? Icons.check_circle
+                            : Icons.arrow_forward_ios,
+                        color: company?.googleCalendarEnabled == true
+                            ? semanticColors.success
+                            : colorScheme.onSurface.withValues(alpha: 0.3),
+                        size: 20,
+                      ),
+                      onTap: () => context.push('/integrations'),
                     ),
-                    onTap: () => _showIntegrationMessage(context),
-                  ),
-                  _buildSubtleDivider(isDark),
-                  ListTile(
-                    leading:
-                        Icon(Icons.calendar_today, color: colorScheme.primary),
-                    title: const Text('Google Calendar',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(
-                      company?.googleCalendarEnabled == true
-                          ? 'Connected'
-                          : 'Not connected',
-                      style: TextStyle(
-                          color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                    _buildSubtleDivider(isDark),
+                    ListTile(
+                      leading:
+                          Icon(Icons.table_chart, color: colorScheme.primary),
+                      title: const Text('Monday.com',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text(
+                        company?.mondayEnabled == true
+                            ? 'Connected'
+                            : 'Not connected',
+                        style: TextStyle(
+                            color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                      ),
+                      trailing: Icon(
+                        company?.mondayEnabled == true
+                            ? Icons.check_circle
+                            : Icons.arrow_forward_ios,
+                        color: company?.mondayEnabled == true
+                            ? semanticColors.success
+                            : colorScheme.onSurface.withValues(alpha: 0.3),
+                        size: 20,
+                      ),
+                      onTap: () => context.push('/integrations'),
                     ),
-                    trailing: Icon(
-                      company?.googleCalendarEnabled == true
-                          ? Icons.check_circle
-                          : Icons.radio_button_unchecked,
-                      color: company?.googleCalendarEnabled == true
-                          ? semanticColors.success
-                          : colorScheme.onSurface.withValues(alpha: 0.3),
-                      size: 20,
-                    ),
-                    onTap: () => _showIntegrationMessage(context),
-                  ),
-                  _buildSubtleDivider(isDark),
-                  ListTile(
-                    leading:
-                        Icon(Icons.table_chart, color: colorScheme.primary),
-                    title: const Text('Monday.com',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(
-                      company?.mondayEnabled == true
-                          ? 'Connected'
-                          : 'Not connected',
-                      style: TextStyle(
-                          color: colorScheme.onSurface.withValues(alpha: 0.6)),
-                    ),
-                    trailing: Icon(
-                      company?.mondayEnabled == true
-                          ? Icons.check_circle
-                          : Icons.radio_button_unchecked,
-                      color: company?.mondayEnabled == true
-                          ? semanticColors.success
-                          : colorScheme.onSurface.withValues(alpha: 0.3),
-                      size: 20,
-                    ),
-                    onTap: () => _showIntegrationMessage(context),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
+            ],
 
-            // Preferences Section
-            const _SectionHeader(title: 'Preferences'),
+            // COLLABORATION Section
+            const _SectionHeader(title: 'Collaboration'),
             GlassCard(
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
                   ListTile(
-                    leading: Icon(Icons.dark_mode, color: colorScheme.primary),
-                    title: const Text('Dark Mode',
+                    leading: Icon(Icons.forum_outlined, color: colorScheme.primary),
+                    title: const Text('Collaboration Overview',
                         style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(
-                      ref.watch(themeModeProvider) == ThemeMode.system
-                          ? 'Following system setting'
-                          : ref.watch(themeModeProvider) == ThemeMode.dark
-                              ? 'Always dark'
-                              : 'Always light',
-                      style: TextStyle(
-                          color: colorScheme.onSurface.withValues(alpha: 0.6)),
-                    ),
-                    trailing: Switch(
-                      activeThumbColor: colorScheme.primary,
-                      value: ref.watch(themeModeProvider) == ThemeMode.dark ||
-                          (ref.watch(themeModeProvider) == ThemeMode.system &&
-                              Theme.of(context).brightness == Brightness.dark),
-                      onChanged: (value) {
-                        ref.read(themeModeProvider.notifier).setThemeMode(
-                              value ? ThemeMode.dark : ThemeMode.light,
-                            );
-                      },
-                    ),
+                    subtitle: Text('Pending reviews, comments, activity',
+                        style: TextStyle(
+                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => context.push('/collaboration'),
                   ),
                   _buildSubtleDivider(isDark),
                   ListTile(
@@ -556,10 +541,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         color: colorScheme.primary),
                     title: const Text('Notifications',
                         style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text('Push notification settings',
+                        style: TextStyle(
+                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () => context.push('/notifications'),
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // PREFERENCES Section
+            const _SectionHeader(title: 'Preferences'),
+            GlassCard(
+              padding: EdgeInsets.zero,
+              child: ListTile(
+                leading: Icon(Icons.dark_mode, color: colorScheme.primary),
+                title: const Text('Dark Mode',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(
+                  ref.watch(themeModeProvider) == ThemeMode.system
+                      ? 'Following system setting'
+                      : ref.watch(themeModeProvider) == ThemeMode.dark
+                          ? 'Always dark'
+                          : 'Always light',
+                  style: TextStyle(
+                      color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                ),
+                trailing: Switch(
+                  activeThumbColor: colorScheme.primary,
+                  value: ref.watch(themeModeProvider) == ThemeMode.dark ||
+                      (ref.watch(themeModeProvider) == ThemeMode.system &&
+                          Theme.of(context).brightness == Brightness.dark),
+                  onChanged: (value) {
+                    ref.read(themeModeProvider.notifier).setThemeMode(
+                          value ? ThemeMode.dark : ThemeMode.light,
+                        );
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -595,13 +615,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       color: isDark
           ? Colors.white.withValues(alpha: 0.06)
           : Colors.black.withValues(alpha: 0.04),
-    );
-  }
-
-  void _showIntegrationMessage(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content: Text('Integrations are managed from the web app.')),
     );
   }
 

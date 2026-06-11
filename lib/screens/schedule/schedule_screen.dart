@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../models/calendar_event.dart';
 import '../../providers/providers.dart';
+import '../../providers/drawer_controller_provider.dart';
 import '../../components/curved_header.dart';
 
 class ScheduleScreen extends ConsumerStatefulWidget {
@@ -97,6 +98,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
           // Top curved header
           CurvedHeader(
             title: 'Schedule',
+            onMenuPressed: () => openDrawer(ref),
             actions: [
               IconButton(
                 icon: const Icon(Icons.add, color: Colors.white),

@@ -11,3 +11,4 @@ export 'theme_provider.dart';
 export 'ai_provider.dart';
 export 'interaction_log_provider.dart';
 export 'checklist_template_provider.dart';
+export 'drawer_controller_provider.dart';

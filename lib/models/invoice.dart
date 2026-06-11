@@ -15,6 +15,7 @@ class Invoice with _$Invoice {
     required String invoiceNumber,
     String? quotationId,
     String? quotationNumber,
+    String? customerId,
     required String customerName,
     required String customerEmail,
     String? customerPhone,

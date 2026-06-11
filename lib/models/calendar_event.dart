@@ -41,6 +41,13 @@ class CalendarEvent with _$CalendarEvent {
   factory CalendarEvent.fromFirestore(DocumentSnapshot doc) {
     final data = Map<String, dynamic>.from(doc.data() as Map<String, dynamic>);
     _convertTimestamps(data);
+    // Ensure start and end are never null
+    if (data['start'] == null || data['start'] == '') {
+      data['start'] = DateTime.now().toIso8601String();
+    }
+    if (data['end'] == null || data['end'] == '') {
+      data['end'] = DateTime.now().add(const Duration(hours: 1)).toIso8601String();
+    }
     return CalendarEvent.fromJson({
       'companyId': '',
       'userId': '',

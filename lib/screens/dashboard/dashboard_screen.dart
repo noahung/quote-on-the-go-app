@@ -3,12 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../providers/providers.dart';
+import '../../providers/drawer_controller_provider.dart';
 import '../../theme/semantic_colors.dart';
 import '../../components/mesh_background.dart';
 import '../../models/models.dart';
-
-// Key to access the ShellScaffold drawer from dashboard
-final dashboardDrawerKey = GlobalKey<ScaffoldState>();
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -57,11 +55,7 @@ class DashboardScreen extends ConsumerWidget {
                         child: IconButton(
                           padding: EdgeInsets.zero,
                           icon: const Icon(Icons.menu, color: Colors.white),
-                          onPressed: () {
-                            // Open the drawer from the parent ShellScaffold
-                            final scaffoldState = Scaffold.maybeOf(context);
-                            scaffoldState?.openDrawer();
-                          },
+                          onPressed: () => openDrawer(ref),
                         ),
                       ),
                     ),

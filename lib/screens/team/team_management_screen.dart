@@ -21,8 +21,69 @@ final teamMembersProvider = StreamProvider<List<UserProfile>>((ref) {
           snap.docs.map((d) => UserProfile.fromFirestore(d)).toList());
 });
 
+// Pending invitations model
+class PendingInvitation {
+  final String id;
+  final String email;
+  final String role;
+  final DateTime createdAt;
+
+  PendingInvitation({
+    required this.id,
+    required this.email,
+    required this.role,
+    required this.createdAt,
+  });
+
+  factory PendingInvitation.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return PendingInvitation(
+      id: doc.id,
+      email: data['email'] ?? '',
+      role: data['role'] ?? 'member',
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+}
+
+// Stream pending invitations
+final pendingInvitationsProvider = StreamProvider.autoDispose<List<PendingInvitation>>((ref) {
+  final companyId = ref.watch(companyIdProvider);
+  if (companyId == null) return Stream.value([]);
+
+  return FirebaseFirestore.instance
+      .collection('invitations')
+      .where('companyId', isEqualTo: companyId)
+      .where('status', isEqualTo: 'pending')
+      .snapshots()
+      .map((snap) {
+        final list = snap.docs.map((d) => PendingInvitation.fromFirestore(d)).toList();
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return list;
+      });
+});
+
 class TeamManagementScreen extends ConsumerWidget {
   const TeamManagementScreen({super.key});
+
+  String _timeAgo(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inDays > 365) {
+      return '${(diff.inDays / 365).floor()}y ago';
+    } else if (diff.inDays > 30) {
+      return '${(diff.inDays / 30).floor()}mo ago';
+    } else if (diff.inDays > 0) {
+      return '${diff.inDays}d ago';
+    } else if (diff.inHours > 0) {
+      return '${diff.inHours}h ago';
+    } else if (diff.inMinutes > 0) {
+      return '${diff.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,6 +91,7 @@ class TeamManagementScreen extends ConsumerWidget {
     final textTheme = Theme.of(context).textTheme;
     final currentUser = ref.watch(userProfileProvider);
     final teamAsync = ref.watch(teamMembersProvider);
+    final pendingAsync = ref.watch(pendingInvitationsProvider);
 
     final isOwner =
         currentUser?.role == 'owner' || currentUser?.role == 'admin';
@@ -115,6 +177,91 @@ class TeamManagementScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
 
+                // Pending Invitations (Owner/Admin only)
+                if (isOwner)
+                  pendingAsync.when(
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                    data: (pending) {
+                      if (pending.isEmpty) return const SizedBox.shrink();
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          GlassCard(
+                            padding: EdgeInsets.zero,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text(
+                                        'Pending Invitations',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(100),
+                                        ),
+                                        child: Text(
+                                          '${pending.length} pending',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.orange,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Divider(
+                                  height: 1,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white.withValues(alpha: 0.06)
+                                      : Colors.black.withValues(alpha: 0.04),
+                                ),
+                                ...pending.map((invite) => _PendingInviteTile(
+                                  invitation: invite,
+                                  colorScheme: colorScheme,
+                                  isDark: Theme.of(context).brightness == Brightness.dark,
+                                  timeAgo: _timeAgo(invite.createdAt),
+                                  onCancel: () => _cancelInvitation(context, ref, invite),
+                                )),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      );
+                    },
+                  ),
+
+                // Member list section header
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, bottom: 8),
+                  child: Text(
+                    'TEAM MEMBERS',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: colorScheme.primary,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+
                 // Member list
                 ...sorted.map((member) => _MemberTile(
                       member: member,
@@ -130,6 +277,54 @@ class TeamManagementScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _cancelInvitation(
+    BuildContext context,
+    WidgetRef ref,
+    PendingInvitation invitation,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel Invitation?'),
+        content: Text('Cancel the invitation sent to ${invitation.email}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            child: const Text('Cancel Invite'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('invitations')
+          .doc(invitation.id)
+          .update({'status': 'cancelled'});
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invitation cancelled')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _showInviteDialog(BuildContext context, WidgetRef ref) async {
@@ -310,6 +505,98 @@ class TeamManagementScreen extends ConsumerWidget {
         const SnackBar(content: Text('Member removed — coming soon')),
       );
     }
+  }
+}
+
+class _PendingInviteTile extends StatelessWidget {
+  final PendingInvitation invitation;
+  final ColorScheme colorScheme;
+  final bool isDark;
+  final String timeAgo;
+  final VoidCallback onCancel;
+
+  const _PendingInviteTile({
+    required this.invitation,
+    required this.colorScheme,
+    required this.isDark,
+    required this.timeAgo,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04),
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: Colors.orange.withValues(alpha: 0.12),
+            child: Icon(
+              Icons.mail_outline,
+              size: 18,
+              color: Colors.orange.shade700,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  invitation.email,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        invitation.role[0].toUpperCase() + invitation.role.substring(1),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Sent $timeAgo',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.close, size: 20, color: colorScheme.error),
+            onPressed: onCancel,
+            tooltip: 'Cancel invitation',
+          ),
+        ],
+      ),
+    );
   }
 }
 

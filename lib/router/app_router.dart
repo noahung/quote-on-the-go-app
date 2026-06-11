@@ -28,6 +28,10 @@ import '../screens/quotations/kanban_board_screen.dart';
 import '../screens/invoices/create_invoice_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/settings/company_branding_screen.dart';
+import '../screens/settings/integrations_screen.dart';
+import '../screens/settings/collaboration_overview_screen.dart';
+import '../screens/settings/checklist_templates_screen.dart';
+import '../screens/settings/sign_in_methods_screen.dart';
 import '../screens/expenses/expenses_screen.dart';
 import '../screens/expenses/expense_detail_screen.dart';
 import '../screens/expenses/log_expense_screen.dart';
@@ -290,6 +294,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/integrations',
+        builder: (context, state) => const IntegrationsScreen(),
+      ),
+      GoRoute(
+        path: '/collaboration',
+        builder: (context, state) => const CollaborationOverviewScreen(),
+      ),
+      GoRoute(
+        path: '/checklist-templates',
+        builder: (context, state) => const ChecklistTemplatesScreen(),
+      ),
+      GoRoute(
+        path: '/sign-in-methods',
+        builder: (context, state) => const SignInMethodsScreen(),
       ),
       GoRoute(
         path: '/expenses',

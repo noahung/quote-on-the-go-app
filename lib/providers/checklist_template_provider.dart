@@ -36,6 +36,14 @@ class ChecklistTemplateRepository {
   Future<void> deleteTemplate(String templateId) async {
     await _firestore.collection('checklist_templates').doc(templateId).delete();
   }
+
+  Future<void> updateTemplate(String templateId, String name, List<String> items) async {
+    await _firestore.collection('checklist_templates').doc(templateId).update({
+      'name': name,
+      'items': items,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
 }
 
 final checklistTemplateRepositoryProvider =

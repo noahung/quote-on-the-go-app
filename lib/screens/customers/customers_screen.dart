@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/providers.dart';
+import '../../providers/drawer_controller_provider.dart';
 import '../../models/models.dart';
 import '../../components/glass_card.dart';
 import '../../components/curved_header.dart';
@@ -50,6 +51,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
         children: [
           CurvedHeader(
             title: 'Customers',
+            onMenuPressed: () => openDrawer(ref),
             actions: [
               IconButton(
                 icon: const Icon(Icons.add, color: Colors.white),

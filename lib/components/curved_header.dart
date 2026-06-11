@@ -7,6 +7,7 @@ class CurvedHeader extends StatelessWidget {
   final bool? showBackButton;
   final VoidCallback? onBackPressed;
   final bool showMenuButton;
+  final VoidCallback? onMenuPressed;
 
   const CurvedHeader({
     super.key,
@@ -15,6 +16,7 @@ class CurvedHeader extends StatelessWidget {
     this.showBackButton,
     this.onBackPressed,
     this.showMenuButton = false,
+    this.onMenuPressed,
   });
 
   VoidCallback _buildBackHandler(BuildContext context) {
@@ -24,17 +26,8 @@ class CurvedHeader extends StatelessWidget {
         if (router.canPop()) { router.pop(); return; }
       } catch (_) {}
       if (Navigator.of(context).canPop()) { Navigator.of(context).pop(); return; }
-      try {
-        final p = GoRouterState.of(context).uri.path;
-        if (p.startsWith('/quotations')) { context.go('/quotations'); }
-        else if (p.startsWith('/invoices')) { context.go('/invoices'); }
-        else if (p.startsWith('/customers')) { context.go('/customers'); }
-        else if (p.startsWith('/schedule')) { context.go('/schedule'); }
-        else if (p.startsWith('/services')) { context.go('/services'); }
-        else if (p.startsWith('/expenses')) { context.go('/expenses'); }
-        else if (p.startsWith('/collaboration')) { context.go('/quotations'); }
-        else { context.go('/'); }
-      } catch (_) { Navigator.of(context).pop(); }
+      // For screens that can't pop (like drawer screens), go to Dashboard
+      context.go('/');
     };
   }
 
@@ -48,13 +41,17 @@ class CurvedHeader extends StatelessWidget {
     // Only the dashboard root uses the curved gradient header
     final isDashboard = path == '/';
 
-    const rootShellPaths = {
-      '/', '/quotations', '/invoices', '/customers',
-      '/schedule', '/workflows', '/analytics', '/pricing',
+    // Bottom nav root paths (Dashboard, Schedule, Customers, Settings)
+    const bottomNavPaths = {'/', '/schedule', '/customers', '/settings'};
+    // Drawer-accessed paths should show back button, not menu
+    const drawerPaths = {
+      '/quotations', '/invoices', '/workflows', '/analytics',
+      '/pipeline', '/services', '/expenses',
     };
-    final isRootPath = path != null && rootShellPaths.contains(path);
-    final canPop = showBackButton ?? (path != null ? !isRootPath : Navigator.of(context).canPop());
-    final shouldShowMenu = showMenuButton || (isRootPath && path != '/');
+    final isBottomNavPath = path != null && bottomNavPaths.contains(path);
+    final isDrawerPath = path != null && drawerPaths.any((p) => path.startsWith(p));
+    final canPop = showBackButton ?? (isDrawerPath || (path != null && !isBottomNavPath));
+    final shouldShowMenu = showMenuButton || isBottomNavPath;
 
     if (isDashboard) {
       // ── Curved gradient header (dashboard only) ──
@@ -118,7 +115,7 @@ class CurvedHeader extends StatelessWidget {
               else if (shouldShowMenu)
                 IconButton(
                   icon: const Icon(Icons.menu, color: Colors.white),
-                  onPressed: () {
+                  onPressed: onMenuPressed ?? () {
                     final scaffoldState = Scaffold.maybeOf(context);
                     scaffoldState?.openDrawer();
                   },
