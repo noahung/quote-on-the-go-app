@@ -16,7 +16,7 @@ class ScheduleScreen extends ConsumerStatefulWidget {
 
 class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
   DateTime _selectedDay = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-  bool _isMonthlyView = false;
+  bool _isMonthlyView = true;
 
   List<CalendarEvent> _eventsForDay(List<CalendarEvent> events, DateTime day) {
     return events.where((e) {
