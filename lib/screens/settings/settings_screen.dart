@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
@@ -130,7 +131,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           controller: nameController,
           decoration: const InputDecoration(
             labelText: 'Display Name',
-            prefixIcon: Icon(Icons.person),
+            prefixIcon: Icon(LucideIcons.user),
           ),
         ),
         actions: [
@@ -181,7 +182,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           elevation: 0,
           scrolledUnderElevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(LucideIcons.arrowLeft),
             onPressed: () {
               if (context.canPop()) {
                 context.pop();
@@ -313,7 +314,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 children: [
                   ListTile(
-                    leading: Icon(Icons.business, color: colorScheme.primary),
+                    leading: Icon(LucideIcons.building2, color: colorScheme.primary),
                     title: const Text('Company Branding',
                         style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text(
@@ -321,29 +322,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       style: TextStyle(
                           color: colorScheme.onSurface.withValues(alpha: 0.6)),
                     ),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
                     onTap: () => context.push('/company-branding'),
                   ),
                   _buildSubtleDivider(isDark),
                   ListTile(
-                    leading: Icon(Icons.people_outline, color: colorScheme.primary),
+                    leading: Icon(LucideIcons.users, color: colorScheme.primary),
                     title: const Text('Team Management',
                         style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text('Invite and manage team members',
                         style: TextStyle(
                             color: colorScheme.onSurface.withValues(alpha: 0.6))),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
                     onTap: () => context.push('/team'),
                   ),
                   _buildSubtleDivider(isDark),
                   ListTile(
-                    leading: Icon(Icons.person_outline, color: colorScheme.primary),
+                    leading: Icon(LucideIcons.user, color: colorScheme.primary),
                     title: const Text('Sign-in Methods',
                         style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text('Manage passwords and linked accounts',
                         style: TextStyle(
                             color: colorScheme.onSurface.withValues(alpha: 0.6))),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
                     onTap: () => context.push('/sign-in-methods'),
                   ),
                 ],
@@ -358,35 +359,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 children: [
                   ListTile(
-                    leading: Icon(Icons.construction, color: colorScheme.primary),
+                    leading: Icon(LucideIcons.hardHat, color: colorScheme.primary),
                     title: const Text('Services',
                         style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text('Manage your service catalogue & pricing',
                         style: TextStyle(
                             color: colorScheme.onSurface.withValues(alpha: 0.6))),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
                     onTap: () => context.push('/services'),
                   ),
                   _buildSubtleDivider(isDark),
                   ListTile(
-                    leading: Icon(Icons.receipt_long_outlined, color: colorScheme.primary),
+                    leading: Icon(LucideIcons.receipt, color: colorScheme.primary),
                     title: const Text('Expenses',
                         style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text('Track business expenses & receipts',
                         style: TextStyle(
                             color: colorScheme.onSurface.withValues(alpha: 0.6))),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
                     onTap: () => context.push('/expenses'),
                   ),
                   _buildSubtleDivider(isDark),
                   ListTile(
-                    leading: Icon(Icons.checklist_outlined, color: colorScheme.primary),
+                    leading: Icon(LucideIcons.listChecks, color: colorScheme.primary),
                     title: const Text('Checklist Templates',
                         style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text('Create templates for job checklists',
                         style: TextStyle(
                             color: colorScheme.onSurface.withValues(alpha: 0.6))),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
                     onTap: () => context.push('/checklist-templates'),
                   ),
                 ],
@@ -410,7 +411,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     _buildSubtleDivider(isDark),
                     ListTile(
-                      leading: Icon(Icons.card_giftcard,
+                      leading: Icon(LucideIcons.gift,
                           color: const Color(0xFFF4781F)),
                       title: const Text('Referral Programme',
                           style: TextStyle(fontWeight: FontWeight.w600)),
@@ -418,7 +419,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           style: TextStyle(
                               color:
                                   colorScheme.onSurface.withValues(alpha: 0.6))),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                      trailing: const Icon(LucideIcons.chevronRight, size: 14),
                       onTap: () => context.push('/referral'),
                     ),
                   ],
@@ -436,7 +437,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 child: Column(
                   children: [
                     ListTile(
-                      leading: Icon(Icons.sync, color: colorScheme.primary),
+                      leading: Icon(LucideIcons.refreshCw, color: colorScheme.primary),
                       title: const Text('QuickBooks',
                           style: TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(
@@ -448,8 +449,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       trailing: Icon(
                         company?.quickbooksEnabled == true
-                            ? Icons.check_circle
-                            : Icons.arrow_forward_ios,
+                            ? LucideIcons.checkCircle
+                            : LucideIcons.chevronRight,
                         color: company?.quickbooksEnabled == true
                             ? semanticColors.success
                             : colorScheme.onSurface.withValues(alpha: 0.3),
@@ -460,7 +461,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     _buildSubtleDivider(isDark),
                     ListTile(
                       leading:
-                          Icon(Icons.calendar_today, color: colorScheme.primary),
+                          Icon(LucideIcons.calendar, color: colorScheme.primary),
                       title: const Text('Google Calendar',
                           style: TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(
@@ -472,8 +473,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       trailing: Icon(
                         company?.googleCalendarEnabled == true
-                            ? Icons.check_circle
-                            : Icons.arrow_forward_ios,
+                            ? LucideIcons.checkCircle
+                            : LucideIcons.chevronRight,
                         color: company?.googleCalendarEnabled == true
                             ? semanticColors.success
                             : colorScheme.onSurface.withValues(alpha: 0.3),
@@ -484,7 +485,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     _buildSubtleDivider(isDark),
                     ListTile(
                       leading:
-                          Icon(Icons.table_chart, color: colorScheme.primary),
+                          Icon(LucideIcons.table2, color: colorScheme.primary),
                       title: const Text('Monday.com',
                           style: TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(
@@ -496,8 +497,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       trailing: Icon(
                         company?.mondayEnabled == true
-                            ? Icons.check_circle
-                            : Icons.arrow_forward_ios,
+                            ? LucideIcons.checkCircle
+                            : LucideIcons.chevronRight,
                         color: company?.mondayEnabled == true
                             ? semanticColors.success
                             : colorScheme.onSurface.withValues(alpha: 0.3),
@@ -518,25 +519,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 children: [
                   ListTile(
-                    leading: Icon(Icons.forum_outlined, color: colorScheme.primary),
+                    leading: Icon(LucideIcons.messageSquare, color: colorScheme.primary),
                     title: const Text('Collaboration Overview',
                         style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text('Pending reviews, comments, activity',
                         style: TextStyle(
                             color: colorScheme.onSurface.withValues(alpha: 0.6))),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
                     onTap: () => context.push('/collaboration'),
                   ),
                   _buildSubtleDivider(isDark),
                   ListTile(
-                    leading: Icon(Icons.notifications_outlined,
+                    leading: Icon(LucideIcons.bell,
                         color: colorScheme.primary),
                     title: const Text('Notifications',
                         style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text('Push notification settings',
                         style: TextStyle(
                             color: colorScheme.onSurface.withValues(alpha: 0.6))),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
                     onTap: () => context.push('/notifications'),
                   ),
                 ],
@@ -549,7 +550,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             GlassCard(
               padding: EdgeInsets.zero,
               child: ListTile(
-                leading: Icon(Icons.dark_mode, color: colorScheme.primary),
+                leading: Icon(LucideIcons.moon, color: colorScheme.primary),
                 title: const Text('Dark Mode',
                     style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: Text(
@@ -581,13 +582,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             GlassCard(
               padding: EdgeInsets.zero,
               child: ListTile(
-                leading: Icon(Icons.logout, color: semanticColors.error),
+                leading: Icon(LucideIcons.logOut, color: semanticColors.error),
                 title: Text(
                   'Log Out',
                   style: TextStyle(
                       color: semanticColors.error, fontWeight: FontWeight.w600),
                 ),
-                trailing: Icon(Icons.arrow_forward_ios,
+                trailing: Icon(LucideIcons.chevronRight,
                     size: 14,
                     color: semanticColors.error.withValues(alpha: 0.6)),
                 onTap: () => _handleLogOut(context),
@@ -675,7 +676,7 @@ class _SubscriptionTile extends StatelessWidget {
 
     return ListTile(
       leading: Icon(
-        Icons.credit_card,
+        LucideIcons.creditCard,
         color: isActive ? colorScheme.primary : null,
       ),
       title: Text(
@@ -694,8 +695,8 @@ class _SubscriptionTile extends StatelessWidget {
             )
           : Icon(
               isActive
-                  ? Icons.manage_accounts_outlined
-                  : Icons.rocket_launch_outlined,
+                  ? LucideIcons.userCog
+                  : LucideIcons.rocket,
               color: isActive ? null : colorScheme.primary,
               size: 20,
             ),

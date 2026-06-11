@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../components/curved_header.dart';
@@ -128,7 +129,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                         title: 'Avg. Profit Margin',
                         value: '${avgMargin.toStringAsFixed(1)}%',
                         subtitle: 'Revenue: ${currency.format(totalRevenue)}',
-                        icon: Icons.trending_up,
+                        icon: LucideIcons.trendingUp,
                         iconColor: semanticColors.success,
                         bgColor: const Color(0xFFF4781F),
                         textColor: Colors.white,
@@ -139,7 +140,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                         title: 'Pipeline Value',
                         value: currency.format(pipelineValue),
                         subtitle: '${pipelineQuotes.length} open quotes',
-                        icon: Icons.track_changes,
+                        icon: LucideIcons.target,
                         iconColor: Colors.blueAccent,
                       ),
                       _buildMetricCard(
@@ -147,7 +148,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                         title: 'Avg. Customer LTV',
                         value: currency.format(avgLtv),
                         subtitle: '$customerCount total customers',
-                        icon: Icons.people,
+                        icon: LucideIcons.users,
                         iconColor: Colors.purpleAccent,
                       ),
                       _buildMetricCard(
@@ -155,7 +156,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                         title: 'Conversion Rate',
                         value: '${conversionRate.toStringAsFixed(1)}%',
                         subtitle: '$acceptedCount / $sentCount quotes',
-                        icon: Icons.check_circle_outline,
+                        icon: LucideIcons.checkCircle,
                         iconColor: Colors.orangeAccent,
                       ),
                     ],

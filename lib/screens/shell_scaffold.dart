@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/providers.dart';
@@ -83,7 +84,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
                           context,
                           title: 'Create Quote',
                           desc: 'Draft new offer',
-                          icon: Icons.description_outlined,
+                          icon: LucideIcons.fileText,
                           color: const Color(0xFFF4781F),
                           onTap: () {
                             Navigator.pop(context);
@@ -97,7 +98,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
                           context,
                           title: 'Create Invoice',
                           desc: 'Log new billing',
-                          icon: Icons.receipt_outlined,
+                          icon: LucideIcons.receipt,
                           color: Colors.green,
                           onTap: () {
                             Navigator.pop(context);
@@ -215,7 +216,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
             shape: const CircleBorder(),
             elevation: 0,
             onPressed: () => _showQuickActionsBottomSheet(context),
-            child: const Icon(Icons.add, color: Colors.white, size: 28),
+            child: const Icon(LucideIcons.plus, color: Colors.white, size: 28),
           ),
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -265,7 +266,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
                         child: Row(
                           children: [
                             Icon(
-                              Icons.workspace_premium,
+                              LucideIcons.star,
                               size: 18,
                               color: semanticColors.warning,
                             ),
@@ -309,30 +310,30 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
                           _buildTabItem(
                             context,
                             index: 0,
-                            icon: Icons.dashboard_outlined,
-                            activeIcon: Icons.dashboard,
+                            icon: LucideIcons.layoutDashboard,
+                            activeIcon: LucideIcons.layoutDashboard,
                             label: 'Dashboard',
                           ),
                           _buildTabItem(
                             context,
                             index: 1,
-                            icon: Icons.calendar_today_outlined,
-                            activeIcon: Icons.calendar_today,
+                            icon: LucideIcons.calendar,
+                            activeIcon: LucideIcons.calendar,
                             label: 'Schedule',
                           ),
                           const SizedBox(width: 48), // Center spacing for FAB
                           _buildTabItem(
                             context,
                             index: 2,
-                            icon: Icons.people_outlined,
-                            activeIcon: Icons.people,
+                            icon: LucideIcons.users,
+                            activeIcon: LucideIcons.users,
                             label: 'Customers',
                           ),
                           _buildTabItem(
                             context,
                             index: 3,
-                            icon: Icons.person_outline,
-                            activeIcon: Icons.person,
+                            icon: LucideIcons.user,
+                            activeIcon: LucideIcons.user,
                             label: 'Profile',
                           ),
                         ],
@@ -486,7 +487,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
         // Menu Items
         _buildDrawerItem(
           context,
-          icon: Icons.description_outlined,
+          icon: LucideIcons.fileText,
           label: 'Quotations',
           onTap: () {
             Navigator.pop(context);
@@ -495,7 +496,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
         ),
         _buildDrawerItem(
           context,
-          icon: Icons.receipt_outlined,
+          icon: LucideIcons.receipt,
           label: 'Invoices',
           onTap: () {
             Navigator.pop(context);
@@ -504,7 +505,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
         ),
         _buildDrawerItem(
           context,
-          icon: Icons.view_kanban_outlined,
+          icon: LucideIcons.kanban,
           label: 'Pipeline',
           onTap: () {
             Navigator.pop(context);
@@ -513,7 +514,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
         ),
         _buildDrawerItem(
           context,
-          icon: Icons.auto_mode,
+          icon: LucideIcons.refreshCw,
           label: 'Workflows',
           onTap: () {
             Navigator.pop(context);
@@ -522,7 +523,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
         ),
         _buildDrawerItem(
           context,
-          icon: Icons.construction_outlined,
+          icon: LucideIcons.hardHat,
           label: 'Services',
           onTap: () {
             Navigator.pop(context);
@@ -531,7 +532,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
         ),
         _buildDrawerItem(
           context,
-          icon: Icons.insights,
+          icon: LucideIcons.trendingUp,
           label: 'Analytics',
           onTap: () {
             Navigator.pop(context);
@@ -540,7 +541,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
         ),
         _buildDrawerItem(
           context,
-          icon: Icons.attach_money_outlined,
+          icon: LucideIcons.dollarSign,
           label: 'Expenses',
           onTap: () {
             Navigator.pop(context);
@@ -555,7 +556,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
 
         _buildDrawerItem(
           context,
-          icon: Icons.settings_outlined,
+          icon: LucideIcons.settings,
           label: 'Settings',
           onTap: () {
             Navigator.pop(context);
@@ -564,7 +565,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
         ),
         _buildDrawerItem(
           context,
-          icon: Icons.help_outline,
+          icon: LucideIcons.helpCircle,
           label: 'Help & Support',
           onTap: () {
             Navigator.pop(context);

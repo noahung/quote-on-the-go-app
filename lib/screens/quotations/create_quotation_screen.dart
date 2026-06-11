@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -265,7 +266,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
         child: Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+              icon: const Icon(LucideIcons.chevronLeft, size: 20),
               onPressed: () => Navigator.of(context).pop(),
             ),
             Text(
@@ -319,7 +320,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.link_rounded, size: 14, color: Colors.grey),
+                  Icon(LucideIcons.link, size: 14, color: Colors.grey),
                   SizedBox(width: 4),
                   Text('COPY LINK', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey, letterSpacing: 0.5)),
                 ],
@@ -361,7 +362,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
                 color: Theme.of(context).colorScheme.onSurface,
               ),
               decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.person_search, color: Color(0xFFF4781F)),
+                prefixIcon: const Icon(LucideIcons.userSearch, color: Color(0xFFF4781F)),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -409,7 +410,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
             style: const TextStyle(fontSize: 14),
             decoration: const InputDecoration(
               labelText: 'Customer Name *',
-              prefixIcon: Icon(Icons.person_outline),
+              prefixIcon: Icon(LucideIcons.user),
             ),
             textCapitalization: TextCapitalization.words,
           ),
@@ -419,7 +420,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
             style: const TextStyle(fontSize: 14),
             decoration: const InputDecoration(
               labelText: 'Email *',
-              prefixIcon: Icon(Icons.email_outlined),
+              prefixIcon: Icon(LucideIcons.mail),
             ),
             keyboardType: TextInputType.emailAddress,
           ),
@@ -429,7 +430,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
             style: const TextStyle(fontSize: 14),
             decoration: const InputDecoration(
               labelText: 'Phone',
-              prefixIcon: Icon(Icons.phone_outlined),
+              prefixIcon: Icon(LucideIcons.phone),
             ),
             keyboardType: TextInputType.phone,
           ),
@@ -439,7 +440,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
             style: const TextStyle(fontSize: 14),
             decoration: const InputDecoration(
               labelText: 'Address',
-              prefixIcon: Icon(Icons.location_on_outlined),
+              prefixIcon: Icon(LucideIcons.mapPin),
             ),
             maxLines: 2,
             textCapitalization: TextCapitalization.sentences,
@@ -478,7 +479,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  const Icon(Icons.calendar_today_rounded, size: 14, color: Color(0xFFF4781F)),
+                  const Icon(LucideIcons.calendar, size: 14, color: Color(0xFFF4781F)),
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
@@ -622,7 +623,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
                       SizedBox(
                         width: 28,
                         child: PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_vert, size: 18, color: Colors.grey),
+                          icon: const Icon(LucideIcons.ellipsisVertical, size: 18, color: Colors.grey),
                           padding: EdgeInsets.zero,
                           itemBuilder: (_) => [
                             const PopupMenuItem(value: 'edit', child: Text('Edit')),
@@ -647,7 +648,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 24.0),
                 child: Column(
                   children: [
-                    Icon(Icons.receipt_long_outlined, size: 44, color: Colors.grey.withValues(alpha: 0.4)),
+                    Icon(LucideIcons.receipt, size: 44, color: Colors.grey.withValues(alpha: 0.4)),
                     const SizedBox(height: 10),
                     const Text('No items added yet', style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500)),
                   ],
@@ -660,7 +661,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
               foregroundColor: const Color(0xFFF4781F),
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             ),
-            icon: const Icon(Icons.add_circle_outline, size: 18),
+            icon: const Icon(LucideIcons.plusCircle, size: 18),
             label: const Text('+ Add Item', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
             onPressed: () => _showAddLineItemSheet(context),
           ),
@@ -874,7 +875,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
                         minimumSize: const Size.fromHeight(50),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                       ),
-                      icon: Icon(_isEditing ? Icons.save_outlined : Icons.send_rounded, color: Colors.white, size: 18),
+                      icon: Icon(_isEditing ? LucideIcons.save : LucideIcons.send, color: Colors.white, size: 18),
                       label: Text(
                         _isEditing ? 'Save Changes' : 'Send Quote',
                         style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
@@ -1033,7 +1034,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          Icons.close,
+                          LucideIcons.x,
                           size: 16,
                           color: isDarkSheet ? Colors.white70 : Colors.black54,
                         ),
@@ -1055,7 +1056,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
                   children: [
                     Expanded(
                       child: _ModeButton(
-                        icon: Icons.edit_rounded,
+                        icon: LucideIcons.pencil,
                         label: 'Manual',
                         isSelected: _mode == _ItemAddMode.manual,
                         onTap: () => setState(() => _mode = _ItemAddMode.manual),
@@ -1063,7 +1064,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
                     ),
                     Expanded(
                       child: _ModeButton(
-                        icon: isPremium ? Icons.bolt_rounded : Icons.lock_outline,
+                        icon: isPremium ? LucideIcons.zap : LucideIcons.lock,
                         label: 'AI Generate',
                         isSelected: _mode == _ItemAddMode.ai,
                         isPremium: isPremium,
@@ -1259,7 +1260,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
                 flex: 2,
                 child: PillButton(
                   onTap: () => _addGeneratedItems(aiState.generatedItems!),
-                  icon: Icons.add,
+                  icon: LucideIcons.plus,
                   text: 'Add ${aiState.generatedItems!.length} Items',
                 ),
               ),
@@ -1315,7 +1316,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
           isLoading: aiState.isLoading,
           onTap:
               _aiPromptController.text.trim().isEmpty ? null : _generateAIItems,
-          icon: Icons.auto_fix_high,
+          icon: LucideIcons.sparkles,
           text: aiState.isLoading ? 'Generating...' : 'Generate Items',
         ),
       ],

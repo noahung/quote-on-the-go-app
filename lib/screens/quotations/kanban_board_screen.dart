@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -28,25 +29,25 @@ const _columns = [
     title: 'Draft',
     statuses: ['Draft', 'Amended'],
     color: Color(0xFFF57F17),
-    icon: Icons.edit_note_outlined,
+    icon: LucideIcons.pencil,
   ),
   _PipelineColumn(
     title: 'Sent',
     statuses: ['Sent'],
     color: Color(0xFF1976D2),
-    icon: Icons.send_outlined,
+    icon: LucideIcons.send,
   ),
   _PipelineColumn(
     title: 'Won',
     statuses: ['Accepted'],
     color: Color(0xFF2E7D32),
-    icon: Icons.emoji_events_outlined,
+    icon: LucideIcons.trophy,
   ),
   _PipelineColumn(
     title: 'Lost',
     statuses: ['Declined'],
     color: Color(0xFFC62828),
-    icon: Icons.cancel_outlined,
+    icon: LucideIcons.xCircle,
   ),
 ];
 

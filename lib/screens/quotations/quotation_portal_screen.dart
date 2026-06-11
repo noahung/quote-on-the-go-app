@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -51,14 +52,14 @@ class QuotationPortalScreen extends ConsumerWidget {
                 if (quotation.status == 'Sent') const SizedBox(height: 16),
                 if (quotation.status == 'Accepted')
                   _StatusBanner(
-                    icon: Icons.check_circle_outline,
+                    icon: LucideIcons.checkCircle,
                     message: 'You have accepted this quote.',
                     color: Theme.of(context).colorScheme.tertiary,
                     bgColor: Theme.of(context).colorScheme.tertiaryContainer,
                   ),
                 if (quotation.status == 'Declined')
                   _StatusBanner(
-                    icon: Icons.cancel_outlined,
+                    icon: LucideIcons.xCircle,
                     message: 'You have declined this quote.',
                     color: Theme.of(context).colorScheme.error,
                     bgColor: Theme.of(context).colorScheme.errorContainer,

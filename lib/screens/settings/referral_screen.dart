@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -147,7 +148,7 @@ class ReferralScreen extends ConsumerWidget {
                       child: _StatCard(
                         label: 'Total Referred',
                         value: '$referralCount',
-                        icon: Icons.people_outline,
+                        icon: LucideIcons.users,
                         color: colorScheme.primary,
                         isDark: isDark,
                       ),
@@ -157,7 +158,7 @@ class ReferralScreen extends ConsumerWidget {
                       child: _StatCard(
                         label: 'Converted',
                         value: '$convertedCount',
-                        icon: Icons.star_outline,
+                        icon: LucideIcons.star,
                         color: Colors.green,
                         isDark: isDark,
                       ),
@@ -167,7 +168,7 @@ class ReferralScreen extends ConsumerWidget {
                       child: _StatCard(
                         label: 'Months Earned',
                         value: '$convertedCount',
-                        icon: Icons.calendar_month_outlined,
+                        icon: LucideIcons.calendarDays,
                         color: Colors.purple,
                         isDark: isDark,
                       ),

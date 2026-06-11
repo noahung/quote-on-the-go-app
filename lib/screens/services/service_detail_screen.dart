@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -161,14 +162,14 @@ class _ServiceDetailView extends ConsumerWidget {
                                   letterSpacing: 1)),
                           const SizedBox(height: 12),
                           _IntegrationRow(
-                            icon: Icons.sync,
+                            icon: LucideIcons.refreshCw,
                             label: 'QuickBooks',
                             synced: service.quickbooksItemId != null,
                             lastSync: service.quickbooksLastSyncAt,
                           ),
                           const Divider(height: 20),
                           _IntegrationRow(
-                            icon: Icons.table_chart_outlined,
+                            icon: LucideIcons.table2,
                             label: 'Monday.com',
                             synced: service.mondayItemId != null,
                             lastSync: service.mondayLastSyncAt,
@@ -384,7 +385,7 @@ class _IntegrationRow extends StatelessWidget {
           ),
         ),
         Icon(
-          synced ? Icons.check_circle : Icons.radio_button_unchecked,
+          synced ? LucideIcons.checkCircle : LucideIcons.circle,
           color: synced ? colorScheme.tertiary : colorScheme.outlineVariant,
           size: 20,
         ),

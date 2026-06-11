@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../components/mesh_background.dart';
@@ -135,7 +136,7 @@ class ProfileMenuScreen extends ConsumerWidget {
             const SizedBox(height: 8),
 
             _ProfileMenuItem(
-              icon: Icons.settings_outlined,
+              icon: LucideIcons.settings,
               title: 'Settings & Profile',
               subtitle: 'Account, company, integrations',
               onTap: () {
@@ -144,7 +145,7 @@ class ProfileMenuScreen extends ConsumerWidget {
               },
             ),
             _ProfileMenuItem(
-              icon: Icons.notifications_outlined,
+              icon: LucideIcons.bell,
               title: 'Notifications',
               subtitle: 'Alerts and reminders',
               onTap: () {
@@ -153,7 +154,7 @@ class ProfileMenuScreen extends ConsumerWidget {
               },
             ),
             _ProfileMenuItem(
-              icon: Icons.group_outlined,
+              icon: LucideIcons.users,
               title: 'Team Management',
               subtitle: 'Manage team members and roles',
               onTap: () {
@@ -162,7 +163,7 @@ class ProfileMenuScreen extends ConsumerWidget {
               },
             ),
             _ProfileMenuItem(
-              icon: Icons.play_circle_outline,
+              icon: LucideIcons.playCircle,
               title: 'Automated Workflows',
               subtitle: 'Triggers and automations',
               onTap: () {
@@ -171,7 +172,7 @@ class ProfileMenuScreen extends ConsumerWidget {
               },
             ),
             _ProfileMenuItem(
-              icon: Icons.help_outline,
+              icon: LucideIcons.helpCircle,
               title: 'Help & Support',
               subtitle: 'FAQs and contact support',
               onTap: () {

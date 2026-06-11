@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class PremiumEmptyState extends StatelessWidget {
   final IconData icon;
@@ -159,7 +160,7 @@ class PremiumEmptyState extends StatelessWidget {
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: onUpgrade,
-                icon: Icon(Icons.workspace_premium, color: colorScheme.primary),
+                icon: Icon(LucideIcons.crown, color: colorScheme.primary),
                 label: const Text('Upgrade to Pro'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: colorScheme.primary,
@@ -183,7 +184,7 @@ class PremiumEmptyState extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      Icons.workspace_premium,
+                      LucideIcons.crown,
                       size: 16,
                       color: colorScheme.primary,
                     ),

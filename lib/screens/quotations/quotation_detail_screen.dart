@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -377,8 +378,8 @@ class QuotationDetailScreen extends ConsumerWidget {
                       child: Row(children: [
                         Icon(
                           quotation.status == 'Archived'
-                              ? Icons.unarchive_outlined
-                              : Icons.archive_outlined,
+                              ? LucideIcons.archive
+                              : LucideIcons.archive,
                           color: semanticColors.warning,
                         ),
                         const SizedBox(width: 8),
@@ -442,10 +443,10 @@ class QuotationDetailScreen extends ConsumerWidget {
                               children: [
                                 Icon(
                                   quotation.status == 'Accepted'
-                                      ? Icons.check_circle
+                                      ? LucideIcons.checkCircle
                                       : (quotation.status == 'Declined'
-                                          ? Icons.cancel
-                                          : Icons.info_outline),
+                                          ? LucideIcons.xCircle
+                                          : LucideIcons.info),
                                   size: 14,
                                   color: statusColor,
                                 ),
@@ -479,7 +480,7 @@ class QuotationDetailScreen extends ConsumerWidget {
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              Icons.corporate_fare,
+                              LucideIcons.building,
                               color: colorScheme.primary,
                               size: 24,
                             ),
@@ -502,7 +503,7 @@ class QuotationDetailScreen extends ConsumerWidget {
                                   Row(
                                     children: [
                                       Icon(
-                                        Icons.location_on,
+                                        LucideIcons.mapPin,
                                         size: 16,
                                         color: colorScheme.primary,
                                       ),
@@ -677,7 +678,7 @@ class QuotationDetailScreen extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
-                              Icons.picture_as_pdf,
+                              LucideIcons.fileText,
                               color: semanticColors.error,
                               size: 24,
                             ),

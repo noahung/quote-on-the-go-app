@@ -57,12 +57,16 @@ class FeedbackController {
     required FlashMessageType type,
     required String message,
     Duration duration = const Duration(seconds: 3),
+    String? actionLabel,
+    VoidCallback? onAction,
   }) {
     FlashMessage.show(
       context: context,
       type: type,
       message: message,
       duration: duration,
+      actionLabel: actionLabel,
+      onAction: onAction,
     );
   }
 
@@ -72,6 +76,22 @@ class FeedbackController {
       context: context,
       type: FlashMessageType.success,
       message: message,
+    );
+  }
+
+  /// Success with action button - for important messages
+  void successWithAction(
+    BuildContext context,
+    String message, {
+    required String actionLabel,
+    required VoidCallback onAction,
+  }) {
+    showFlash(
+      context: context,
+      type: FlashMessageType.success,
+      message: message,
+      actionLabel: actionLabel,
+      onAction: onAction,
     );
   }
 

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -160,7 +161,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        isPremium ? Icons.workspace_premium : Icons.person_outline,
+                        isPremium ? LucideIcons.crown : LucideIcons.user,
                         color: isPremium ? Colors.amber : colorScheme.primary,
                         size: 28,
                       ),
@@ -493,7 +494,7 @@ class _FaqTileState extends State<_FaqTile> {
                 style: const TextStyle(
                     fontWeight: FontWeight.w600, fontSize: 14)),
             trailing: Icon(
-                _expanded ? Icons.expand_less : Icons.expand_more),
+                _expanded ? LucideIcons.chevronUp : LucideIcons.chevronDown),
             onTap: () => setState(() => _expanded = !_expanded),
           ),
           if (_expanded)

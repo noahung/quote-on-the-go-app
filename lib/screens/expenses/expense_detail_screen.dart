@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -340,20 +341,20 @@ class _ExpenseDetailScreenState extends ConsumerState<ExpenseDetailScreen> {
               ),
               const SizedBox(height: 16),
               _buildDetailRow(
-                  Icons.store_outlined, 'Merchant', expense.merchant,
+                  LucideIcons.store, 'Merchant', expense.merchant,
                   colorScheme: colorScheme),
               const Divider(height: 24),
-              _buildDetailRow(Icons.category_outlined, 'Category',
+              _buildDetailRow(LucideIcons.tag, 'Category',
                   expense.category,
                   colorScheme: colorScheme),
               const Divider(height: 24),
               _buildDetailRow(
-                  Icons.calendar_today_outlined, 'Date', expense.date,
+                  LucideIcons.calendar, 'Date', expense.date,
                   colorScheme: colorScheme),
               if (expense.description != null &&
                   expense.description!.isNotEmpty) ...[
                 const Divider(height: 24),
-                _buildDetailRow(Icons.notes_outlined, 'Notes',
+                _buildDetailRow(LucideIcons.notebookPen, 'Notes',
                     expense.description!,
                     colorScheme: colorScheme),
               ],

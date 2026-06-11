@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -89,7 +90,7 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                     Expanded(
                       child: filtered.isEmpty
                           ? AppEmptyState(
-                              icon: Icons.construction,
+                              icon: LucideIcons.hardHat,
                               title: _searchQuery.isNotEmpty
                                   ? 'No services match "$_searchQuery"'
                                   : 'No services yet',

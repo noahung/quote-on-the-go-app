@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -338,10 +339,10 @@ class InvoiceDetailScreen extends ConsumerWidget {
                               children: [
                                 Icon(
                                   invoice.status == 'Paid'
-                                      ? Icons.check_circle
+                                      ? LucideIcons.checkCircle
                                       : (invoice.status == 'Overdue'
-                                          ? Icons.warning
-                                          : Icons.info_outline),
+                                          ? LucideIcons.triangleAlert
+                                          : LucideIcons.info),
                                   size: 14,
                                   color: statusColor,
                                 ),
@@ -380,7 +381,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
                             Row(
                               children: [
                                 Icon(
-                                  Icons.location_on,
+                                  LucideIcons.mapPin,
                                   color: colorScheme.primary,
                                   size: 18,
                                 ),
@@ -564,7 +565,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
-                              Icons.picture_as_pdf,
+                              LucideIcons.fileText,
                               color: semanticColors.error,
                               size: 24,
                             ),

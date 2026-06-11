@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -37,7 +38,7 @@ class ExpensesScreen extends ConsumerWidget {
                 data: (expenses) {
                   if (expenses.isEmpty) {
                     return AppEmptyState(
-                      icon: Icons.receipt_long,
+                      icon: LucideIcons.receipt,
                       title: 'No expenses yet',
                       subtitle: 'Track your business spending here.',
                       actionLabel: 'Add Expense',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -287,7 +288,7 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PremiumEmptyState(
-      icon: Icons.description_outlined,
+      icon: LucideIcons.fileText,
       title: 'No Quotations Yet',
       subtitle: 'Create your first quotation to get started',
       actionLabel: 'Create Quotation',
@@ -323,7 +324,7 @@ class _QuotationList extends StatelessWidget {
   Widget build(BuildContext context) {
     if (quotations.isEmpty) {
       return PremiumEmptyState(
-        icon: Icons.description_outlined,
+        icon: LucideIcons.fileText,
         title: emptyTitle,
         subtitle: emptySubtitle,
         actionLabel: 'Create Quotation',

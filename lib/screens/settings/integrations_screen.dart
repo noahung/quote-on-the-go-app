@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -79,7 +80,7 @@ class IntegrationsScreen extends ConsumerWidget {
             _IntegrationCard(
               title: 'QuickBooks Online',
               description: 'Sync customers, invoices, and services with QuickBooks Online.',
-              icon: Icons.account_balance_wallet_outlined,
+              icon: LucideIcons.wallet,
               iconColor: const Color(0xFF2CA01C), // QuickBooks green
               isConnected: quickbooksConnected,
               isPremium: isPremium,
@@ -94,17 +95,17 @@ class IntegrationsScreen extends ConsumerWidget {
               actions: [
                 _IntegrationAction(
                   label: 'Sync All',
-                  icon: Icons.sync,
+                  icon: LucideIcons.refreshCw,
                   onTap: () => _launchWebApp(context, '/settings/integrations'),
                 ),
                 _IntegrationAction(
                   label: 'Import Customers',
-                  icon: Icons.download,
+                  icon: LucideIcons.download,
                   onTap: () => _launchWebApp(context, '/settings/integrations'),
                 ),
                 _IntegrationAction(
                   label: 'Import Invoices',
-                  icon: Icons.receipt_long,
+                  icon: LucideIcons.receipt,
                   onTap: () => _launchWebApp(context, '/settings/integrations'),
                 ),
               ],
@@ -115,7 +116,7 @@ class IntegrationsScreen extends ConsumerWidget {
             _IntegrationCard(
               title: 'Monday.com',
               description: 'Sync quotations, invoices, and customers with Monday.com boards.',
-              icon: Icons.table_chart_outlined,
+              icon: LucideIcons.table2,
               iconColor: const Color(0xFFFF3D57), // Monday red
               isConnected: mondayConnected,
               isPremium: isPremium,
@@ -130,12 +131,12 @@ class IntegrationsScreen extends ConsumerWidget {
               actions: [
                 _IntegrationAction(
                   label: 'Board Config',
-                  icon: Icons.settings,
+                  icon: LucideIcons.settings,
                   onTap: () => _launchWebApp(context, '/settings/integrations'),
                 ),
                 _IntegrationAction(
                   label: 'Sync Now',
-                  icon: Icons.sync,
+                  icon: LucideIcons.refreshCw,
                   onTap: () => _launchWebApp(context, '/settings/integrations'),
                 ),
               ],
@@ -146,7 +147,7 @@ class IntegrationsScreen extends ConsumerWidget {
             _IntegrationCard(
               title: 'Google Calendar',
               description: 'Sync your scheduled jobs with Google Calendar.',
-              icon: Icons.calendar_today_outlined,
+              icon: LucideIcons.calendar,
               iconColor: const Color(0xFF4285F4), // Google blue
               isConnected: googleCalendarConnected,
               isPremium: isPremium,
@@ -298,7 +299,7 @@ class _IntegrationCard extends StatelessWidget {
                       Row(
                         children: [
                           Icon(
-                            isConnected ? Icons.check_circle : Icons.radio_button_unchecked,
+                            isConnected ? LucideIcons.checkCircle : LucideIcons.circle,
                             size: 14,
                             color: isConnected ? semanticColors.success : colorScheme.onSurfaceVariant,
                           ),
@@ -394,7 +395,7 @@ class _IntegrationCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    isConnected ? Icons.link_off : Icons.link,
+                    isConnected ? LucideIcons.unlink : LucideIcons.link,
                     size: 18,
                     color: isConnected
                         ? semanticColors.error

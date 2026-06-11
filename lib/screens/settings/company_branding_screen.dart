@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../components/glass_card.dart';
@@ -327,7 +328,7 @@ class _CompanyBrandingScreenState extends ConsumerState<CompanyBrandingScreen> {
                     // ── Company Logo ──────────────────────────────────────
                     _SectionCard(
                       title: 'Company Logo',
-                      icon: Icons.image_outlined,
+                      icon: LucideIcons.image,
                       children: [
                         Text(
                           'Appears on your quotes and invoices.',
@@ -373,7 +374,7 @@ class _CompanyBrandingScreenState extends ConsumerState<CompanyBrandingScreen> {
                                           ),
                                         ),
                                         child: Icon(
-                                          Icons.edit,
+                                          LucideIcons.pencil,
                                           size: 14,
                                           color: colorScheme.onPrimary,
                                         ),
@@ -432,7 +433,7 @@ class _CompanyBrandingScreenState extends ConsumerState<CompanyBrandingScreen> {
                     // ── Company Info ──────────────────────────────────────
                     _SectionCard(
                       title: 'Company Details',
-                      icon: Icons.business_outlined,
+                      icon: LucideIcons.building2,
                       children: [
                         _Field(
                           label: 'Company Name',
@@ -491,7 +492,7 @@ class _CompanyBrandingScreenState extends ConsumerState<CompanyBrandingScreen> {
                     // ── Bank Details ──────────────────────────────────────
                     _SectionCard(
                       title: 'Payment / Bank Details',
-                      icon: Icons.account_balance_outlined,
+                      icon: LucideIcons.landmark,
                       children: [
                         Text(
                           'Appears on your invoices for customer payments.',

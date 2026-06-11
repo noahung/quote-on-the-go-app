@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -47,14 +48,14 @@ class InvoicePortalScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                 if (invoice.status == 'Paid')
                   _StatusBanner(
-                    icon: Icons.check_circle_outline,
+                    icon: LucideIcons.checkCircle,
                     message: 'This invoice has been paid.',
                     color: Theme.of(context).colorScheme.tertiary,
                     bgColor: Theme.of(context).colorScheme.tertiaryContainer,
                   ),
                 if (invoice.status == 'Overdue')
                   _StatusBanner(
-                    icon: Icons.warning_amber_outlined,
+                    icon: LucideIcons.triangleAlert,
                     message: 'This invoice is overdue.',
                     color: Theme.of(context).colorScheme.error,
                     bgColor: Theme.of(context).colorScheme.errorContainer,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -804,7 +805,7 @@ class _PendingReviewTile extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Icon(
-              Icons.chevron_right,
+              LucideIcons.chevronRight,
               size: 20,
               color: colorScheme.onSurface.withValues(alpha: 0.4),
             ),
@@ -952,7 +953,7 @@ class _ActivityTile extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              Icons.circle,
+              LucideIcons.circle,
               size: 8,
               color: colorScheme.primary.withValues(alpha: 0.5),
             ),
@@ -982,7 +983,7 @@ class _ActivityTile extends StatelessWidget {
               ),
             ),
             Icon(
-              Icons.chevron_right,
+              LucideIcons.chevronRight,
               size: 18,
               color: colorScheme.onSurface.withValues(alpha: 0.3),
             ),

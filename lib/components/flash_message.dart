@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../models/feedback_type.dart';
 
 /// Attractive flash message overlay - replaces standard SnackBar
@@ -11,6 +12,8 @@ class FlashMessage extends StatefulWidget {
   final String message;
   final Duration duration;
   final VoidCallback? onDismiss;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   const FlashMessage({
     super.key,
@@ -18,6 +21,8 @@ class FlashMessage extends StatefulWidget {
     required this.message,
     this.duration = const Duration(seconds: 3),
     this.onDismiss,
+    this.actionLabel,
+    this.onAction,
   });
 
   /// Show flash message as overlay
@@ -29,6 +34,8 @@ class FlashMessage extends StatefulWidget {
     required FlashMessageType type,
     required String message,
     Duration duration = const Duration(seconds: 3),
+    String? actionLabel,
+    VoidCallback? onAction,
   }) {
     // Remove existing message if any
     hide();
@@ -63,6 +70,13 @@ class FlashMessage extends StatefulWidget {
                   message: message,
                   duration: duration,
                   onDismiss: hide,
+                  actionLabel: actionLabel,
+                  onAction: onAction != null
+                      ? () {
+                          hide();
+                          onAction();
+                        }
+                      : null,
                 ),
               ),
             ),
@@ -73,9 +87,12 @@ class FlashMessage extends StatefulWidget {
 
     overlay.insert(_currentEntry!);
 
-    // Auto hide
+    // Auto hide - longer duration if has action
+    final actualDuration = onAction != null
+        ? const Duration(seconds: 5)
+        : duration;
     _hideTimer?.cancel();
-    _hideTimer = Timer(duration, hide);
+    _hideTimer = Timer(actualDuration, hide);
   }
 
   static void hide() {
@@ -262,7 +279,31 @@ class _FlashMessageState extends State<FlashMessage>
                                   ),
                                 ),
                               ),
-                              
+
+                              // Action button (if provided)
+                              if (widget.actionLabel != null && widget.onAction != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: GestureDetector(
+                                    onTap: widget.onAction,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: accentColor,
+                                        borderRadius: BorderRadius.circular(999),
+                                      ),
+                                      child: Text(
+                                        widget.actionLabel!,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
                               // Dismiss button
                               Material(
                                 color: Colors.transparent,
@@ -273,7 +314,7 @@ class _FlashMessageState extends State<FlashMessage>
                                   child: Padding(
                                     padding: const EdgeInsets.all(4),
                                     child: Icon(
-                                      Icons.close_rounded,
+                                      LucideIcons.x,
                                       size: 18,
                                       color: colorScheme.onSurface.withValues(alpha: 0.5),
                                     ),
@@ -301,25 +342,25 @@ class _FlashMessageState extends State<FlashMessage>
     switch (widget.type) {
       case FlashMessageType.success:
         return (
-          Icons.check_circle_rounded,
+          LucideIcons.checkCircle,
           brandOrange,
           brandOrange,
         );
       case FlashMessageType.error:
         return (
-          Icons.error_rounded,
+          LucideIcons.alertCircle,
           brandOrange,
           brandOrange,
         );
       case FlashMessageType.info:
         return (
-          Icons.info_rounded,
+          LucideIcons.info,
           brandOrange,
           brandOrange,
         );
       case FlashMessageType.warning:
         return (
-          Icons.warning_rounded,
+          LucideIcons.triangleAlert,
           brandOrange,
           brandOrange,
         );

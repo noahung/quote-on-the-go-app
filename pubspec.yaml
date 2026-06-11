@@ -33,6 +33,7 @@ dependencies:
   json_annotation: ^4.9.0
 
   # UI
+  lucide_icons_flutter: ^3.1.14+2
   cupertino_icons: ^1.0.8
   google_fonts: ^6.2.1
   flutter_slidable: ^4.0.0

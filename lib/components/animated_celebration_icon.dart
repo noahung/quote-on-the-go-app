@@ -1,5 +1,6 @@
 import 'dart:math' show pi, cos, sin;
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
 import '../models/feedback_type.dart';
 
@@ -178,13 +179,13 @@ class _AnimatedCelebrationIconState extends State<AnimatedCelebrationIcon>
     switch (widget.type) {
       case CelebrationType.checkmark:
         return Icon(
-          Icons.check_rounded,
+          LucideIcons.check,
           color: iconColor,
           size: iconSize,
         );
       case CelebrationType.sparkle:
         return Icon(
-          Icons.auto_awesome_rounded,
+          LucideIcons.sparkles,
           color: iconColor,
           size: iconSize,
         );
@@ -192,7 +193,7 @@ class _AnimatedCelebrationIconState extends State<AnimatedCelebrationIcon>
         return Transform.rotate(
           angle: -pi / 4,
           child: Icon(
-            Icons.send_rounded,
+            LucideIcons.send,
             color: iconColor,
             size: iconSize,
           ),

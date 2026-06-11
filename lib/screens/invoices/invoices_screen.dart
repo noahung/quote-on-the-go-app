@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -289,7 +290,7 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PremiumEmptyState(
-      icon: Icons.receipt_long_outlined,
+      icon: LucideIcons.receipt,
       title: 'No Invoices Yet',
       subtitle: 'Create your first invoice to get started',
       actionLabel: 'Create Invoice',
@@ -325,7 +326,7 @@ class _InvoiceList extends StatelessWidget {
   Widget build(BuildContext context) {
     if (invoices.isEmpty) {
       return PremiumEmptyState(
-        icon: Icons.receipt_long_outlined,
+        icon: LucideIcons.receipt,
         title: emptyTitle,
         subtitle: emptySubtitle,
         actionLabel: 'Create Invoice',

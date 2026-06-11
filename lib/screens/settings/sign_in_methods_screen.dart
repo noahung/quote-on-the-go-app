@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -98,7 +99,7 @@ class SignInMethodsScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   _ProviderRow(
-                    icon: Icons.email_outlined,
+                    icon: LucideIcons.mail,
                     iconColor: colorScheme.primary,
                     title: 'Email & Password',
                     subtitle: user?.email ?? 'Not configured',
@@ -123,7 +124,7 @@ class SignInMethodsScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   _ProviderRow(
-                    icon: Icons.g_mobiledata,
+                    icon: LucideIcons.smartphone,
                     iconColor: const Color(0xFF4285F4),
                     title: 'Google Login',
                     subtitle: hasGoogle

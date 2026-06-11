@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
@@ -137,7 +138,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   padding: const EdgeInsets.only(top: 8),
                   child: IconButton(
                     onPressed: () => context.pop(),
-                    icon: Icon(Icons.arrow_back,
+                    icon: Icon(LucideIcons.arrowLeft,
                         color: isDark ? Colors.white : Colors.black87),
                   ),
                 ),
@@ -189,7 +190,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.error_outline,
+                      Icon(LucideIcons.alertCircle,
                           color: colorScheme.error, size: 18),
                       const SizedBox(width: 10),
                       Expanded(
@@ -237,8 +238,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           suffix: IconButton(
                             icon: Icon(
                               _obscurePassword
-                                  ? Icons.visibility_off_outlined
-                                  : Icons.visibility_outlined,
+                                  ? LucideIcons.eyeOff
+                                  : LucideIcons.eye,
                               size: 20,
                               color: colorScheme.onSurfaceVariant,
                             ),
@@ -260,8 +261,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           suffix: IconButton(
                             icon: Icon(
                               _obscureConfirm
-                                  ? Icons.visibility_off_outlined
-                                  : Icons.visibility_outlined,
+                                  ? LucideIcons.eyeOff
+                                  : LucideIcons.eye,
                               size: 20,
                               color: colorScheme.onSurfaceVariant,
                             ),

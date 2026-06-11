@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -523,7 +524,7 @@ class _PendingInviteTile extends StatelessWidget {
             radius: 20,
             backgroundColor: Colors.orange.withValues(alpha: 0.12),
             child: Icon(
-              Icons.mail_outline,
+              LucideIcons.mail,
               size: 18,
               color: Colors.orange.shade700,
             ),

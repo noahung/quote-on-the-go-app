@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -204,8 +205,8 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
                     : const Color(0xFFF4781F),
                 foregroundColor: Colors.white,
                 icon: Icon(hasSignature
-                    ? Icons.check_circle_outline
-                    : Icons.draw_outlined),
+                    ? LucideIcons.checkCircle
+                    : LucideIcons.penLine),
                 label: Text(
                   hasSignature ? 'Signed ✓' : 'Get Sign-off',
                   style: const TextStyle(fontWeight: FontWeight.w700),
@@ -226,7 +227,7 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
               },
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                  icon: const Icon(LucideIcons.pencil, color: Colors.white),
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => CreateJobScreen(event: widget.job),
@@ -602,7 +603,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                         borderRadius: BorderRadius.circular(14),
                         side: const BorderSide(color: Colors.black12)),
                     child: ListTile(
-                      leading: const Icon(Icons.checklist_outlined),
+                      leading: const Icon(LucideIcons.listChecks),
                       title: Text(t.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text('${t.items.length} tasks'),
                       trailing: FilledButton(
@@ -764,7 +765,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.draw_outlined,
+                  const Icon(LucideIcons.penLine,
                       color: Color(0xFFF57F17), size: 22),
                   const SizedBox(width: 12),
                   const Expanded(
@@ -783,7 +784,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right,
+                  const Icon(LucideIcons.chevronRight,
                       color: Color(0xFFF57F17), size: 20),
                 ],
               ),
@@ -800,7 +801,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
             ),
             child: const Row(
               children: [
-                Icon(Icons.check_circle, color: Color(0xFF2E7D32), size: 20),
+                Icon(LucideIcons.checkCircle, color: Color(0xFF2E7D32), size: 20),
                 SizedBox(width: 10),
                 Text('Client signature captured',
                     style: TextStyle(
@@ -888,7 +889,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.calendar_month, color: colorScheme.outline, size: 20),
+                  Icon(LucideIcons.calendarDays, color: colorScheme.outline, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -921,7 +922,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.group, color: colorScheme.outline, size: 20),
+                  Icon(LucideIcons.users, color: colorScheme.outline, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -943,7 +944,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.edit_outlined, size: 18),
+                              icon: const Icon(LucideIcons.pencil, size: 18),
                               onPressed: _showManageTeamSheet,
                             ),
                           ],
@@ -990,7 +991,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.location_on, color: colorScheme.primary, size: 20),
+                    Icon(LucideIcons.mapPin, color: colorScheme.primary, size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -1036,12 +1037,12 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                     children: [
                       TextButton.icon(
                         onPressed: _showApplyTemplateSheet,
-                        icon: const Icon(Icons.copy_outlined, size: 14),
+                        icon: const Icon(LucideIcons.copy, size: 14),
                         label: const Text('Template', style: TextStyle(fontSize: 12)),
                       ),
                       TextButton.icon(
                         onPressed: _showAddItemDialog,
-                        icon: const Icon(Icons.add, size: 16),
+                        icon: const Icon(LucideIcons.plus, size: 16),
                         label: const Text('Add', style: TextStyle(fontSize: 12)),
                       ),
                     ],
@@ -1087,7 +1088,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                               ),
                             ),
                             child: isChecked
-                                ? const Icon(Icons.check, size: 14, color: Colors.white)
+                                ? const Icon(LucideIcons.check, size: 14, color: Colors.white)
                                 : (isFirstUnchecked
                                     ? Center(
                                         child: Container(
@@ -1117,14 +1118,14 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.edit_outlined, size: 16),
+                          icon: const Icon(LucideIcons.pencil, size: 16),
                           onPressed: () => _showEditItemDialog(index, item['title'] as String),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                         ),
                         const SizedBox(width: 8),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                          icon: const Icon(LucideIcons.trash2, size: 16, color: Colors.red),
                           onPressed: () => _deleteChecklistItem(index),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
@@ -1156,10 +1157,10 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                 if (linkedQuotes.isNotEmpty) ...[
                   ...linkedQuotes.map((q) => ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: Icon(Icons.request_quote, color: colorScheme.outline),
+                        leading: Icon(LucideIcons.fileText, color: colorScheme.outline),
                         title: Text('Quote #${q.quotationNumber.replaceFirst('Q-', '')}'),
                         subtitle: Text(NumberFormat.currency(symbol: '£').format(q.total)),
-                        trailing: const Icon(Icons.chevron_right),
+                        trailing: const Icon(LucideIcons.chevronRight),
                         onTap: () => context.push('/quotations/${q.id}'),
                       )),
                 ],
@@ -1167,10 +1168,10 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                   if (linkedQuotes.isNotEmpty) Divider(color: colorScheme.outline.withValues(alpha: 0.2)),
                   ...linkedInvoices.map((inv) => ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: Icon(Icons.receipt_long, color: colorScheme.outline),
+                        leading: Icon(LucideIcons.receipt, color: colorScheme.outline),
                         title: Text('Invoice #${inv.invoiceNumber.replaceFirst('INV-', '')}'),
                         subtitle: Text(NumberFormat.currency(symbol: '£').format(inv.total)),
-                        trailing: const Icon(Icons.chevron_right),
+                        trailing: const Icon(LucideIcons.chevronRight),
                         onTap: () => context.push('/invoices/${inv.id}'),
                       )),
                 ],
@@ -1196,7 +1197,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
               onPressed: _statusUpdating ? null : () => _updateStatus('En Route'),
               icon: _statusUpdating
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Icon(Icons.directions_car_outlined, size: 18),
+                  : const Icon(LucideIcons.car, size: 18),
               label: const Text('Start Travel (En Route)',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
             ),
@@ -1215,7 +1216,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
               onPressed: _statusUpdating ? null : () => _updateStatus('In Progress'),
               icon: _statusUpdating
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Icon(Icons.play_circle_outline, size: 18),
+                  : const Icon(LucideIcons.playCircle, size: 18),
               label: const Text('Arrive & Start Work',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
             ),
@@ -1234,7 +1235,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
               onPressed: _statusUpdating ? null : () => _updateStatus('Completed'),
               icon: _statusUpdating
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Icon(Icons.check_circle_outline, size: 18),
+                  : const Icon(LucideIcons.checkCircle, size: 18),
               label: const Text('Mark as Completed',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
             ),
@@ -1257,7 +1258,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
               onPressed: _uploading ? null : _pickAndUpload,
               icon: _uploading
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.add_a_photo, size: 18),
+                  : const Icon(LucideIcons.imagePlus, size: 18),
               label: const Text('Upload Site Photos',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
             ),
@@ -1320,7 +1321,7 @@ class _LaborTrackerCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.timer_outlined, size: 18, color: colorScheme.primary),
+                Icon(LucideIcons.timer, size: 18, color: colorScheme.primary),
                 const SizedBox(width: 8),
                 const Text('Labor Time Tracker',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
@@ -1328,20 +1329,20 @@ class _LaborTrackerCard extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             _TimeRow(
-              icon: Icons.directions_car_outlined,
+              icon: LucideIcons.car,
               label: 'En Route',
               time: enRouteAt != null ? timeFmt.format(enRouteAt.toLocal()) : null,
               color: Colors.blue.shade600,
             ),
             _TimeRow(
-              icon: Icons.play_circle_outline,
+              icon: LucideIcons.playCircle,
               label: 'Work Started',
               time: startedAt != null ? timeFmt.format(startedAt.toLocal()) : null,
               color: Colors.orange.shade700,
               detail: travelDuration != null ? 'Travel: ${_fmt(travelDuration)}' : null,
             ),
             _TimeRow(
-              icon: Icons.check_circle_outline,
+              icon: LucideIcons.checkCircle,
               label: 'Completed',
               time: completedAt != null ? timeFmt.format(completedAt.toLocal()) : null,
               color: Colors.green.shade600,
@@ -1503,21 +1504,21 @@ class _CurrentStatusCardState extends State<_CurrentStatusCard>
       case 'Draft':
         return (
           label: 'Start Travel',
-          icon: Icons.directions_car_outlined,
+          icon: LucideIcons.car,
           color: Colors.blue.shade600,
           nextStatus: 'En Route',
         );
       case 'En Route':
         return (
           label: 'Arrive & Start Work',
-          icon: Icons.play_circle_outline,
+          icon: LucideIcons.playCircle,
           color: Colors.orange.shade700,
           nextStatus: 'In Progress',
         );
       case 'In Progress':
         return (
           label: 'Complete Job',
-          icon: Icons.check_circle_outline,
+          icon: LucideIcons.checkCircle,
           color: Colors.green.shade600,
           nextStatus: 'Completed',
         );
@@ -1730,7 +1731,7 @@ class _ConvertToInvoiceButtonState extends ConsumerState<_ConvertToInvoiceButton
           .get();
       final invoiceNumber = 'INV-${(count.count ?? 0) + 1001}';
 
-      await FirebaseFirestore.instance.collection('invoices').add({
+      final docRef = await FirebaseFirestore.instance.collection('invoices').add({
         'companyId': companyId,
         'jobId': widget.job.id,
         'customerName': widget.job.customerName ?? '',
@@ -1748,8 +1749,14 @@ class _ConvertToInvoiceButtonState extends ConsumerState<_ConvertToInvoiceButton
       });
 
       if (mounted) {
-        ref.read(feedbackControllerProvider).success(context, 'Invoice $invoiceNumber created!');
-        context.push('/invoices');
+        await ref.read(feedbackControllerProvider).showCelebration(
+          context: context,
+          type: CelebrationType.sparkle,
+          title: 'Invoice Created',
+          subtitle: 'Invoice $invoiceNumber has been created',
+          buttonText: 'View Invoice',
+          onDone: () => context.push('/invoices/${docRef.id}'),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -1803,7 +1810,7 @@ class _QuotesTab extends ConsumerWidget {
           children: [
             linked.isEmpty
                 ? _EmptyState(
-                    icon: Icons.description_outlined,
+                    icon: LucideIcons.fileText,
                     color: colorScheme.primary,
                     label: 'No quotations yet',
                   )
@@ -1848,7 +1855,7 @@ class _QuotesTab extends ConsumerWidget {
                     ),
                   );
                 },
-                icon: const Icon(Icons.add),
+                icon: const Icon(LucideIcons.plus),
                 label: const Text('New Quote'),
               ),
             ),
@@ -1881,7 +1888,7 @@ class _InvoicesTab extends ConsumerWidget {
           children: [
             linked.isEmpty
                 ? _EmptyState(
-                    icon: Icons.receipt_outlined,
+                    icon: LucideIcons.receipt,
                     color: colorScheme.tertiary,
                     label: 'No invoices yet',
                   )
@@ -1926,7 +1933,7 @@ class _InvoicesTab extends ConsumerWidget {
                     ),
                   );
                 },
-                icon: const Icon(Icons.add),
+                icon: const Icon(LucideIcons.plus),
                 label: const Text('New Invoice'),
               ),
             ),
@@ -1958,7 +1965,7 @@ class _ExpensesTab extends ConsumerWidget {
           children: [
             linked.isEmpty
                 ? _EmptyState(
-                    icon: Icons.payments_outlined,
+                    icon: LucideIcons.creditCard,
                     color: Colors.orange,
                     label: 'No expenses yet',
                   )
@@ -1980,7 +1987,7 @@ class _ExpensesTab extends ConsumerWidget {
                   '/expenses/new',
                   extra: {'jobId': jobId},
                 ),
-                icon: const Icon(Icons.add),
+                icon: const Icon(LucideIcons.plus),
                 label: const Text('Log Expense'),
               ),
             ),
@@ -2113,7 +2120,7 @@ class _MediaTabState extends ConsumerState<_MediaTab> {
         data: (mediaList) {
           if (mediaList.isEmpty) {
             return _EmptyState(
-              icon: Icons.photo_library_outlined,
+              icon: LucideIcons.images,
               color: colorScheme.secondary,
               label: 'No photos or videos yet',
             );
@@ -2178,7 +2185,7 @@ class _MediaTabState extends ConsumerState<_MediaTab> {
                     height: 24,
                     child: CircularProgressIndicator(
                         color: Colors.white, strokeWidth: 2))
-                : const Icon(Icons.add_a_photo),
+                : const Icon(LucideIcons.imagePlus),
           ),
         ),
       ],
@@ -2280,7 +2287,7 @@ class _NotesTabState extends ConsumerState<_NotesTab> {
         data: (notes) {
           if (notes.isEmpty) {
             return _EmptyState(
-              icon: Icons.sticky_note_2_outlined,
+              icon: LucideIcons.stickyNote,
               color: Colors.amber.shade700,
               label: 'No notes yet',
             );
@@ -2301,7 +2308,7 @@ class _NotesTabState extends ConsumerState<_NotesTab> {
                     color: colorScheme.errorContainer,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.delete_outline,
+                  child: Icon(LucideIcons.trash2,
                       color: colorScheme.onErrorContainer),
                 ),
                 confirmDismiss: (_) => showDialog<bool>(
@@ -2353,7 +2360,7 @@ class _NotesTabState extends ConsumerState<_NotesTab> {
           child: FloatingActionButton(
             heroTag: 'notes_fab',
             onPressed: _showAddNoteSheet,
-            child: const Icon(Icons.add),
+            child: const Icon(LucideIcons.plus),
           ),
         ),
       ],
@@ -2522,7 +2529,7 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
       children: [
         materials.isEmpty
           ? _EmptyState(
-              icon: Icons.inventory_2_outlined,
+              icon: LucideIcons.package,
               color: Colors.teal,
               label: 'No materials listed yet',
             )
@@ -2597,7 +2604,7 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline,
+                          icon: const Icon(LucideIcons.trash2,
                               size: 18, color: Colors.red),
                           onPressed: () => _deleteMaterial(index),
                           padding: EdgeInsets.zero,
@@ -2615,7 +2622,7 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
           child: FloatingActionButton.extended(
             heroTag: 'materials_fab',
             onPressed: _showAddMaterialSheet,
-            icon: const Icon(Icons.add),
+            icon: const Icon(LucideIcons.plus),
             label: const Text('Add Material'),
           ),
         ),
@@ -2778,7 +2785,7 @@ class _SignatureTabState extends ConsumerState<_SignatureTab> {
                       ),
                       child: Column(
                         children: [
-                          Icon(Icons.draw_outlined,
+                          Icon(LucideIcons.penLine,
                               size: 48, color: colorScheme.outline),
                           const SizedBox(height: 12),
                           Text(
@@ -2798,7 +2805,7 @@ class _SignatureTabState extends ConsumerState<_SignatureTab> {
                           shape: const StadiumBorder(),
                         ),
                         onPressed: _showSignaturePad,
-                        icon: const Icon(Icons.draw_outlined),
+                        icon: const Icon(LucideIcons.penLine),
                         label: const Text('Capture Signature',
                             style: TextStyle(fontWeight: FontWeight.bold)),
                       ),

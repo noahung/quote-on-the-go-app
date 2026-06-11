@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -27,10 +28,10 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
 
   void _showLogInteractionSheet() {
     final typeOptions = [
-      ('call', Icons.phone_outlined, 'Call'),
-      ('email', Icons.mail_outline, 'Email'),
-      ('meeting', Icons.handshake_outlined, 'Meeting'),
-      ('job_log', Icons.work_outline, 'Job Note'),
+      ('call', LucideIcons.phone, 'Call'),
+      ('email', LucideIcons.mail, 'Email'),
+      ('meeting', LucideIcons.handshake, 'Meeting'),
+      ('job_log', LucideIcons.briefcase, 'Job Note'),
     ];
     String selectedType = 'call';
     final titleCtrl = TextEditingController();
@@ -240,7 +241,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
         title: j.title,
         subtitle: 'Job #${j.id.substring(0, j.id.length > 6 ? 6 : j.id.length)}',
         status: j.status ?? 'Scheduled',
-        icon: Icons.construction,
+        icon: LucideIcons.hardHat,
         date: DateTime.tryParse(j.start) ?? DateTime.now(),
         route: '/schedule/job/${j.id}',
       ));
@@ -251,7 +252,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
         title: q.customerName,
         subtitle: q.quotationNumber,
         status: q.status,
-        icon: Icons.description,
+        icon: LucideIcons.fileText,
         date: DateTime.tryParse(q.date) ?? q.createdAt ?? DateTime.now(),
         route: '/quotations/${q.id}',
       ));
@@ -262,7 +263,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
         title: i.customerName,
         subtitle: i.invoiceNumber,
         status: i.status,
-        icon: Icons.receipt,
+        icon: LucideIcons.receipt,
         date: DateTime.tryParse(i.date) ?? i.createdAt ?? DateTime.now(),
         route: '/invoices/${i.id}',
       ));
@@ -289,7 +290,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
           onPressed: _showLogInteractionSheet,
           backgroundColor: const Color(0xFFF4781F),
           foregroundColor: Colors.white,
-          icon: const Icon(Icons.add_comment_outlined),
+          icon: const Icon(LucideIcons.messageCirclePlus),
           label: const Text('Log', style: TextStyle(fontWeight: FontWeight.w700)),
         ),
         body: Column(
@@ -308,7 +309,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                       value: 'edit',
                       child: Row(
                         children: [
-                          Icon(Icons.edit),
+                          Icon(LucideIcons.pencil),
                           SizedBox(width: 8),
                           Text('Edit'),
                         ],
@@ -318,7 +319,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                       value: 'delete',
                       child: Row(
                         children: [
-                          Icon(Icons.delete, color: Colors.red),
+                          Icon(LucideIcons.trash2, color: Colors.red),
                           SizedBox(width: 8),
                           Text('Delete', style: TextStyle(color: Colors.red)),
                         ],
@@ -382,7 +383,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
                               _buildCircularAction(
-                                icon: Icons.call,
+                                icon: LucideIcons.phoneCall,
                                 label: 'Call',
                                 onTap: () {
                                   if (customer.phone != null) {
@@ -393,12 +394,12 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                                 },
                               ),
                               _buildCircularAction(
-                                icon: Icons.mail,
+                                icon: LucideIcons.mail,
                                 label: 'Email',
                                 onTap: () => _action(context, 'Emailing ${customer.email}...'),
                               ),
                               _buildCircularAction(
-                                icon: Icons.chat,
+                                icon: LucideIcons.messageCircle,
                                 label: 'Message',
                                 onTap: () {
                                   if (customer.phone != null) {
@@ -422,19 +423,19 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                       child: Column(
                         children: [
                           _buildContactRow(
-                            icon: Icons.call,
+                            icon: LucideIcons.phoneCall,
                             label: 'PHONE',
                             value: customer.phone ?? 'N/A',
                           ),
                           _buildDivider(isDark),
                           _buildContactRow(
-                            icon: Icons.mail,
+                            icon: LucideIcons.mail,
                             label: 'EMAIL',
                             value: customer.email,
                           ),
                           _buildDivider(isDark),
                           _buildContactRow(
-                            icon: Icons.location_on,
+                            icon: LucideIcons.mapPin,
                             label: 'ADDRESS',
                             value: customer.address ?? 'N/A',
                           ),
@@ -734,12 +735,12 @@ class _CrmTimelineCard extends StatelessWidget {
 
   IconData _iconForType(String type) {
     switch (type) {
-      case 'call': return Icons.phone_outlined;
-      case 'email': return Icons.mail_outline;
-      case 'meeting': return Icons.handshake_outlined;
-      case 'job_log': return Icons.work_outline;
-      case 'portal_view': return Icons.visibility_outlined;
-      default: return Icons.chat_bubble_outline;
+      case 'call': return LucideIcons.phone;
+      case 'email': return LucideIcons.mail;
+      case 'meeting': return LucideIcons.handshake;
+      case 'job_log': return LucideIcons.briefcase;
+      case 'portal_view': return LucideIcons.eye;
+      default: return LucideIcons.messageCircle;
     }
   }
 
@@ -766,7 +767,7 @@ class _CrmTimelineCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.timeline, size: 18, color: colorScheme.primary),
+              Icon(LucideIcons.activity, size: 18, color: colorScheme.primary),
               const SizedBox(width: 8),
               const Text('Interaction Timeline',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),

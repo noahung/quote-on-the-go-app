@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -168,7 +169,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                                 Row(
                                   children: [
                                     IconButton(
-                                      icon: Icon(_isMonthlyView ? Icons.view_week : Icons.calendar_month),
+                                      icon: Icon(_isMonthlyView ? LucideIcons.calendarDays : LucideIcons.calendarDays),
                                       tooltip: _isMonthlyView ? 'Show Week View' : 'Show Month View',
                                       onPressed: () => setState(() => _isMonthlyView = !_isMonthlyView),
                                     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../components/glass_card.dart';
@@ -290,7 +291,7 @@ class _ChecklistTemplatesScreenState extends ConsumerState<ChecklistTemplatesScr
                   child: Column(
                     children: [
                       Icon(
-                        Icons.checklist_outlined,
+                        LucideIcons.listChecks,
                         size: 48,
                         color: colorScheme.onSurface.withValues(alpha: 0.3),
                       ),
@@ -485,7 +486,7 @@ class _ChecklistTemplatesScreenState extends ConsumerState<ChecklistTemplatesScr
                                 color: Colors.white,
                               ),
                             )
-                          : Icon(_editingTemplate != null ? Icons.save : Icons.add),
+                          : Icon(_editingTemplate != null ? LucideIcons.save : LucideIcons.plus),
                       label: Text(_isSaving
                           ? 'Saving...'
                           : (_editingTemplate != null ? 'Save Changes' : 'Create Template')),
@@ -551,7 +552,7 @@ class _TemplateTile extends StatelessWidget {
                 children: [
                   IconButton(
                     icon: Icon(
-                      Icons.edit_outlined,
+                      LucideIcons.pencil,
                       size: 20,
                       color: colorScheme.primary,
                     ),
@@ -559,7 +560,7 @@ class _TemplateTile extends StatelessWidget {
                   ),
                   IconButton(
                     icon: Icon(
-                      Icons.delete_outline,
+                      LucideIcons.trash2,
                       size: 20,
                       color: colorScheme.error,
                     ),
@@ -586,7 +587,7 @@ class _TemplateTile extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(
-                          Icons.check_circle_outline,
+                          LucideIcons.checkCircle,
                           size: 18,
                           color: colorScheme.primary.withValues(alpha: 0.6),
                         ),

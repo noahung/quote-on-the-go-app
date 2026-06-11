@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
@@ -140,7 +141,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.error_outline,
+                      Icon(LucideIcons.alertCircle,
                           color: colorScheme.error, size: 18),
                       const SizedBox(width: 10),
                       Expanded(
@@ -200,8 +201,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscurePassword
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
+                                ? LucideIcons.eyeOff
+                                : LucideIcons.eye,
                             size: 20,
                             color: colorScheme.onSurfaceVariant,
                           ),

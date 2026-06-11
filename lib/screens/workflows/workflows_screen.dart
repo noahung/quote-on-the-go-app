@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../components/curved_header.dart';
 import '../../models/workflow.dart';
@@ -196,7 +197,7 @@ class _WorkflowsScreenState extends ConsumerState<WorkflowsScreen> with SingleTi
                   },
                 ),
                 IconButton(
-                  icon: Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
+                  icon: Icon(isExpanded ? LucideIcons.chevronUp : LucideIcons.chevronDown),
                   onPressed: () => _toggleExpanded(workflow.id),
                 ),
               ],
@@ -232,7 +233,7 @@ class _WorkflowsScreenState extends ConsumerState<WorkflowsScreen> with SingleTi
           context,
           title: 'Trigger: Quote Sent',
           desc: 'Email initiated instantly to customer.',
-          icon: Icons.send_outlined,
+          icon: LucideIcons.send,
           isFirst: true,
           colors: colors,
         ),
@@ -241,7 +242,7 @@ class _WorkflowsScreenState extends ConsumerState<WorkflowsScreen> with SingleTi
           context,
           title: 'Gentle Reminder Email',
           desc: 'Email: "Following up on your quotation".',
-          icon: Icons.mail_outline,
+          icon: LucideIcons.mail,
           colors: colors,
         ),
         _buildStepConnector('Wait: 5 Business Days'),
@@ -249,7 +250,7 @@ class _WorkflowsScreenState extends ConsumerState<WorkflowsScreen> with SingleTi
           context,
           title: 'Final Offer SMS',
           desc: 'SMS Text reminder with 5% limited discount.',
-          icon: Icons.sms_outlined,
+          icon: LucideIcons.messageSquare,
           isLast: true,
           colors: colors,
         ),

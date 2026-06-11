@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -354,7 +355,7 @@ class _Step1PersonalInfo extends StatelessWidget {
                 decoration: InputDecoration(
                   labelText: 'Your Full Name',
                   hintText: 'e.g. Jane Smith',
-                  prefixIcon: const Icon(Icons.person_outline),
+                  prefixIcon: const Icon(LucideIcons.user),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -378,7 +379,7 @@ class _Step1PersonalInfo extends StatelessWidget {
                   shape: const StadiumBorder(),
                 ),
                 onPressed: onNext,
-                icon: const Icon(Icons.arrow_forward, size: 18),
+                icon: const Icon(LucideIcons.arrowRight, size: 18),
                 label: const Text(
                   'Continue',
                   style:
@@ -475,7 +476,7 @@ class _Step2CompanyInfo extends StatelessWidget {
                     decoration: InputDecoration(
                       labelText: 'Company Name *',
                       hintText: 'e.g. Smith Electrical Ltd.',
-                      prefixIcon: const Icon(Icons.business_outlined),
+                      prefixIcon: const Icon(LucideIcons.building2),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -494,7 +495,7 @@ class _Step2CompanyInfo extends StatelessWidget {
                     decoration: InputDecoration(
                       labelText: 'Company Contact Email *',
                       hintText: 'contact@yourcompany.com',
-                      prefixIcon: const Icon(Icons.email_outlined),
+                      prefixIcon: const Icon(LucideIcons.mail),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -513,7 +514,7 @@ class _Step2CompanyInfo extends StatelessWidget {
                     decoration: InputDecoration(
                       labelText: 'Company Phone (optional)',
                       hintText: '+44 7700 900000',
-                      prefixIcon: const Icon(Icons.phone_outlined),
+                      prefixIcon: const Icon(LucideIcons.phone),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -527,7 +528,7 @@ class _Step2CompanyInfo extends StatelessWidget {
                     decoration: InputDecoration(
                       labelText: 'Company Address (optional)',
                       hintText: '123 High Street, London, EC1A 1BB',
-                      prefixIcon: const Icon(Icons.location_on_outlined),
+                      prefixIcon: const Icon(LucideIcons.mapPin),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -552,7 +553,7 @@ class _Step2CompanyInfo extends StatelessWidget {
                       ),
                     ),
                     onPressed: onBack,
-                    icon: const Icon(Icons.arrow_back, size: 18),
+                    icon: const Icon(LucideIcons.arrowLeft, size: 18),
                     label: const Text('Back',
                         style: TextStyle(fontWeight: FontWeight.w600)),
                   ),
@@ -568,7 +569,7 @@ class _Step2CompanyInfo extends StatelessWidget {
                         shape: const StadiumBorder(),
                       ),
                       onPressed: onNext,
-                      icon: const Icon(Icons.arrow_forward, size: 18),
+                      icon: const Icon(LucideIcons.arrowRight, size: 18),
                       label: const Text(
                         'Continue',
                         style: TextStyle(
@@ -670,7 +671,7 @@ class _Step3Branding extends StatelessWidget {
                                   color: colorScheme.error,
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(Icons.close,
+                                child: Icon(LucideIcons.x,
                                     size: 14, color: colorScheme.onError),
                               ),
                             ),
@@ -680,7 +681,7 @@ class _Step3Branding extends StatelessWidget {
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.add_photo_alternate_outlined,
+                          Icon(LucideIcons.imagePlus,
                               size: 40, color: colorScheme.onSurfaceVariant),
                           const SizedBox(height: 8),
                           Text(
@@ -741,29 +742,29 @@ class _Step3Branding extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 _SummaryRow(
-                  icon: Icons.person_outline,
+                  icon: LucideIcons.user,
                   label: 'Name',
                   value: formState.displayName,
                 ),
                 _SummaryRow(
-                  icon: Icons.business_outlined,
+                  icon: LucideIcons.building2,
                   label: 'Company',
                   value: formState.companyName,
                 ),
                 _SummaryRow(
-                  icon: Icons.email_outlined,
+                  icon: LucideIcons.mail,
                   label: 'Email',
                   value: formState.companyEmail,
                 ),
                 if (formState.companyPhone.isNotEmpty)
                   _SummaryRow(
-                    icon: Icons.phone_outlined,
+                    icon: LucideIcons.phone,
                     label: 'Phone',
                     value: formState.companyPhone,
                   ),
                 if (formState.companyAddress.isNotEmpty)
                   _SummaryRow(
-                    icon: Icons.location_on_outlined,
+                    icon: LucideIcons.mapPin,
                     label: 'Address',
                     value: formState.companyAddress,
                   ),
@@ -785,7 +786,7 @@ class _Step3Branding extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.error_outline,
+                  Icon(LucideIcons.alertCircle,
                       color: colorScheme.error, size: 18),
                   const SizedBox(width: 10),
                   Expanded(
@@ -815,7 +816,7 @@ class _Step3Branding extends StatelessWidget {
                     ),
                   ),
                   onPressed: formState.isSubmitting ? null : onBack,
-                  icon: const Icon(Icons.arrow_back, size: 18),
+                  icon: const Icon(LucideIcons.arrowLeft, size: 18),
                   label: const Text('Back',
                       style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
@@ -838,7 +839,7 @@ class _Step3Branding extends StatelessWidget {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white),
                           )
-                        : const Icon(Icons.check, size: 18),
+                        : const Icon(LucideIcons.check, size: 18),
                     label: Text(
                       formState.isSubmitting ? 'Setting up...' : 'Complete Setup',
                       style: const TextStyle(

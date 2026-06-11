@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/providers.dart';
@@ -89,7 +90,7 @@ class NotificationsScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.notifications_none_outlined,
+                      LucideIcons.bell,
                       size: 64,
                       color: colorScheme.outlineVariant,
                     ),
@@ -274,29 +275,29 @@ class _NotificationTile extends StatelessWidget {
   IconData get _icon {
     switch (item.type) {
       case 'quotation_accepted':
-        return Icons.check_circle_outlined;
+        return LucideIcons.checkCircle;
       case 'quotation_declined':
-        return Icons.cancel_outlined;
+        return LucideIcons.xCircle;
       case 'quotation_amended':
-        return Icons.edit_note_outlined;
+        return LucideIcons.pencil;
       case 'invoice_paid':
-        return Icons.payments_outlined;
+        return LucideIcons.creditCard;
       case 'invoice_reminder':
-        return Icons.alarm_outlined;
+        return LucideIcons.alarmClock;
       case 'team_invitation':
-        return Icons.person_add_outlined;
+        return LucideIcons.userPlus;
       case 'job_assigned':
       case 'job_updated':
       case 'job_reminder':
       case 'job':
       case 'schedule':
-        return Icons.calendar_today_outlined;
+        return LucideIcons.calendar;
       case 'customer_created':
       case 'customer_updated':
       case 'customer':
-        return Icons.people_outline;
+        return LucideIcons.users;
       default:
-        return Icons.info_outlined;
+        return LucideIcons.info;
     }
   }
 
