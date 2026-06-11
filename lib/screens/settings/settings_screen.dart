@@ -405,36 +405,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(height: 16),
 
-            // SUBSCRIPTION & REWARDS Section
-            const _SectionHeader(title: 'Subscription & Rewards'),
-            GlassCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  _SubscriptionTile(
-                    tier: company?.tier ?? 'free',
-                    subscriptionStatus: company?.subscriptionStatus,
-                    trialEndsAt: company?.trialEndsAt,
-                    isLoading: _isSubscriptionLoading,
-                    onTap: () => context.push('/billing'),
-                  ),
-                  _buildSubtleDivider(isDark),
-                  ListTile(
-                    leading: Icon(Icons.card_giftcard,
-                        color: const Color(0xFFF4781F)),
-                    title: const Text('Referral Programme',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('Earn free months by referring friends',
-                        style: TextStyle(
-                            color:
-                                colorScheme.onSurface.withValues(alpha: 0.6))),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                    onTap: () => context.push('/referral'),
-                  ),
-                ],
+            // SUBSCRIPTION & REWARDS Section (Owner only)
+            if (userProfile?.role == 'owner') ...[
+              const _SectionHeader(title: 'Subscription & Rewards'),
+              GlassCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    _SubscriptionTile(
+                      tier: company?.tier ?? 'free',
+                      subscriptionStatus: company?.subscriptionStatus,
+                      trialEndsAt: company?.trialEndsAt,
+                      isLoading: _isSubscriptionLoading,
+                      onTap: () => context.push('/billing'),
+                    ),
+                    _buildSubtleDivider(isDark),
+                    ListTile(
+                      leading: Icon(Icons.card_giftcard,
+                          color: const Color(0xFFF4781F)),
+                      title: const Text('Referral Programme',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text('Earn free months by referring friends',
+                          style: TextStyle(
+                              color:
+                                  colorScheme.onSurface.withValues(alpha: 0.6))),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                      onTap: () => context.push('/referral'),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
+            ],
 
             // INTEGRATIONS Section (Owner/Admin only)
             if (userProfile?.role == 'owner' || userProfile?.role == 'admin') ...[
