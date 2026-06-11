@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/providers.dart';
 import '../components/mesh_background.dart';
 import '../theme/semantic_colors.dart';
+import '../models/company.dart';
 
 class ShellScaffold extends ConsumerStatefulWidget {
   final Widget child;
@@ -16,6 +17,7 @@ class ShellScaffold extends ConsumerStatefulWidget {
 }
 
 class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _currentIndex = 0;
 
   void _showQuickActionsBottomSheet(BuildContext context) {
@@ -23,137 +25,92 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      isScrollControlled: true,
+      isScrollControlled: false,
       builder: (context) {
         return BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E1E24) : Colors.white,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(32),
-                topRight: Radius.circular(32),
+          child: SafeArea(
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E24) : Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(32),
+                  topRight: Radius.circular(32),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  )
+                ],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 20,
-                  spreadRadius: 5,
-                )
-              ],
-            ),
-            padding: const EdgeInsets.only(top: 12, bottom: 24, left: 24, right: 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Pull handle
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : Colors.black12,
-                    borderRadius: BorderRadius.circular(2),
+              padding: const EdgeInsets.only(top: 12, bottom: 32, left: 24, right: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Pull handle
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white24 : Colors.black12,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Quick Actions',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Create New',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                // Action Grid
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 1.4,
-                  children: [
-                    _buildActionCard(
-                      context,
-                      title: 'Create Quote',
-                      desc: 'Draft new offer',
-                      icon: Icons.description_outlined,
-                      color: const Color(0xFFF4781F),
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.push('/quotations/new');
-                      },
+                  const SizedBox(height: 8),
+                  Text(
+                    'What would you like to create?',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? Colors.white60 : Colors.black54,
                     ),
-                    _buildActionCard(
-                      context,
-                      title: 'Create Invoice',
-                      desc: 'Log new billing',
-                      icon: Icons.receipt_outlined,
-                      color: Colors.green,
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.push('/invoices/new');
-                      },
-                    ),
-                    _buildActionCard(
-                      context,
-                      title: 'Workflows',
-                      desc: 'Automations',
-                      icon: Icons.auto_mode,
-                      color: Colors.purple,
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.go('/workflows');
-                      },
-                    ),
-                    _buildActionCard(
-                      context,
-                      title: 'Services',
-                      desc: 'Service catalogue',
-                      icon: Icons.construction_outlined,
-                      color: Colors.teal,
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.push('/services');
-                      },
-                    ),
-                    _buildActionCard(
-                      context,
-                      title: 'Pipeline',
-                      desc: 'Sales kanban',
-                      icon: Icons.view_kanban_outlined,
-                      color: Colors.indigo,
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.push('/pipeline');
-                      },
-                    ),
-                    _buildActionCard(
-                      context,
-                      title: 'Analytics',
-                      desc: 'Advanced insights',
-                      icon: Icons.insights,
-                      color: Colors.blue,
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.go('/analytics');
-                      },
-                    ),
-                    _buildActionCard(
-                      context,
-                      title: 'Schedule',
-                      desc: 'Job calendar',
-                      icon: Icons.calendar_today_outlined,
-                      color: Colors.orange,
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.go('/schedule');
-                      },
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 24),
+                  // Action Cards - Now only 2 options
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildActionCard(
+                          context,
+                          title: 'Create Quote',
+                          desc: 'Draft new offer',
+                          icon: Icons.description_outlined,
+                          color: const Color(0xFFF4781F),
+                          onTap: () {
+                            Navigator.pop(context);
+                            context.push('/quotations/new');
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildActionCard(
+                          context,
+                          title: 'Create Invoice',
+                          desc: 'Log new billing',
+                          icon: Icons.receipt_outlined,
+                          color: Colors.green,
+                          onTap: () {
+                            Navigator.pop(context);
+                            context.push('/invoices/new');
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
             ),
           ),
         );
@@ -182,29 +139,32 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
             color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
+        child: SizedBox(
+          height: 90,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 20),
               ),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            const Spacer(),
-            Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              desc,
-              style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54),
-            ),
-          ],
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                desc,
+                style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -218,13 +178,14 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
     final isEffectivelyFreeTier = company?.tier == 'free' || company?.tier == null;
 
     // Update current index based on location
+    // Bottom Nav: 0=Dashboard, 1=Schedule, 2=Customers, 3=Profile
     if (location == '/') {
       _currentIndex = 0;
-    } else if (location.startsWith('/quotations')) {
+    } else if (location.startsWith('/schedule')) {
       _currentIndex = 1;
-    } else if (location.startsWith('/invoices')) {
-      _currentIndex = 2;
     } else if (location.startsWith('/customers')) {
+      _currentIndex = 2;
+    } else if (location.startsWith('/profile')) {
       _currentIndex = 3;
     } else {
       _currentIndex = -1; // No tab selected for subroutes/other routes
@@ -232,7 +193,9 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
 
     return MeshBackground(
       child: Scaffold(
+        key: _scaffoldKey,
         backgroundColor: Colors.transparent, // Transparent to show global MeshBackground
+        drawer: _buildNavigationDrawer(context, company),
         body: widget.child,
         floatingActionButton: Container(
           decoration: BoxDecoration(
@@ -352,24 +315,24 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
                           _buildTabItem(
                             context,
                             index: 1,
-                            icon: Icons.description_outlined,
-                            activeIcon: Icons.description,
-                            label: 'Quotations',
+                            icon: Icons.calendar_today_outlined,
+                            activeIcon: Icons.calendar_today,
+                            label: 'Schedule',
                           ),
                           const SizedBox(width: 48), // Center spacing for FAB
                           _buildTabItem(
                             context,
                             index: 2,
-                            icon: Icons.receipt_outlined,
-                            activeIcon: Icons.receipt,
-                            label: 'Invoices',
+                            icon: Icons.people_outlined,
+                            activeIcon: Icons.people,
+                            label: 'Customers',
                           ),
                           _buildTabItem(
                             context,
                             index: 3,
-                            icon: Icons.people_outlined,
-                            activeIcon: Icons.people,
-                            label: 'Customers',
+                            icon: Icons.person_outline,
+                            activeIcon: Icons.person,
+                            label: 'Profile',
                           ),
                         ],
                       ),
@@ -404,13 +367,13 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
               context.go('/');
               break;
             case 1:
-              context.go('/quotations');
+              context.go('/schedule');
               break;
             case 2:
-              context.go('/invoices');
+              context.go('/customers');
               break;
             case 3:
-              context.go('/customers');
+              context.go('/profile');
               break;
           }
         },
@@ -435,5 +398,247 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
         ),
       ),
     );
+  }
+
+  Widget _buildNavigationDrawer(BuildContext context, Company? company) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final userProfile = ref.watch(userProfileProvider);
+
+    final initials = () {
+      final name = userProfile?.displayName ?? userProfile?.email ?? '';
+      if (name.isEmpty) return '?';
+      final parts = name.split(' ');
+      if (parts.length >= 2) {
+        return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+      }
+      return name[0].toUpperCase();
+    }();
+
+    return NavigationDrawer(
+      backgroundColor: isDark ? const Color(0xFF1E1E24) : Colors.white,
+      children: [
+        // Header with user info
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        initials,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          userProfile?.displayName ?? 'User',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (company?.name != null)
+                          Text(
+                            company!.name,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark ? Colors.white60 : Colors.black54,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Divider(
+                color: isDark ? Colors.white12 : Colors.black12,
+                height: 1,
+              ),
+            ],
+          ),
+        ),
+
+        // Menu Items
+        _buildDrawerItem(
+          context,
+          icon: Icons.description_outlined,
+          label: 'Quotations',
+          onTap: () {
+            Navigator.pop(context);
+            context.go('/quotations');
+          },
+        ),
+        _buildDrawerItem(
+          context,
+          icon: Icons.receipt_outlined,
+          label: 'Invoices',
+          onTap: () {
+            Navigator.pop(context);
+            context.go('/invoices');
+          },
+        ),
+        _buildDrawerItem(
+          context,
+          icon: Icons.view_kanban_outlined,
+          label: 'Pipeline',
+          onTap: () {
+            Navigator.pop(context);
+            context.push('/pipeline');
+          },
+        ),
+        _buildDrawerItem(
+          context,
+          icon: Icons.auto_mode,
+          label: 'Workflows',
+          onTap: () {
+            Navigator.pop(context);
+            context.go('/workflows');
+          },
+        ),
+        _buildDrawerItem(
+          context,
+          icon: Icons.construction_outlined,
+          label: 'Services',
+          onTap: () {
+            Navigator.pop(context);
+            context.push('/services');
+          },
+        ),
+        _buildDrawerItem(
+          context,
+          icon: Icons.insights,
+          label: 'Analytics',
+          onTap: () {
+            Navigator.pop(context);
+            context.go('/analytics');
+          },
+        ),
+        _buildDrawerItem(
+          context,
+          icon: Icons.attach_money_outlined,
+          label: 'Expenses',
+          onTap: () {
+            Navigator.pop(context);
+            context.push('/expenses');
+          },
+        ),
+
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Divider(),
+        ),
+
+        _buildDrawerItem(
+          context,
+          icon: Icons.settings_outlined,
+          label: 'Settings',
+          onTap: () {
+            Navigator.pop(context);
+            context.push('/settings');
+          },
+        ),
+        _buildDrawerItem(
+          context,
+          icon: Icons.help_outline,
+          label: 'Help & Support',
+          onTap: () {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('For support, email support@quoteonthego.co.uk'),
+                duration: Duration(seconds: 4),
+              ),
+            );
+          },
+        ),
+
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildDrawerItem(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final location = GoRouterState.of(context).matchedLocation;
+    final isActive = _isDrawerItemActive(location, label);
+
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: isActive
+            ? const Color(0xFFF4781F)
+            : (isDark ? Colors.white70 : Colors.black54),
+        size: 22,
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+          color: isActive
+              ? const Color(0xFFF4781F)
+              : (isDark ? Colors.white : Colors.black87),
+        ),
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      selected: isActive,
+      selectedColor: const Color(0xFFF4781F),
+      selectedTileColor: isDark
+          ? const Color(0xFFF4781F).withValues(alpha: 0.1)
+          : const Color(0xFFF4781F).withValues(alpha: 0.08),
+      onTap: onTap,
+    );
+  }
+
+  bool _isDrawerItemActive(String location, String label) {
+    switch (label) {
+      case 'Quotations':
+        return location.startsWith('/quotations') && !location.contains('/new');
+      case 'Invoices':
+        return location.startsWith('/invoices') && !location.contains('/new');
+      case 'Pipeline':
+        return location.startsWith('/pipeline');
+      case 'Workflows':
+        return location.startsWith('/workflows');
+      case 'Services':
+        return location.startsWith('/services') && !location.contains('/new');
+      case 'Analytics':
+        return location.startsWith('/analytics');
+      case 'Expenses':
+        return location.startsWith('/expenses');
+      case 'Settings':
+        return location.startsWith('/settings');
+      default:
+        return false;
+    }
   }
 }

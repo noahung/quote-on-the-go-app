@@ -7,6 +7,9 @@ import '../../theme/semantic_colors.dart';
 import '../../components/mesh_background.dart';
 import '../../models/models.dart';
 
+// Key to access the ShellScaffold drawer from dashboard
+final dashboardDrawerKey = GlobalKey<ScaffoldState>();
+
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
@@ -46,14 +49,19 @@ class DashboardScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 child: Row(
                   children: [
+                    // Hamburger menu - opens drawer
                     SizedBox(
                       width: 48,
                       height: 48,
                       child: Center(
                         child: IconButton(
                           padding: EdgeInsets.zero,
-                          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-                          onPressed: () => context.push('/notifications'),
+                          icon: const Icon(Icons.menu, color: Colors.white),
+                          onPressed: () {
+                            // Open the drawer from the parent ShellScaffold
+                            final scaffoldState = Scaffold.maybeOf(context);
+                            scaffoldState?.openDrawer();
+                          },
                         ),
                       ),
                     ),
@@ -69,26 +77,15 @@ class DashboardScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
+                    // Notifications
                     SizedBox(
                       width: 48,
                       height: 48,
                       child: Center(
-                        child: GestureDetector(
-                          onTap: () => context.push('/settings'),
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white24,
-                              border: Border.all(color: Colors.white30, width: 1.5),
-                            ),
-                            child: const Icon(
-                              Icons.person_outline,
-                              size: 18,
-                              color: Colors.white,
-                            ),
-                          ),
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+                          onPressed: () => context.push('/notifications'),
                         ),
                       ),
                     ),

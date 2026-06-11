@@ -195,6 +195,7 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
         backgroundColor: Colors.transparent,
         floatingActionButton: _currentTabIndex == 0
             ? FloatingActionButton.extended(
+                heroTag: 'signature_fab',
                 onPressed: _showSignaturePad,
                 backgroundColor: hasSignature
                     ? const Color(0xFF2E7D32)
@@ -1796,54 +1797,60 @@ class _QuotesTab extends ConsumerWidget {
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (quotes) {
         final linked = quotes.where((q) => q.jobId == jobId).toList();
-        return Scaffold(
-          body: linked.isEmpty
-              ? _EmptyState(
-                  icon: Icons.description_outlined,
-                  color: colorScheme.primary,
-                  label: 'No quotations yet',
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: linked.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (_, i) {
-                    final q = linked[i];
-                    return _QuotationTile(
-                        quotation: q,
-                        onTap: () => context.push('/quotations/${q.id}'));
-                  },
-                ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () {
-              Customer? customer;
-              if (job.customerId != null) {
-                final customers =
-                    ref.read(customersStreamProvider).valueOrNull ?? [];
-                customer = customers.cast<Customer?>().firstWhere(
-                    (c) => c?.id == job.customerId,
-                    orElse: () => null);
-              }
-              // Fallback: build a Customer from job fields if lookup failed
-              customer ??= (job.customerName != null)
-                  ? Customer(
-                      id: job.customerId ?? '',
-                      companyId: '',
-                      name: job.customerName!,
-                      email: '',
-                      address: job.customerAddress,
-                    )
-                  : null;
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) =>
-                      CreateQuotationScreen(prefilledCustomer: customer),
-                ),
-              );
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('New Quote'),
-          ),
+        return Stack(
+          children: [
+            linked.isEmpty
+                ? _EmptyState(
+                    icon: Icons.description_outlined,
+                    color: colorScheme.primary,
+                    label: 'No quotations yet',
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+                    itemCount: linked.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (_, i) {
+                      final q = linked[i];
+                      return _QuotationTile(
+                          quotation: q,
+                          onTap: () => context.push('/quotations/${q.id}'));
+                    },
+                  ),
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: FloatingActionButton.extended(
+                heroTag: 'quotes_fab',
+                onPressed: () {
+                  Customer? customer;
+                  if (job.customerId != null) {
+                    final customers =
+                        ref.read(customersStreamProvider).valueOrNull ?? [];
+                    customer = customers.cast<Customer?>().firstWhere(
+                        (c) => c?.id == job.customerId,
+                        orElse: () => null);
+                  }
+                  customer ??= (job.customerName != null)
+                      ? Customer(
+                          id: job.customerId ?? '',
+                          companyId: '',
+                          name: job.customerName!,
+                          email: '',
+                          address: job.customerAddress,
+                        )
+                      : null;
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          CreateQuotationScreen(prefilledCustomer: customer),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('New Quote'),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -1868,54 +1875,60 @@ class _InvoicesTab extends ConsumerWidget {
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (invoices) {
         final linked = invoices.where((i) => i.jobId == jobId).toList();
-        return Scaffold(
-          body: linked.isEmpty
-              ? _EmptyState(
-                  icon: Icons.receipt_outlined,
-                  color: colorScheme.tertiary,
-                  label: 'No invoices yet',
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: linked.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (_, i) {
-                    final inv = linked[i];
-                    return _InvoiceTile(
-                        invoice: inv,
-                        onTap: () => context.push('/invoices/${inv.id}'));
-                  },
-                ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () {
-              Customer? customer;
-              if (job.customerId != null) {
-                final customers =
-                    ref.read(customersStreamProvider).valueOrNull ?? [];
-                customer = customers.cast<Customer?>().firstWhere(
-                    (c) => c?.id == job.customerId,
-                    orElse: () => null);
-              }
-              // Fallback: build a Customer from job fields if lookup failed
-              customer ??= (job.customerName != null)
-                  ? Customer(
-                      id: job.customerId ?? '',
-                      companyId: '',
-                      name: job.customerName!,
-                      email: '',
-                      address: job.customerAddress,
-                    )
-                  : null;
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) =>
-                      CreateInvoiceScreen(prefilledCustomer: customer),
-                ),
-              );
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('New Invoice'),
-          ),
+        return Stack(
+          children: [
+            linked.isEmpty
+                ? _EmptyState(
+                    icon: Icons.receipt_outlined,
+                    color: colorScheme.tertiary,
+                    label: 'No invoices yet',
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+                    itemCount: linked.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (_, i) {
+                      final inv = linked[i];
+                      return _InvoiceTile(
+                          invoice: inv,
+                          onTap: () => context.push('/invoices/${inv.id}'));
+                    },
+                  ),
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: FloatingActionButton.extended(
+                heroTag: 'invoices_fab',
+                onPressed: () {
+                  Customer? customer;
+                  if (job.customerId != null) {
+                    final customers =
+                        ref.read(customersStreamProvider).valueOrNull ?? [];
+                    customer = customers.cast<Customer?>().firstWhere(
+                        (c) => c?.id == job.customerId,
+                        orElse: () => null);
+                  }
+                  customer ??= (job.customerName != null)
+                      ? Customer(
+                          id: job.customerId ?? '',
+                          companyId: '',
+                          name: job.customerName!,
+                          email: '',
+                          address: job.customerAddress,
+                        )
+                      : null;
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          CreateInvoiceScreen(prefilledCustomer: customer),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('New Invoice'),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -1939,30 +1952,37 @@ class _ExpensesTab extends ConsumerWidget {
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (expenses) {
         final linked = expenses.where((e) => e.jobId == jobId).toList();
-        return Scaffold(
-          body: linked.isEmpty
-              ? _EmptyState(
-                  icon: Icons.payments_outlined,
-                  color: Colors.orange,
-                  label: 'No expenses yet',
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: linked.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (_, i) {
-                    final exp = linked[i];
-                    return _ExpenseTile(expense: exp);
-                  },
+        return Stack(
+          children: [
+            linked.isEmpty
+                ? _EmptyState(
+                    icon: Icons.payments_outlined,
+                    color: Colors.orange,
+                    label: 'No expenses yet',
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+                    itemCount: linked.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (_, i) {
+                      final exp = linked[i];
+                      return _ExpenseTile(expense: exp);
+                    },
+                  ),
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: FloatingActionButton.extended(
+                heroTag: 'expenses_fab',
+                onPressed: () => context.push(
+                  '/expenses/new',
+                  extra: {'jobId': jobId},
                 ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => context.push(
-              '/expenses/new',
-              extra: {'jobId': jobId},
+                icon: const Icon(Icons.add),
+                label: const Text('Log Expense'),
+              ),
             ),
-            icon: const Icon(Icons.add),
-            label: const Text('Log Expense'),
-          ),
+          ],
         );
       },
     );
@@ -2086,8 +2106,9 @@ class _MediaTabState extends ConsumerState<_MediaTab> {
     final colorScheme = Theme.of(context).colorScheme;
     final mediaAsync = ref.watch(jobMediaStreamProvider(widget.jobId));
 
-    return Scaffold(
-      body: mediaAsync.when(
+    return Stack(
+      children: [
+        mediaAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (mediaList) {
@@ -2146,16 +2167,22 @@ class _MediaTabState extends ConsumerState<_MediaTab> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _uploading ? null : _pickAndUpload,
-        child: _uploading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                    color: Colors.white, strokeWidth: 2))
-            : const Icon(Icons.add_a_photo),
-      ),
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: FloatingActionButton(
+            heroTag: 'media_fab',
+            onPressed: _uploading ? null : _pickAndUpload,
+            child: _uploading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2))
+                : const Icon(Icons.add_a_photo),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -2246,8 +2273,9 @@ class _NotesTabState extends ConsumerState<_NotesTab> {
     final textTheme = Theme.of(context).textTheme;
     final notesAsync = ref.watch(jobNotesStreamProvider(widget.jobId));
 
-    return Scaffold(
-      body: notesAsync.when(
+    return Stack(
+      children: [
+        notesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (notes) {
@@ -2320,10 +2348,16 @@ class _NotesTabState extends ConsumerState<_NotesTab> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddNoteSheet,
-        child: const Icon(Icons.add),
-      ),
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: FloatingActionButton(
+            heroTag: 'notes_fab',
+            onPressed: _showAddNoteSheet,
+            child: const Icon(Icons.add),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -2486,8 +2520,9 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
     final totalCost = materials.fold<double>(
         0, (acc, m) => acc + ((m['cost'] as num?) ?? 0).toDouble() * ((m['quantity'] as num?) ?? 1).toDouble());
 
-    return Scaffold(
-      body: materials.isEmpty
+    return Stack(
+      children: [
+        materials.isEmpty
           ? _EmptyState(
               icon: Icons.inventory_2_outlined,
               color: Colors.teal,
@@ -2576,11 +2611,17 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
                 }),
               ],
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddMaterialSheet,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Material'),
-      ),
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: FloatingActionButton.extended(
+            heroTag: 'materials_fab',
+            onPressed: _showAddMaterialSheet,
+            icon: const Icon(Icons.add),
+            label: const Text('Add Material'),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -2643,8 +2684,7 @@ class _SignatureTabState extends ConsumerState<_SignatureTab> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      body: SingleChildScrollView(
+    return SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2771,7 +2811,6 @@ class _SignatureTabState extends ConsumerState<_SignatureTab> {
             ),
           ],
         ),
-      ),
     );
   }
 }

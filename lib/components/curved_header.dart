@@ -6,6 +6,7 @@ class CurvedHeader extends StatelessWidget {
   final List<Widget>? actions;
   final bool? showBackButton;
   final VoidCallback? onBackPressed;
+  final bool showMenuButton;
 
   const CurvedHeader({
     super.key,
@@ -13,6 +14,7 @@ class CurvedHeader extends StatelessWidget {
     this.actions,
     this.showBackButton,
     this.onBackPressed,
+    this.showMenuButton = false,
   });
 
   VoidCallback _buildBackHandler(BuildContext context) {
@@ -52,6 +54,7 @@ class CurvedHeader extends StatelessWidget {
     };
     final isRootPath = path != null && rootShellPaths.contains(path);
     final canPop = showBackButton ?? (path != null ? !isRootPath : Navigator.of(context).canPop());
+    final shouldShowMenu = showMenuButton || (isRootPath && path != '/');
 
     if (isDashboard) {
       // ── Curved gradient header (dashboard only) ──
@@ -111,6 +114,14 @@ class CurvedHeader extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: _buildBackHandler(context),
+                )
+              else if (shouldShowMenu)
+                IconButton(
+                  icon: const Icon(Icons.menu, color: Colors.white),
+                  onPressed: () {
+                    final scaffoldState = Scaffold.maybeOf(context);
+                    scaffoldState?.openDrawer();
+                  },
                 )
               else
                 const SizedBox(width: 16),
