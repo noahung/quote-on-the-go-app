@@ -2,11 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../providers/providers.dart';
-import '../../providers/drawer_controller_provider.dart';
 import '../../models/models.dart';
 import '../../components/glass_card.dart';
 import '../../components/curved_header.dart';
+
+// ─── Sort options ──────────────────────────────────────────────
+enum _SortBy { name, revenue, lastActivity }
+
+// ─── CRM status derived from invoice data ─────────────────────
+enum _CrmStatus { active, overdue, inactive }
+
+_CrmStatus _deriveStatus(Customer c, List<dynamic> invoices) {
+  final ci = invoices.where((i) =>
+      i.customerEmail == c.email || i.customerName == c.name).toList();
+  if (ci.any((i) => i.status == 'Overdue')) return _CrmStatus.overdue;
+  if (ci.any((i) =>
+      i.status == 'Paid' || i.status == 'Sent' || i.status == 'Pending')) {
+    return _CrmStatus.active;
+  }
+  return _CrmStatus.inactive;
+}
 
 class CustomersScreen extends ConsumerStatefulWidget {
   const CustomersScreen({super.key});
@@ -18,6 +35,10 @@ class CustomersScreen extends ConsumerStatefulWidget {
 class _CustomersScreenState extends ConsumerState<CustomersScreen> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
+  _SortBy _sortBy = _SortBy.name;
+  String? _selectedTag;
+
+  static const _brandOrange = Color(0xFFF4781F);
 
   @override
   void initState() {
@@ -33,18 +54,55 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
     super.dispose();
   }
 
+  List<Customer> _applyFiltersAndSort(
+      List<Customer> all, List<dynamic> invoices) {
+    var list = all.where((c) {
+      final matchesSearch = _searchQuery.isEmpty ||
+          c.name.toLowerCase().contains(_searchQuery) ||
+          c.email.toLowerCase().contains(_searchQuery) ||
+          (c.phone ?? '').toLowerCase().contains(_searchQuery);
+      final matchesTag =
+          _selectedTag == null || c.tags.contains(_selectedTag);
+      return matchesSearch && matchesTag;
+    }).toList();
+
+    switch (_sortBy) {
+      case _SortBy.name:
+        list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        break;
+      case _SortBy.revenue:
+        list.sort((a, b) =>
+            (b.totalSpent ?? 0.0).compareTo(a.totalSpent ?? 0.0));
+        break;
+      case _SortBy.lastActivity:
+        list.sort((a, b) {
+          final aT = a.lastSeenAt ?? '';
+          final bT = b.lastSeenAt ?? '';
+          return bT.compareTo(aT);
+        });
+        break;
+    }
+    return list;
+  }
+
+  Set<String> _allTags(List<Customer> customers) {
+    final tags = <String>{};
+    for (final c in customers) {
+      tags.addAll(c.tags);
+    }
+    return tags;
+  }
+
   @override
   Widget build(BuildContext context) {
     final allCustomers = ref.watch(customersProvider);
+    final invoices = ref.watch(invoicesProvider);
     final isLoading = ref.watch(customersStreamProvider).isLoading;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
-    final customers = _searchQuery.isEmpty
-        ? allCustomers
-        : allCustomers.where((c) =>
-            c.name.toLowerCase().contains(_searchQuery) ||
-            c.email.toLowerCase().contains(_searchQuery) ||
-            (c.phone ?? '').toLowerCase().contains(_searchQuery)).toList();
+    final customers = _applyFiltersAndSort(allCustomers, invoices);
+    final allTags = _allTags(allCustomers);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -61,38 +119,69 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
             ],
           ),
 
-          // Search bar
+          // Search + Sort row
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search customers…',
-                hintStyle: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                  fontSize: 14,
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search customers…',
+                      hintStyle: TextStyle(
+                        color: colorScheme.onSurface.withValues(alpha: 0.4),
+                        fontSize: 14,
+                      ),
+                      prefixIcon: Icon(LucideIcons.search,
+                          size: 18,
+                          color: colorScheme.onSurface.withValues(alpha: 0.4)),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.close, size: 18),
+                              onPressed: () => _searchController.clear(),
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: isDark
+                          ? Colors.white.withValues(alpha: 0.06)
+                          : Colors.black.withValues(alpha: 0.05),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
                 ),
-                prefixIcon: Icon(Icons.search,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.close, size: 18),
-                        onPressed: () => _searchController.clear(),
-                      )
-                    : null,
-                filled: true,
-                fillColor: isDark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : Colors.black.withValues(alpha: 0.05),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
+                const SizedBox(width: 8),
+                _SortButton(
+                  current: _sortBy,
+                  onChanged: (v) => setState(() => _sortBy = v),
+                  isDark: isDark,
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              ),
+              ],
             ),
           ),
+
+          // Tag filter chips
+          if (allTags.isNotEmpty)
+            _TagFilterRow(
+              tags: allTags,
+              selected: _selectedTag,
+              onSelected: (t) =>
+                  setState(() => _selectedTag = _selectedTag == t ? null : t),
+              brandColor: _brandOrange,
+            ),
+
+          // Summary strip
+          if (!isLoading && allCustomers.isNotEmpty)
+            _SummaryStrip(
+              total: allCustomers.length,
+              filtered: customers.length,
+              invoices: invoices,
+              customers: allCustomers,
+            ),
 
           Expanded(
             child: isLoading
@@ -100,10 +189,16 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                 : customers.isEmpty
                     ? const _EmptyState()
                     : ListView.builder(
-                        padding: const EdgeInsets.only(left: 16, right: 16, top: 4, bottom: 80),
+                        padding: const EdgeInsets.only(
+                            left: 16, right: 16, top: 4, bottom: 80),
                         itemCount: customers.length,
                         itemBuilder: (context, index) {
-                          return _CustomerCard(customer: customers[index]);
+                          final c = customers[index];
+                          final status = _deriveStatus(c, invoices);
+                          return _CustomerCard(
+                            customer: c,
+                            crmStatus: status,
+                          );
                         },
                       ),
           ),
@@ -113,6 +208,265 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
   }
 }
 
+// ─── Sort button ───────────────────────────────────────────────
+class _SortButton extends StatelessWidget {
+  final _SortBy current;
+  final ValueChanged<_SortBy> onChanged;
+  final bool isDark;
+
+  const _SortButton(
+      {required this.current,
+      required this.onChanged,
+      required this.isDark});
+
+  String get _label {
+    switch (current) {
+      case _SortBy.name:
+        return 'A–Z';
+      case _SortBy.revenue:
+        return '£';
+      case _SortBy.lastActivity:
+        return 'Recent';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<_SortBy>(
+      onSelected: onChanged,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.black.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(LucideIcons.arrowUpDown,
+                size: 15,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.5)),
+            const SizedBox(width: 4),
+            Text(
+              _label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
+      ),
+      itemBuilder: (ctx) => [
+        const PopupMenuItem(value: _SortBy.name, child: Text('Name (A–Z)')),
+        const PopupMenuItem(
+            value: _SortBy.revenue, child: Text('Revenue (High–Low)')),
+        const PopupMenuItem(
+            value: _SortBy.lastActivity, child: Text('Last Activity')),
+      ],
+    );
+  }
+}
+
+// ─── Tag filter chips ─────────────────────────────────────────
+class _TagFilterRow extends StatelessWidget {
+  final Set<String> tags;
+  final String? selected;
+  final ValueChanged<String> onSelected;
+  final Color brandColor;
+
+  const _TagFilterRow(
+      {required this.tags,
+      required this.selected,
+      required this.onSelected,
+      required this.brandColor});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return SizedBox(
+      height: 40,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: tags.map((tag) {
+          final isSelected = selected == tag;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () => onSelected(tag),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? brandColor
+                      : (isDark
+                          ? Colors.white.withValues(alpha: 0.07)
+                          : Colors.black.withValues(alpha: 0.06)),
+                  borderRadius: BorderRadius.circular(99),
+                  border: isSelected
+                      ? null
+                      : Border.all(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.1)
+                              : Colors.black.withValues(alpha: 0.08)),
+                ),
+                child: Text(
+                  tag,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected
+                        ? Colors.white
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+// ─── Summary strip ────────────────────────────────────────────
+class _SummaryStrip extends StatelessWidget {
+  final int total;
+  final int filtered;
+  final List<dynamic> invoices;
+  final List<Customer> customers;
+
+  const _SummaryStrip(
+      {required this.total,
+      required this.filtered,
+      required this.invoices,
+      required this.customers});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final overdue = customers.where((c) {
+      return invoices.any((i) =>
+          (i.customerEmail == c.email || i.customerName == c.name) &&
+          i.status == 'Overdue');
+    }).length;
+
+    final totalRevenue = customers.fold<double>(0.0, (sum, c) {
+      return sum + (c.totalSpent ?? 0.0);
+    });
+
+    final cardColor = isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white;
+    final borderColor = isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06);
+    final labelColor = isDark ? Colors.white38 : Colors.black38;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          children: [
+            _StatCell(
+              value: filtered == total ? '$total' : '$filtered/$total',
+              label: 'Total',
+              valueColor: isDark ? Colors.white : Colors.black87,
+              labelColor: labelColor,
+            ),
+            _StatDivider(color: borderColor),
+            _StatCell(
+              value: '$overdue',
+              label: 'Overdue',
+              valueColor: overdue > 0 ? const Color(0xFFFF3B30) : (isDark ? Colors.white : Colors.black87),
+              labelColor: labelColor,
+            ),
+            _StatDivider(color: borderColor),
+            _StatCell(
+              value: NumberFormat.compactCurrency(symbol: '£').format(totalRevenue),
+              label: 'Revenue',
+              valueColor: isDark ? Colors.white : Colors.black87,
+              labelColor: labelColor,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatCell extends StatelessWidget {
+  final String value;
+  final String label;
+  final Color valueColor;
+  final Color labelColor;
+
+  const _StatCell({
+    required this.value,
+    required this.label,
+    required this.valueColor,
+    required this.labelColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: valueColor,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: labelColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatDivider extends StatelessWidget {
+  final Color color;
+  const _StatDivider({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(width: 1, height: 32, color: color);
+  }
+}
+
+// ─── Empty state ──────────────────────────────────────────────
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
 
@@ -149,85 +503,298 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _CustomerCard extends StatelessWidget {
+// ─── Customer card with swipe gestures ────────────────────────
+class _CustomerCard extends ConsumerWidget {
   final Customer customer;
+  final _CrmStatus crmStatus;
 
-  const _CustomerCard({required this.customer});
+  const _CustomerCard(
+      {required this.customer, required this.crmStatus});
+
+  Color _statusColor(BuildContext context) {
+    switch (crmStatus) {
+      case _CrmStatus.active:
+        return const Color(0xFF137333);
+      case _CrmStatus.overdue:
+        return const Color(0xFFC5221F);
+      case _CrmStatus.inactive:
+        return Colors.grey;
+    }
+  }
+
+  String _statusLabel() {
+    switch (crmStatus) {
+      case _CrmStatus.active:
+        return 'Active';
+      case _CrmStatus.overdue:
+        return 'Overdue';
+      case _CrmStatus.inactive:
+        return 'Inactive';
+    }
+  }
+
+  Color _statusBg() {
+    switch (crmStatus) {
+      case _CrmStatus.active:
+        return const Color(0xFFE6F4EA);
+      case _CrmStatus.overdue:
+        return const Color(0xFFFCE8E6);
+      case _CrmStatus.inactive:
+        return const Color(0xFFF5F5F5);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final initials = customer.name.trim().isEmpty
+        ? '?'
+        : customer.name.trim().split(' ').length > 1
+            ? '${customer.name.trim().split(' ').first[0]}${customer.name.trim().split(' ').last[0]}'.toUpperCase()
+            : customer.name.trim()[0].toUpperCase();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Dismissible(
+        key: ValueKey(customer.id),
+        background: _SwipeBackground(
+          alignment: Alignment.centerLeft,
+          color: const Color(0xFF137333),
+          icon: LucideIcons.phoneCall,
+          label: 'Call',
+        ),
+        secondaryBackground: _SwipeBackground(
+          alignment: Alignment.centerRight,
+          color: const Color(0xFFF4781F),
+          icon: LucideIcons.fileText,
+          label: 'Quote',
+        ),
+        confirmDismiss: (direction) async {
+          if (direction == DismissDirection.startToEnd) {
+            // Call action
+            final phone = customer.phone;
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(phone != null && phone.isNotEmpty
+                      ? 'Calling ${customer.name} ($phone)…'
+                      : 'No phone number for ${customer.name}'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            }
+          } else {
+            // New quote pre-filled with this customer
+            if (context.mounted) {
+              context.push('/quotations/new',
+                  extra: {'prefilledCustomer': customer});
+            }
+          }
+          return false; // never actually dismiss
+        },
+        child: GlassCard(
+          padding: EdgeInsets.zero,
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => context.push('/customers/${customer.id}'),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                // Avatar
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF4781F).withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFFF4781F).withValues(alpha: 0.25),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      initials,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFFF4781F),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                // Main info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              customer.name,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.2,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          // Status chip
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? _statusColor(context).withValues(alpha: 0.2)
+                                  : _statusBg(),
+                              borderRadius: BorderRadius.circular(99),
+                            ),
+                            child: Text(
+                              _statusLabel(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: _statusColor(context),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        customer.email,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: colorScheme.onSurface.withValues(alpha: 0.55),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (customer.phone != null &&
+                          customer.phone!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          customer.phone!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colorScheme.onSurface.withValues(alpha: 0.4),
+                          ),
+                        ),
+                      ],
+                      // Tags row
+                      if (customer.tags.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 4,
+                          children: customer.tags
+                              .take(3)
+                              .map((tag) => _MiniTag(tag: tag, isDark: isDark))
+                              .toList(),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Revenue + chevron
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (customer.totalSpent != null &&
+                        customer.totalSpent! > 0)
+                      Text(
+                        NumberFormat.compactCurrency(symbol: '£')
+                            .format(customer.totalSpent),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFFF4781F),
+                        ),
+                      ),
+                    const SizedBox(height: 4),
+                    Icon(
+                      LucideIcons.chevronRight,
+                      size: 16,
+                      color: colorScheme.onSurface.withValues(alpha: 0.3),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniTag extends StatelessWidget {
+  final String tag;
+  final bool isDark;
+  const _MiniTag({required this.tag, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: GlassCard(
-        padding: EdgeInsets.zero,
-        borderRadius: BorderRadius.circular(24),
-        onTap: () => context.push('/customers/${customer.id}'),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Premium Glowing Initials Avatar Badge
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF4781F).withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFFF4781F).withValues(alpha: 0.25),
-                    width: 1.5,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    customer.name.isNotEmpty ? customer.name[0].toUpperCase() : '?',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFFF4781F),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      customer.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      customer.email,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                    if (customer.phone != null && customer.phone!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        customer.phone!,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: colorScheme.onSurface.withValues(alpha: 0.45),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.08)
+            : Colors.black.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Text(
+        tag,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color:
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
+      ),
+    );
+  }
+}
+
+class _SwipeBackground extends StatelessWidget {
+  final Alignment alignment;
+  final Color color;
+  final IconData icon;
+  final String label;
+
+  const _SwipeBackground({
+    required this.alignment,
+    required this.color,
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      alignment: alignment,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 22),
+          const SizedBox(height: 4),
+          Text(label,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700)),
+        ],
       ),
     );
   }

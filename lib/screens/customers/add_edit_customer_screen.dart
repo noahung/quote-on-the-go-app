@@ -23,6 +23,9 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
+  final _notesController = TextEditingController();
+  final List<String> _tags = [];
+  final _tagController = TextEditingController();
 
   bool _isLoading = false;
   bool get _isEditing => widget.customerId != null;
@@ -42,6 +45,8 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
       _emailController.text = customer.email;
       _phoneController.text = customer.phone ?? '';
       _addressController.text = customer.address ?? '';
+      _notesController.text = customer.notes ?? '';
+      _tags.addAll(customer.tags);
     }
   }
 
@@ -51,6 +56,8 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
     _emailController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
+    _notesController.dispose();
+    _tagController.dispose();
     super.dispose();
   }
 
@@ -84,6 +91,10 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
             'address': _addressController.text.trim().isEmpty
                 ? null
                 : _addressController.text.trim(),
+            'tags': _tags,
+            'notes': _notesController.text.trim().isEmpty
+                ? null
+                : _notesController.text.trim(),
           },
         );
         if (mounted) {
@@ -104,6 +115,10 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
           address: _addressController.text.trim().isEmpty
               ? null
               : _addressController.text.trim(),
+          tags: _tags,
+          notes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
         );
         await repository.createCustomer(customer);
         if (mounted) {
@@ -205,6 +220,58 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
                 decoration: const InputDecoration(
                   labelText: 'Address',
                   prefixIcon: Icon(Icons.location_on_outlined),
+                ),
+                maxLines: 3,
+                textCapitalization: TextCapitalization.sentences,
+              ),
+              const SizedBox(height: 16),
+              // Tags
+              TextFormField(
+                controller: _tagController,
+                decoration: InputDecoration(
+                  labelText: 'Add Tag',
+                  prefixIcon: const Icon(Icons.label_outline),
+                  hintText: 'e.g. VIP, Commercial…',
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () {
+                      final tag = _tagController.text.trim();
+                      if (tag.isNotEmpty && !_tags.contains(tag)) {
+                        setState(() => _tags.add(tag));
+                        _tagController.clear();
+                      }
+                    },
+                  ),
+                ),
+                onFieldSubmitted: (tag) {
+                  if (tag.trim().isNotEmpty && !_tags.contains(tag.trim())) {
+                    setState(() => _tags.add(tag.trim()));
+                    _tagController.clear();
+                  }
+                },
+              ),
+              if (_tags.isNotEmpty) ...[  
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: _tags.map((tag) => Chip(
+                    label: Text(tag),
+                    onDeleted: () => setState(() => _tags.remove(tag)),
+                    deleteIconColor: const Color(0xFFF4781F),
+                    labelStyle: const TextStyle(fontSize: 12),
+                    padding: EdgeInsets.zero,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  )).toList(),
+                ),
+              ],
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _notesController,
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                  prefixIcon: Icon(Icons.notes_outlined),
+                  hintText: 'Internal notes about this customer…',
                 ),
                 maxLines: 3,
                 textCapitalization: TextCapitalization.sentences,

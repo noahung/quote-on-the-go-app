@@ -3,7 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../models/interaction_log.dart';
+import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../components/glass_card.dart';
 import '../../components/curved_header.dart';
@@ -283,6 +283,19 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
       }
     }
 
+    // Health score: 0–100 based on payment history, recency, volume
+    final int healthScore = _computeHealthScore(
+      invoices: customerInvoices,
+      lastSeenAt: customer.lastSeenAt,
+      totalPaid: totalPaid,
+    );
+
+    // Next-action nudge: check days since last interaction
+    final String? nudge = _computeNudge(
+      interactionLogsAsync,
+      customer,
+    );
+
     return MeshBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -378,7 +391,63 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                               color: Colors.grey,
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          // Tags
+                          if (customer.tags.isNotEmpty) ...[  
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              alignment: WrapAlignment.center,
+                              children: customer.tags.map((tag) => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF4781F).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(99),
+                                  border: Border.all(
+                                    color: const Color(0xFFF4781F).withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Text(
+                                  tag,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFFF4781F),
+                                  ),
+                                ),
+                              )).toList(),
+                            ),
+                          ],
+                          const SizedBox(height: 20),
+                          // Quick-create action buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _QuickActionButton(
+                                  icon: LucideIcons.fileText,
+                                  label: 'New Quote',
+                                  color: const Color(0xFFF4781F),
+                                  onTap: () => context.push(
+                                    '/quotations/new',
+                                    extra: {'prefilledCustomer': customer},
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _QuickActionButton(
+                                  icon: LucideIcons.receipt,
+                                  label: 'New Invoice',
+                                  color: const Color(0xFF1976D2),
+                                  onTap: () => context.push(
+                                    '/invoices/new',
+                                    extra: {'prefilledCustomer': customer},
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
@@ -414,7 +483,17 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
+
+                    // Health score card
+                    _HealthScoreCard(score: healthScore),
+                    const SizedBox(height: 16),
+
+                    // Next-action nudge
+                    if (nudge != null)
+                      _NudgeCard(message: nudge),
+                    if (nudge != null)
+                      const SizedBox(height: 16),
 
                     // Contact Info Card
                     GlassCard(
@@ -444,77 +523,85 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Financial Summary Card
+                    // Financial Summary Card — now shows LTV + breakdown
                     GlassCard(
                       borderRadius: BorderRadius.circular(24),
                       padding: const EdgeInsets.all(20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Financial Summary',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
+                          Row(
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  'Financials',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              // LTV badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF4781F).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(99),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(LucideIcons.trendingUp,
+                                        size: 12,
+                                        color: Color(0xFFF4781F)),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'LTV ${NumberFormat.compactCurrency(symbol: '£').format(totalPaid + outstandingBalance)}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFFF4781F),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 16),
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFCE8E6),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'Outstanding Balance',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFFC5221F),
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _FinStat(
+                                  label: 'Total Paid',
+                                  value: NumberFormat.currency(symbol: '£').format(totalPaid),
+                                  valueColor: const Color(0xFF137333),
+                                  bg: const Color(0xFFE6F4EA),
                                 ),
-                                Text(
-                                  NumberFormat.currency(symbol: '£').format(outstandingBalance),
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Color(0xFFC5221F),
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _FinStat(
+                                  label: 'Outstanding',
+                                  value: NumberFormat.currency(symbol: '£').format(outstandingBalance),
+                                  valueColor: outstandingBalance > 0
+                                      ? const Color(0xFFC5221F)
+                                      : const Color(0xFF137333),
+                                  bg: outstandingBalance > 0
+                                      ? const Color(0xFFFCE8E6)
+                                      : const Color(0xFFE6F4EA),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE6F4EA),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'Total Paid',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFF137333),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                Text(
-                                  NumberFormat.currency(symbol: '£').format(totalPaid),
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Color(0xFF137333),
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          const SizedBox(height: 10),
+                          _FinStat(
+                            label: '${customerInvoices.length} invoice${customerInvoices.length == 1 ? '' : 's'}  ·  ${customerQuotations.length} quote${customerQuotations.length == 1 ? '' : 's'}',
+                            value: '',
+                            valueColor: Colors.grey,
+                            bg: Colors.transparent,
+                            isSubtle: true,
                           ),
                         ],
                       ),
@@ -619,6 +706,60 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
         ),
       ),
     );
+  }
+
+  // Health score: 0–100
+  int _computeHealthScore({
+    required List<dynamic> invoices,
+    required String? lastSeenAt,
+    required double totalPaid,
+  }) {
+    int score = 0;
+    // Payment history: max 40 pts
+    final paid = invoices.where((i) => i.status == 'Paid').length;
+    final total = invoices.length;
+    if (total > 0) { score += ((paid / total) * 40).round(); }
+    // Recency: max 30 pts (within last 90 days = full marks)
+    if (lastSeenAt != null) {
+      final last = DateTime.tryParse(lastSeenAt);
+      if (last != null) {
+        final days = DateTime.now().difference(last).inDays;
+        if (days <= 30) {
+          score += 30;
+        } else if (days <= 60) {
+          score += 20;
+        } else if (days <= 90) {
+          score += 10;
+        }
+      }
+    }
+    // Volume: max 30 pts
+    if (totalPaid >= 10000) {
+      score += 30;
+    } else if (totalPaid >= 5000) {
+      score += 20;
+    } else if (totalPaid >= 1000) {
+      score += 10;
+    } else if (totalPaid > 0) {
+      score += 5;
+    }
+    return score.clamp(0, 100);
+  }
+
+  // Next-action nudge
+  String? _computeNudge(
+      AsyncValue<List<InteractionLog>> logsAsync, Customer customer) {
+    final logs = logsAsync.valueOrNull;
+    if (logs == null) return null;
+    if (logs.isEmpty) {
+      return 'No interactions logged yet — start a conversation with ${customer.name}';
+    }
+    final last = logs.first.timestamp;
+    if (last == null) return null;
+    final days = DateTime.now().difference(last).inDays;
+    if (days >= 30) return '${days}d since last interaction — time to follow up!';
+    if (days >= 14) return '${days}d since last contact — consider checking in.';
+    return null;
   }
 
   Widget _buildCircularAction({
@@ -887,6 +1028,255 @@ class _CrmTimelineCard extends StatelessWidget {
                 },
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Quick action button (New Quote / New Invoice)
+// ─────────────────────────────────────────────────────────────────
+class _QuickActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Health Score Card
+// ─────────────────────────────────────────────────────────────────
+class _HealthScoreCard extends StatelessWidget {
+  final int score;
+  const _HealthScoreCard({required this.score});
+
+  Color get _color {
+    if (score >= 70) return const Color(0xFF137333);
+    if (score >= 40) return const Color(0xFFF4781F);
+    return const Color(0xFFC5221F);
+  }
+
+  String get _label {
+    if (score >= 70) return 'Healthy';
+    if (score >= 40) return 'At Risk';
+    return 'Needs Attention';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GlassCard(
+      borderRadius: BorderRadius.circular(24),
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          // Ring
+          SizedBox(
+            width: 64,
+            height: 64,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  value: score / 100,
+                  strokeWidth: 6,
+                  backgroundColor: isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.07),
+                  color: _color,
+                  strokeCap: StrokeCap.round,
+                ),
+                Text(
+                  '$score',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    color: _color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text(
+                      'Customer Health',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: _color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(
+                        _label,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: _color,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Based on payment history, recency & revenue',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Next-action nudge card
+// ─────────────────────────────────────────────────────────────────
+class _NudgeCard extends StatelessWidget {
+  final String message;
+  const _NudgeCard({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFFFC107).withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          const Icon(LucideIcons.bell, size: 18, color: Color(0xFFE65100)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFFE65100),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Financial stat tile
+// ─────────────────────────────────────────────────────────────────
+class _FinStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color valueColor;
+  final Color bg;
+  final bool isSubtle;
+
+  const _FinStat({
+    required this.label,
+    required this.value,
+    required this.valueColor,
+    required this.bg,
+    this.isSubtle = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isSubtle) {
+      return Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
+        ),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: valueColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: valueColor,
+            ),
           ),
         ],
       ),

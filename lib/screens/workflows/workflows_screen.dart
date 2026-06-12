@@ -70,15 +70,25 @@ class _WorkflowsScreenState extends ConsumerState<WorkflowsScreen> with SingleTi
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Container(
+                height: 44,
                 decoration: BoxDecoration(
                   color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.04),
                   borderRadius: BorderRadius.circular(16),
                 ),
+                padding: const EdgeInsets.all(4),
                 child: TabBar(
                   controller: _tabController,
-                  indicatorColor: const Color(0xFFF4781F),
-                  labelColor: const Color(0xFFF4781F),
-                  unselectedLabelColor: isDark ? Colors.white54 : Colors.black54,
+                  dividerColor: Colors.transparent,
+                  indicatorColor: Colors.transparent,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  indicator: BoxDecoration(
+                    color: const Color(0xFFF4781F),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  labelColor: Colors.white,
+                  unselectedLabelColor: isDark ? Colors.white70 : Colors.black87,
+                  labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                   tabs: const [
                     Tab(text: 'Active Sequences'),
                     Tab(text: 'Template Library'),
@@ -215,46 +225,99 @@ class _WorkflowsScreenState extends ConsumerState<WorkflowsScreen> with SingleTi
     );
   }
 
+  IconData _stepIcon(String type) {
+    switch (type) {
+      case 'send_email':
+        return LucideIcons.mail;
+      case 'send_sms':
+        return LucideIcons.messageSquare;
+      case 'wait':
+        return LucideIcons.clock;
+      default:
+        return LucideIcons.zap;
+    }
+  }
+
+  String _stepTitle(WorkflowStep step) {
+    switch (step.type) {
+      case 'send_email':
+        return step.subject != null && step.subject!.isNotEmpty
+            ? 'Email: ${step.subject}'
+            : 'Send Email';
+      case 'send_sms':
+        return step.subject != null && step.subject!.isNotEmpty
+            ? 'SMS: ${step.subject}'
+            : 'Send SMS';
+      case 'wait':
+        final d = step.waitDays ?? 1;
+        return 'Wait $d ${d == 1 ? 'day' : 'days'}';
+      default:
+        return step.type.replaceAll('_', ' ');
+    }
+  }
+
+  String _stepDesc(WorkflowStep step) {
+    switch (step.type) {
+      case 'send_email':
+        return step.body != null && step.body!.isNotEmpty ? step.body! : 'Email message';
+      case 'send_sms':
+        return 'SMS notification to customer';
+      case 'wait':
+        return 'Pause before next action';
+      default:
+        return '';
+    }
+  }
+
   Widget _buildSequenceVisualizer(
     BuildContext context,
     WorkflowTemplate workflow,
     SemanticColors colors,
     bool isDark,
   ) {
+    final steps = List<WorkflowStep>.from(workflow.steps)
+      ..sort((a, b) => a.order.compareTo(b.order));
+
+    if (steps.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          'No steps defined for this workflow.',
+          style: TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+      );
+    }
+
+    final widgets = <Widget>[
+      const Text(
+        'Automation Sequence Steps:',
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFF4781F)),
+      ),
+      const SizedBox(height: 16),
+    ];
+
+    for (int i = 0; i < steps.length; i++) {
+      final step = steps[i];
+      widgets.add(_buildStepNode(
+        context,
+        title: _stepTitle(step),
+        desc: _stepDesc(step),
+        icon: _stepIcon(step.type),
+        isFirst: i == 0,
+        isLast: i == steps.length - 1,
+        colors: colors,
+      ));
+      if (step.type == 'wait' && i < steps.length - 1) {
+        final d = step.waitDays ?? 1;
+        widgets.add(_buildStepConnector('Wait: $d ${d == 1 ? 'day' : 'days'}'));
+      } else if (i < steps.length - 1) {
+        widgets.add(_buildStepConnector('then'));
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Automation Sequence Steps:',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFF4781F)),
-        ),
-        const SizedBox(height: 16),
-        _buildStepNode(
-          context,
-          title: 'Trigger: Quote Sent',
-          desc: 'Email initiated instantly to customer.',
-          icon: LucideIcons.send,
-          isFirst: true,
-          colors: colors,
-        ),
-        _buildStepConnector('Wait: 3 Business Days'),
-        _buildStepNode(
-          context,
-          title: 'Gentle Reminder Email',
-          desc: 'Email: "Following up on your quotation".',
-          icon: LucideIcons.mail,
-          colors: colors,
-        ),
-        _buildStepConnector('Wait: 5 Business Days'),
-        _buildStepNode(
-          context,
-          title: 'Final Offer SMS',
-          desc: 'SMS Text reminder with 5% limited discount.',
-          icon: LucideIcons.messageSquare,
-          isLast: true,
-          colors: colors,
-        ),
-      ],
+      children: widgets,
     );
   }
 
@@ -324,35 +387,53 @@ class _WorkflowsScreenState extends ConsumerState<WorkflowsScreen> with SingleTi
     );
   }
 
+  static const List<Map<String, dynamic>> _kTemplates = [
+    {
+      'title': 'High-Value Client Sequence',
+      'desc': 'Special high-touch delay triggers and customized premium emails designed for corporate jobs.',
+      'trigger': 'QUOTE SENT > £5,000',
+      'type': 'quotation_sent',
+      'steps': [
+        {'order': 0, 'type': 'send_email', 'subject': 'Your Quotation is Ready', 'body': 'Dear customer, please find your tailored quotation attached.'},
+        {'order': 1, 'type': 'wait', 'waitDays': 3},
+        {'order': 2, 'type': 'send_email', 'subject': 'Following Up on Your Quotation', 'body': 'Just checking in — we would love to help with your project.'},
+        {'order': 3, 'type': 'wait', 'waitDays': 5},
+        {'order': 4, 'type': 'send_sms', 'subject': 'Final reminder: your quote is still valid. Reply to confirm.'},
+      ],
+    },
+    {
+      'title': 'Invoice Overdue Automated Alert',
+      'desc': 'Triggers 3 emails and an SMS over 14 days when invoices pass the due date.',
+      'trigger': 'INVOICE OVERDUE 1 DAY',
+      'type': 'invoice_overdue',
+      'steps': [
+        {'order': 0, 'type': 'send_email', 'subject': 'Invoice Overdue Reminder', 'body': 'Your invoice is now overdue. Please arrange payment at your earliest convenience.'},
+        {'order': 1, 'type': 'wait', 'waitDays': 3},
+        {'order': 2, 'type': 'send_email', 'subject': 'Second Overdue Notice', 'body': 'This is a second reminder that your invoice remains unpaid.'},
+        {'order': 3, 'type': 'wait', 'waitDays': 7},
+        {'order': 4, 'type': 'send_sms', 'subject': 'Urgent: Invoice overdue. Please contact us immediately.'},
+        {'order': 5, 'type': 'wait', 'waitDays': 4},
+        {'order': 6, 'type': 'send_email', 'subject': 'Final Overdue Notice', 'body': 'We have not received payment. This is our final notice before further action.'},
+      ],
+    },
+    {
+      'title': 'Quick Feedback Collection',
+      'desc': 'Sends a polite satisfaction survey link 2 days after payment confirmation.',
+      'trigger': 'INVOICE PAID',
+      'type': 'invoice_paid',
+      'steps': [
+        {'order': 0, 'type': 'wait', 'waitDays': 2},
+        {'order': 1, 'type': 'send_email', 'subject': 'How Did We Do?', 'body': 'Thank you for your payment! We would love your feedback — it only takes 1 minute.'},
+      ],
+    },
+  ];
+
   Widget _buildLibraryTab(BuildContext context, SemanticColors colors, bool isDark) {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      children: [
-        _buildLibraryCard(
-          context,
-          colors,
-          isDark,
-          title: 'High-Value Client Sequence',
-          desc: 'Special high-touch delay triggers and customized premium emails designed for corporate jobs.',
-          trigger: 'QUOTE SENT > £5,000',
-        ),
-        _buildLibraryCard(
-          context,
-          colors,
-          isDark,
-          title: 'Invoice Overdue Automated Alert',
-          desc: 'Triggers 3 emails and an SMS over 14 days when invoices pass the due date.',
-          trigger: 'INVOICE OVERDUE 1 DAY',
-        ),
-        _buildLibraryCard(
-          context,
-          colors,
-          isDark,
-          title: 'Quick Feedback Collection',
-          desc: 'Sends a polite satisfaction survey link 2 days after payment confirmation.',
-          trigger: 'INVOICE PAID',
-        ),
-      ],
+      children: _kTemplates
+          .map((t) => _buildLibraryCard(context, colors, isDark, template: t))
+          .toList(),
     );
   }
 
@@ -360,10 +441,11 @@ class _WorkflowsScreenState extends ConsumerState<WorkflowsScreen> with SingleTi
     BuildContext context,
     SemanticColors colors,
     bool isDark, {
-    required String title,
-    required String desc,
-    required String trigger,
+    required Map<String, dynamic> template,
   }) {
+    final title = template['title'] as String;
+    final desc = template['desc'] as String;
+    final trigger = template['trigger'] as String;
     return Card(
       elevation: 0,
       color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
@@ -384,19 +466,23 @@ class _WorkflowsScreenState extends ConsumerState<WorkflowsScreen> with SingleTi
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: colors.success.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    'Trigger: $trigger',
-                    style: TextStyle(color: colors.success, fontSize: 9, fontWeight: FontWeight.bold),
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: colors.success.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Trigger: $trigger',
+                      style: TextStyle(color: colors.success, fontSize: 9, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 OutlinedButton(
-                  onPressed: () {},
+                  onPressed: () => _useTemplate(context, template),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Color(0xFFF4781F)),
                     foregroundColor: const Color(0xFFF4781F),
@@ -409,6 +495,14 @@ class _WorkflowsScreenState extends ConsumerState<WorkflowsScreen> with SingleTi
             )
           ],
         ),
+      ),
+    );
+  }
+
+  void _useTemplate(BuildContext context, Map<String, dynamic> template) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CreateWorkflowScreen(prefillTemplate: template),
       ),
     );
   }

@@ -5,6 +5,20 @@ part 'workflow.freezed.dart';
 part 'workflow.g.dart';
 
 @freezed
+class WorkflowStep with _$WorkflowStep {
+  const factory WorkflowStep({
+    required int order,
+    required String type,
+    String? subject,
+    String? body,
+    int? waitDays,
+  }) = _WorkflowStep;
+
+  factory WorkflowStep.fromJson(Map<String, dynamic> json) =>
+      _$WorkflowStepFromJson(json);
+}
+
+@freezed
 class WorkflowTemplate with _$WorkflowTemplate {
   const factory WorkflowTemplate({
     required String id,
@@ -13,6 +27,7 @@ class WorkflowTemplate with _$WorkflowTemplate {
     required String type,
     required bool isActive,
     required String companyId,
+    @Default([]) List<WorkflowStep> steps,
     @TimestampConverter() DateTime? createdAt,
     @TimestampConverter() DateTime? updatedAt,
   }) = _WorkflowTemplate;
@@ -23,6 +38,13 @@ class WorkflowTemplate with _$WorkflowTemplate {
   factory WorkflowTemplate.fromFirestore(DocumentSnapshot doc) {
     final data = Map<String, dynamic>.from(doc.data() as Map<String, dynamic>);
     _convertTimestamps(data);
+    if (data['steps'] is List) {
+      data['steps'] = (data['steps'] as List)
+          .map((s) => Map<String, dynamic>.from(s as Map))
+          .toList();
+    } else {
+      data['steps'] = <Map<String, dynamic>>[];
+    }
     return WorkflowTemplate.fromJson({
       'name': '',
       'type': '',

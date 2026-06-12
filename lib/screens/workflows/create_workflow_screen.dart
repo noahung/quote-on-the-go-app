@@ -49,7 +49,9 @@ class _WorkflowStep {
 }
 
 class CreateWorkflowScreen extends ConsumerStatefulWidget {
-  const CreateWorkflowScreen({super.key});
+  final Map<String, dynamic>? prefillTemplate;
+
+  const CreateWorkflowScreen({super.key, this.prefillTemplate});
 
   @override
   ConsumerState<CreateWorkflowScreen> createState() =>
@@ -61,9 +63,35 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   String _selectedTrigger = _kTriggers.first;
-  final List<_WorkflowStep> _steps = [_WorkflowStep()];
+  List<_WorkflowStep> _steps = [];
   bool _isActive = true;
   bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final t = widget.prefillTemplate;
+    if (t != null) {
+      _nameController.text = t['title'] as String? ?? '';
+      _descriptionController.text = t['desc'] as String? ?? '';
+      final type = t['type'] as String?;
+      if (type != null && _kTriggers.contains(type)) {
+        _selectedTrigger = type;
+      }
+      final rawSteps = t['steps'] as List?;
+      if (rawSteps != null && rawSteps.isNotEmpty) {
+        _steps = rawSteps.map((s) {
+          final m = s as Map;
+          final step = _WorkflowStep(actionType: m['type'] as String? ?? 'send_email');
+          step.subject = m['subject'] as String? ?? '';
+          step.body = m['body'] as String? ?? '';
+          step.waitDays = m['waitDays'] as int? ?? 1;
+          return step;
+        }).toList();
+      }
+    }
+    if (_steps.isEmpty) _steps = [_WorkflowStep()];
+  }
 
   @override
   void dispose() {
@@ -106,7 +134,7 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
         };
       }).toList();
 
-      await FirebaseFirestore.instance.collection('workflowTemplates').add({
+      await FirebaseFirestore.instance.collection('workflows').add({
         'companyId': companyId,
         'createdBy': userProfile.uid,
         'name': _nameController.text.trim(),

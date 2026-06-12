@@ -23,6 +23,9 @@ class Customer with _$Customer {
     // QuickBooks Integration
     String? quickbooksCustomerId,
     @TimestampConverter() DateTime? quickbooksLastSyncAt,
+    // CRM Segmentation
+    @Default([]) List<String> tags,
+    String? notes,
     // Monday.com Integration
     String? mondayItemId,
     String? mondayBoardId,
