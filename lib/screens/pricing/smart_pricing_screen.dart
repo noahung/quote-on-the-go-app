@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../components/curved_header.dart';
 import '../../theme/semantic_colors.dart';
 import '../../providers/providers.dart';
@@ -91,7 +92,7 @@ class _SmartPricingScreenState extends ConsumerState<SmartPricingScreen> with Si
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       color: isDark
                           ? Colors.white.withValues(alpha: 0.05)
@@ -102,17 +103,39 @@ class _SmartPricingScreenState extends ConsumerState<SmartPricingScreen> with Si
                       child: DropdownButton<String>(
                         value: _selectedServiceId,
                         isExpanded: true,
+                        isDense: true,
                         borderRadius: BorderRadius.circular(20),
                         dropdownColor: isDark
-                            ? const Color(0xFF1E1E2C)
-                            : const Color(0xFFF0F4F9),
-                        hint: const Text('Select Service to Optimize'),
+                            ? const Color(0xFF18181C)
+                            : Colors.white,
+                        style: TextStyle(
+                          color: isDark ? Colors.white : const Color(0xFF1F1F1F),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        icon: Icon(
+                          LucideIcons.chevronDown,
+                          color: isDark ? Colors.white60 : Colors.black45,
+                          size: 18,
+                        ),
+                        hint: Text(
+                          'Select Service to Optimize',
+                          style: TextStyle(
+                            color: isDark ? Colors.white60 : Colors.black45,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                         items: services.map((s) {
                           return DropdownMenuItem<String>(
                             value: s.id,
                             child: Text(
                               s.name,
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: isDark ? Colors.white : const Color(0xFF1F1F1F),
+                              ),
                             ),
                           );
                         }).toList(),

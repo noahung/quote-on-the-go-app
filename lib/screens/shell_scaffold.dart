@@ -532,6 +532,15 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
         ),
         _buildDrawerItem(
           context,
+          icon: LucideIcons.coins,
+          label: 'Smart Pricing',
+          onTap: () {
+            Navigator.pop(context);
+            context.push('/pricing');
+          },
+        ),
+        _buildDrawerItem(
+          context,
           icon: LucideIcons.trendingUp,
           label: 'Analytics',
           onTap: () {
@@ -633,6 +642,8 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
         return location.startsWith('/workflows');
       case 'Services':
         return location.startsWith('/services') && !location.contains('/new');
+      case 'Smart Pricing':
+        return location.startsWith('/pricing');
       case 'Analytics':
         return location.startsWith('/analytics');
       case 'Expenses':
