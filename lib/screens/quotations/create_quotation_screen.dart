@@ -138,9 +138,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
               : _notesController.text.trim(),
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Quotation updated successfully')),
-          );
+          ref.read(feedbackControllerProvider).success(context, 'Quotation updated successfully');
           context.pop();
         }
       } else {
@@ -176,7 +174,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
             type: CelebrationType.checkmark,
             title: 'Quotation Created',
             subtitle: 'Your quotation has been saved successfully',
-            onDone: () => context.go('/quotations/$newId'),
+            onDone: () => context.go('/pdf-preview/quotation/$newId'),
           );
         }
       }
@@ -272,7 +270,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
             Text(
               _isEditing ? 'Edit Quotation' : 'Create New Quote',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: Theme.of(context).colorScheme.onSurface,
               ),

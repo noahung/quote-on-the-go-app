@@ -81,8 +81,8 @@ class CurvedHeader extends StatelessWidget {
                     title,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -129,8 +129,8 @@ class CurvedHeader extends StatelessWidget {
                     title,
                     style: TextStyle(
                       color: colorScheme.onSurface,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
                     ),
                     overflow: TextOverflow.ellipsis,

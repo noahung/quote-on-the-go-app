@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 
 /// A premium, glassmorphic frosted card container.
@@ -32,8 +31,8 @@ class GlassCard extends StatelessWidget {
     final effectiveBorder = border; // No borders by default for a clean Gemini look
 
     final backgroundColor = isDark
-        ? Colors.black.withValues(alpha: 0.35)
-        : Colors.white.withValues(alpha: 0.45);
+        ? const Color(0xFF1E1E24)
+        : const Color(0xFFF0F4F9);
 
     Widget cardContent = Container(
       width: width,
@@ -55,12 +54,6 @@ class GlassCard extends StatelessWidget {
       );
     }
 
-    return ClipRRect(
-      borderRadius: effectiveBorderRadius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: cardContent,
-      ),
-    );
+    return cardContent;
   }
 }

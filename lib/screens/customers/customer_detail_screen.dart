@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../components/glass_card.dart';
@@ -22,9 +23,7 @@ class CustomerDetailScreen extends ConsumerStatefulWidget {
 class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
   String get customerId => widget.customerId;
 
-  void _action(BuildContext context, String message) {
-    ref.read(feedbackControllerProvider).success(context, message);
-  }
+
 
   void _showLogInteractionSheet() {
     final typeOptions = [
@@ -451,27 +450,36 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                               _buildCircularAction(
                                 icon: LucideIcons.phoneCall,
                                 label: 'Call',
-                                onTap: () {
-                                  if (customer.phone != null) {
-                                    _action(context, 'Calling ${customer.name} (${customer.phone})...');
+                                onTap: () async {
+                                  if (customer.phone != null && customer.phone!.trim().isNotEmpty) {
+                                    final uri = Uri.parse('tel:${customer.phone}');
+                                    if (await canLaunchUrl(uri)) {
+                                      await launchUrl(uri);
+                                    } else {
+                                      if (context.mounted) {
+                                        ref.read(feedbackControllerProvider).error(context, 'Could not launch dialer.');
+                                      }
+                                    }
                                   } else {
-                                    _action(context, 'No phone number available.');
+                                    ref.read(feedbackControllerProvider).error(context, 'No phone number available.');
                                   }
                                 },
                               ),
                               _buildCircularAction(
                                 icon: LucideIcons.mail,
                                 label: 'Email',
-                                onTap: () => _action(context, 'Emailing ${customer.email}...'),
-                              ),
-                              _buildCircularAction(
-                                icon: LucideIcons.messageCircle,
-                                label: 'Message',
-                                onTap: () {
-                                  if (customer.phone != null) {
-                                    _action(context, 'Messaging ${customer.name} (${customer.phone})...');
+                                onTap: () async {
+                                  if (customer.email.trim().isNotEmpty) {
+                                    final uri = Uri.parse('mailto:${customer.email}');
+                                    if (await canLaunchUrl(uri)) {
+                                      await launchUrl(uri);
+                                    } else {
+                                      if (context.mounted) {
+                                        ref.read(feedbackControllerProvider).error(context, 'Could not launch email app.');
+                                      }
+                                    }
                                   } else {
-                                    _action(context, 'No phone number available.');
+                                    ref.read(feedbackControllerProvider).error(context, 'No email address available.');
                                   }
                                 },
                               ),

@@ -1,12 +1,10 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../models/feedback_type.dart';
 
-/// Attractive flash message overlay - replaces standard SnackBar
-/// Fade in/out at center with glass morphism design
-/// Auto-dismisses after 3 seconds with progress indicator
+/// Clean, attractive floating pill-shaped toast notification matching the Google Gemini aesthetic.
+/// Appears at the bottom center of the screen and does not block touch interactions.
 class FlashMessage extends StatefulWidget {
   final FlashMessageType type;
   final String message;
@@ -25,7 +23,6 @@ class FlashMessage extends StatefulWidget {
     this.onAction,
   });
 
-  /// Show flash message as overlay
   static OverlayEntry? _currentEntry;
   static Timer? _hideTimer;
 
@@ -37,34 +34,23 @@ class FlashMessage extends StatefulWidget {
     String? actionLabel,
     VoidCallback? onAction,
   }) {
-    // Remove existing message if any
     hide();
 
     final overlay = Overlay.of(context);
-    
     final mediaQuery = MediaQuery.of(context);
-    
+
     _currentEntry = OverlayEntry(
       builder: (context) => Material(
         type: MaterialType.transparency,
         child: Stack(
           children: [
-            // Backdrop to capture taps
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: hide,
-                child: Container(
-                  color: Colors.black.withValues(alpha: 0.3),
-                ),
-              ),
-            ),
-            // Centered flash message
-            Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 32.0,
-                  vertical: mediaQuery.viewInsets.bottom + 24,
-                ),
+            // Positioned at the bottom center, floating above standard bottom sheets/navbars
+            Positioned(
+              bottom: mediaQuery.padding.bottom + 80,
+              left: 24,
+              right: 24,
+              child: Align(
+                alignment: Alignment.bottomCenter,
                 child: FlashMessage(
                   type: type,
                   message: message,
@@ -87,7 +73,6 @@ class FlashMessage extends StatefulWidget {
 
     overlay.insert(_currentEntry!);
 
-    // Auto hide - longer duration if has action
     final actualDuration = onAction != null
         ? const Duration(seconds: 5)
         : duration;
@@ -109,9 +94,8 @@ class FlashMessage extends StatefulWidget {
 class _FlashMessageState extends State<FlashMessage>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _slideAnimation;
+  late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
-  late Animation<double> _progressAnimation;
 
   @override
   void initState() {
@@ -119,10 +103,13 @@ class _FlashMessageState extends State<FlashMessage>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 250),
     );
 
-    _slideAnimation = Tween<double>(begin: -100, end: 0).animate(
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.4),
+      end: Offset.zero,
+    ).animate(
       CurvedAnimation(
         parent: _controller,
         curve: Curves.easeOutCubic,
@@ -136,27 +123,10 @@ class _FlashMessageState extends State<FlashMessage>
       ),
     );
 
-    _progressAnimation = Tween<double>(begin: 1, end: 0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.0, 1.0, curve: Curves.linear),
-      ),
-    );
-
-    // Start entrance animation
     _controller.forward();
-
-    // Start progress animation after entrance
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        _controller.animateTo(
-          0,
-          duration: widget.duration,
-          curve: Curves.linear,
-        ).then((_) {
-          if (mounted) _dismiss();
-        });
-      }
+    
+    Future.delayed(widget.duration, () {
+      if (mounted) _dismiss();
     });
   }
 
@@ -168,7 +138,6 @@ class _FlashMessageState extends State<FlashMessage>
 
   void _dismiss() {
     if (!mounted) return;
-    
     _controller.reverse().then((_) {
       widget.onDismiss?.call();
     });
@@ -179,191 +148,81 @@ class _FlashMessageState extends State<FlashMessage>
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final (icon, iconColor, accentColor) = _getColors(colorScheme);
+    final (icon, iconColor) = _getColors(colorScheme);
 
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Opacity(
-          opacity: _fadeAnimation.value,
-          child: GestureDetector(
-            onTap: _dismiss,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                child: Container(
-                  decoration: BoxDecoration(
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark
+                ? const Color(0xFF2C2C35) // Gemini dark theme pill background
+                : Colors.white,           // Gemini light theme pill background
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: iconColor,
+                size: 18,
+              ),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  widget.message,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                     color: isDark
-                        ? const Color(0xFF1C1C1E).withValues(alpha: 0.95)
-                        : Colors.white.withValues(alpha: 0.95),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 40,
-                        offset: const Offset(0, 20),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                        // Progress bar at top
-                        Container(
-                          height: 3,
-                          decoration: BoxDecoration(
-                            color: accentColor.withValues(alpha: 0.2),
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(16),
-                            ),
-                          ),
-                          child: FractionallySizedBox(
-                            alignment: Alignment.centerLeft,
-                            widthFactor: 1 - _controller.value,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: accentColor,
-                                borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(16),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        
-                        // Content
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
-                          child: Row(
-                            children: [
-                              // Left accent line
-                              Container(
-                                width: 4,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: accentColor,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              
-                              // Icon
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: accentColor.withValues(alpha: 0.12),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  icon,
-                                  color: iconColor,
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              
-                              // Message
-                              Expanded(
-                                child: Text(
-                                  widget.message,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: colorScheme.onSurface,
-                                    height: 1.3,
-                                  ),
-                                ),
-                              ),
-
-                              // Action button (if provided)
-                              if (widget.actionLabel != null && widget.onAction != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: GestureDetector(
-                                    onTap: widget.onAction,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: accentColor,
-                                        borderRadius: BorderRadius.circular(999),
-                                      ),
-                                      child: Text(
-                                        widget.actionLabel!,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                              // Dismiss button
-                              Material(
-                                color: Colors.transparent,
-                                borderRadius: BorderRadius.circular(20),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(20),
-                                  onTap: _dismiss,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(4),
-                                    child: Icon(
-                                      LucideIcons.x,
-                                      size: 18,
-                                      color: colorScheme.onSurface.withValues(alpha: 0.5),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                        ? const Color(0xFFF1F1F4)
+                        : const Color(0xFF1F1F1F),
                   ),
                 ),
               ),
-            ),
-          );
-      },
+              if (widget.actionLabel != null && widget.onAction != null) ...[
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: widget.onAction,
+                  child: Text(
+                    widget.actionLabel!,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  (IconData, Color, Color) _getColors(ColorScheme colorScheme) {
+  (IconData, Color) _getColors(ColorScheme colorScheme) {
     final brandOrange = colorScheme.primary; // #F4781F
     
-    // All messages use brand orange theme
     switch (widget.type) {
       case FlashMessageType.success:
-        return (
-          LucideIcons.checkCircle,
-          brandOrange,
-          brandOrange,
-        );
+        return (LucideIcons.checkCircle2, brandOrange);
       case FlashMessageType.error:
-        return (
-          LucideIcons.alertCircle,
-          brandOrange,
-          brandOrange,
-        );
+        return (LucideIcons.alertCircle, brandOrange);
       case FlashMessageType.info:
-        return (
-          LucideIcons.info,
-          brandOrange,
-          brandOrange,
-        );
+        return (LucideIcons.info, brandOrange);
       case FlashMessageType.warning:
-        return (
-          LucideIcons.triangleAlert,
-          brandOrange,
-          brandOrange,
-        );
+        return (LucideIcons.triangleAlert, brandOrange);
     }
   }
 }

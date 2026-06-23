@@ -152,9 +152,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
               : _notesController.text.trim(),
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invoice updated successfully')),
-          );
+          ref.read(feedbackControllerProvider).success(context, 'Invoice updated successfully');
           context.pop();
         }
       } else {
@@ -190,7 +188,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
             type: CelebrationType.checkmark,
             title: 'Invoice Created',
             subtitle: 'Your invoice has been saved successfully',
-            onDone: () => context.go('/invoices/$newId'),
+            onDone: () => context.go('/pdf-preview/invoice/$newId'),
           );
         }
       }
@@ -286,7 +284,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
             Text(
               _isEditing ? 'Edit Invoice' : 'Create New Invoice',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: Theme.of(context).colorScheme.onSurface,
               ),

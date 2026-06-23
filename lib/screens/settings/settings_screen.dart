@@ -166,6 +166,50 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  Color _getAvatarColor(String name, bool isDark) {
+    final int hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
+    final List<Color> lightColors = [
+      const Color(0xFFC2E7FF),
+      const Color(0xFFC4EED0),
+      const Color(0xFFFEEFC3),
+      const Color(0xFFFAD2E1),
+      const Color(0xFFE8EAED),
+      const Color(0xFFD7C4F2),
+    ];
+    final List<Color> darkColors = [
+      const Color(0xFF004A77),
+      const Color(0xFF07522C),
+      const Color(0xFF7A5C00),
+      const Color(0xFF7D1B46),
+      const Color(0xFF3C4043),
+      const Color(0xFF532E7E),
+    ];
+    final list = isDark ? darkColors : lightColors;
+    return list[hash % list.length];
+  }
+
+  Color _getAvatarTextColor(String name, bool isDark) {
+    final int hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
+    final List<Color> lightTextColors = [
+      const Color(0xFF001D35),
+      const Color(0xFF072711),
+      const Color(0xFF553D00),
+      const Color(0xFF4B0024),
+      const Color(0xFF202124),
+      const Color(0xFF2C0A5E),
+    ];
+    final List<Color> darkTextColors = [
+      const Color(0xFFC2E7FF),
+      const Color(0xFFC4EED0),
+      const Color(0xFFFEEFC3),
+      const Color(0xFFFAD2E1),
+      const Color(0xFFE8EAED),
+      const Color(0xFFD7C4F2),
+    ];
+    final list = isDark ? darkTextColors : lightTextColors;
+    return list[hash % list.length];
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -173,6 +217,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final userProfile = ref.watch(userProfileProvider);
     final company = ref.watch(companyProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final avatarName = userProfile?.displayName ?? userProfile?.email ?? 'User';
+    final avatarColor = _getAvatarColor(avatarName, isDark);
+    final avatarTextColor = _getAvatarTextColor(avatarName, isDark);
 
     return MeshBackground(
       child: Scaffold(
@@ -209,22 +257,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: colorScheme.primary.withValues(alpha: 0.5),
-                        width: 2.5,
+                        color: colorScheme.primary.withValues(alpha: 0.6),
+                        width: 1.5,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colorScheme.primary.withValues(alpha: 0.25),
-                          blurRadius: 20,
-                          spreadRadius: 2,
-                        ),
-                      ],
                     ),
                     child: CircleAvatar(
                       radius: 40,
-                      backgroundColor: isDark
-                          ? Colors.black.withValues(alpha: 0.4)
-                          : Colors.white.withValues(alpha: 0.6),
+                      backgroundColor: avatarColor,
                       child: Text(
                         userProfile?.displayName != null &&
                                 userProfile!.displayName!.isNotEmpty
@@ -236,7 +275,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
+                          color: avatarTextColor,
                         ),
                       ),
                     ),

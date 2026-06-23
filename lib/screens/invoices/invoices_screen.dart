@@ -7,7 +7,6 @@ import '../../providers/providers.dart';
 import '../../models/models.dart';
 import '../../widgets/premium_empty_state.dart';
 import '../../theme/semantic_colors.dart';
-import '../../components/glass_card.dart';
 import '../../components/curved_header.dart';
 
 class InvoicesScreen extends ConsumerStatefulWidget {
@@ -109,21 +108,21 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                   fontSize: 14,
                 ),
-                prefixIcon: Icon(Icons.search,
+                prefixIcon: Icon(LucideIcons.search,
                     size: 20,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.close, size: 18),
+                        icon: const Icon(LucideIcons.x, size: 18),
                         onPressed: () => _searchController.clear(),
                       )
                     : null,
                 filled: true,
                 fillColor: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : Colors.black.withValues(alpha: 0.05),
+                    ? const Color(0xFF1E1E24)
+                    : const Color(0xFFF0F4F9),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(999),
                   borderSide: BorderSide.none,
                 ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -141,7 +140,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
                 height: 48,
                 decoration: BoxDecoration(
                   color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.04),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 padding: const EdgeInsets.all(4),
                 child: TabBar(
@@ -354,95 +353,148 @@ class _InvoiceCard extends StatelessWidget {
     }
   }
 
+  Color _getAvatarColor(String name, bool isDark) {
+    final int hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
+    final List<Color> lightColors = [
+      const Color(0xFFC2E7FF),
+      const Color(0xFFC4EED0),
+      const Color(0xFFFEEFC3),
+      const Color(0xFFFAD2E1),
+      const Color(0xFFE8EAED),
+      const Color(0xFFD7C4F2),
+    ];
+    final List<Color> darkColors = [
+      const Color(0xFF004A77),
+      const Color(0xFF07522C),
+      const Color(0xFF7A5C00),
+      const Color(0xFF7D1B46),
+      const Color(0xFF3C4043),
+      const Color(0xFF532E7E),
+    ];
+    final list = isDark ? darkColors : lightColors;
+    return list[hash % list.length];
+  }
+
+  Color _getAvatarTextColor(String name, bool isDark) {
+    final int hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
+    final List<Color> lightTextColors = [
+      const Color(0xFF001D35),
+      const Color(0xFF072711),
+      const Color(0xFF553D00),
+      const Color(0xFF4B0024),
+      const Color(0xFF202124),
+      const Color(0xFF2C0A5E),
+    ];
+    final List<Color> darkTextColors = [
+      const Color(0xFFC2E7FF),
+      const Color(0xFFC4EED0),
+      const Color(0xFFFEEFC3),
+      const Color(0xFFFAD2E1),
+      const Color(0xFFE8EAED),
+      const Color(0xFFD7C4F2),
+    ];
+    final list = isDark ? darkTextColors : lightTextColors;
+    return list[hash % list.length];
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     final statusColor = _getStatusColor(invoice.status, semanticColors);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final avatarColor = _getAvatarColor(invoice.customerName, isDark);
+    final avatarTextColor = _getAvatarTextColor(invoice.customerName, isDark);
+    final initials = invoice.customerName.isNotEmpty
+        ? invoice.customerName.substring(0, 1).toUpperCase()
+        : 'I';
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: GlassCard(
-        padding: EdgeInsets.zero,
-        borderRadius: BorderRadius.circular(24),
-        onTap: () => context.push('/invoices/${invoice.id}'),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      invoice.customerName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.2,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      NumberFormat.currency(symbol: '£').format(invoice.total),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: invoice.status == 'Overdue' ? semanticColors.error : (isDark ? Colors.white70 : Colors.black87),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${invoice.invoiceNumber} • Due ${invoice.dueDate}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: colorScheme.onSurface.withValues(alpha: 0.5),
-                      ),
-                    ),
-                  ],
+    return InkWell(
+      onTap: () => context.push('/invoices/${invoice.id}'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: avatarColor,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                initials,
+                style: TextStyle(
+                  color: avatarTextColor,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(width: 12),
-              // Status Badge on the right
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(100),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: statusColor,
-                        shape: BoxShape.circle,
-                      ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    invoice.customerName,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurface,
+                      letterSpacing: -0.2,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      invoice.status,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: statusColor,
-                      ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${invoice.invoiceNumber} • Due ${invoice.dueDate}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  NumberFormat.currency(symbol: '£').format(invoice.total),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: invoice.status == 'Overdue' ? semanticColors.error : colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: Text(
+                    invoice.status,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: statusColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -462,12 +514,29 @@ class _CountBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    Color textColor;
+    Color bgColor;
+
+    if (isSelected) {
+      if (isDark) {
+        textColor = theme.colorScheme.onPrimary;
+        bgColor = theme.colorScheme.onPrimary.withValues(alpha: 0.15);
+      } else {
+        textColor = Colors.white;
+        bgColor = Colors.white.withValues(alpha: 0.25);
+      }
+    } else {
+      textColor = activeColor;
+      bgColor = activeColor.withValues(alpha: 0.1);
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: isSelected
-            ? activeColor.withValues(alpha: 0.2)
-            : activeColor.withValues(alpha: 0.1),
+        color: bgColor,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
@@ -475,7 +544,7 @@ class _CountBadge extends StatelessWidget {
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.bold,
-          color: activeColor,
+          color: textColor,
         ),
       ),
     );

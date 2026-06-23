@@ -51,6 +51,7 @@ import '../screens/pricing/smart_pricing_screen.dart';
 import '../screens/auth/onboarding_screen.dart';
 import '../screens/auth/email_verification_screen.dart';
 import '../screens/shared/in_app_web_view_screen.dart';
+import '../screens/shared/pdf_preview_screen.dart';
 
 /// Converts a Firebase auth stream into a [Listenable] for GoRouter's
 /// refreshListenable, so the router re-evaluates redirects without being
@@ -194,6 +195,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           final url = extra?['url'] as String? ?? state.uri.queryParameters['url'] ?? '';
           final title = extra?['title'] as String? ?? state.uri.queryParameters['title'] ?? 'Preview';
           return InAppWebViewScreen(url: url, title: title);
+        },
+      ),
+      GoRoute(
+        path: '/pdf-preview/:type/:id',
+        builder: (context, state) {
+          final type = state.pathParameters['type']!;
+          final id = state.pathParameters['id']!;
+          return PdfPreviewScreen(type: type, id: id);
         },
       ),
       GoRoute(

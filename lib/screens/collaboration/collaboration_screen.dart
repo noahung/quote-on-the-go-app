@@ -273,12 +273,17 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Container(
+                height: 48,
                 decoration: BoxDecoration(
                   color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.04),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(999),
                 ),
+                padding: const EdgeInsets.all(4),
                 child: TabBar(
                   controller: _tabController,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  padding: EdgeInsets.zero,
                   tabs: [
                     Tab(text: 'Versions ($versionCount)'),
                     Tab(text: 'Team Comments ($commentCount)'),

@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../providers/providers.dart';
 import '../../models/models.dart';
-import '../../components/glass_card.dart';
 import '../../components/curved_header.dart';
 
 // ─── Sort options ──────────────────────────────────────────────
@@ -134,20 +133,20 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                         fontSize: 14,
                       ),
                       prefixIcon: Icon(LucideIcons.search,
-                          size: 18,
+                          size: 20,
                           color: colorScheme.onSurface.withValues(alpha: 0.4)),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.close, size: 18),
+                              icon: const Icon(LucideIcons.x, size: 18),
                               onPressed: () => _searchController.clear(),
                             )
                           : null,
                       filled: true,
                       fillColor: isDark
-                          ? Colors.white.withValues(alpha: 0.06)
-                          : Colors.black.withValues(alpha: 0.05),
+                          ? const Color(0xFF1E1E24)
+                          : const Color(0xFFF0F4F9),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(999),
                         borderSide: BorderSide.none,
                       ),
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -234,15 +233,15 @@ class _SortButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<_SortBy>(
       onSelected: onChanged,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         height: 48,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(14),
+              ? const Color(0xFF1E1E24)
+              : const Color(0xFFF0F4F9),
+          borderRadius: BorderRadius.circular(999),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -253,7 +252,7 @@ class _SortButton extends StatelessWidget {
                     .colorScheme
                     .onSurface
                     .withValues(alpha: 0.5)),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Text(
               _label,
               style: TextStyle(
@@ -544,10 +543,58 @@ class _CustomerCard extends ConsumerWidget {
     }
   }
 
+  Color _getAvatarColor(String name, bool isDark) {
+    final int hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
+    final List<Color> lightColors = [
+      const Color(0xFFC2E7FF),
+      const Color(0xFFC4EED0),
+      const Color(0xFFFEEFC3),
+      const Color(0xFFFAD2E1),
+      const Color(0xFFE8EAED),
+      const Color(0xFFD7C4F2),
+    ];
+    final List<Color> darkColors = [
+      const Color(0xFF004A77),
+      const Color(0xFF07522C),
+      const Color(0xFF7A5C00),
+      const Color(0xFF7D1B46),
+      const Color(0xFF3C4043),
+      const Color(0xFF532E7E),
+    ];
+    final list = isDark ? darkColors : lightColors;
+    return list[hash % list.length];
+  }
+
+  Color _getAvatarTextColor(String name, bool isDark) {
+    final int hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
+    final List<Color> lightTextColors = [
+      const Color(0xFF001D35),
+      const Color(0xFF072711),
+      const Color(0xFF553D00),
+      const Color(0xFF4B0024),
+      const Color(0xFF202124),
+      const Color(0xFF2C0A5E),
+    ];
+    final List<Color> darkTextColors = [
+      const Color(0xFFC2E7FF),
+      const Color(0xFFC4EED0),
+      const Color(0xFFFEEFC3),
+      const Color(0xFFFAD2E1),
+      const Color(0xFFE8EAED),
+      const Color(0xFFD7C4F2),
+    ];
+    final list = isDark ? darkTextColors : lightTextColors;
+    return list[hash % list.length];
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final avatarColor = _getAvatarColor(customer.name, isDark);
+    final avatarTextColor = _getAvatarTextColor(customer.name, isDark);
+    
     final initials = customer.name.trim().isEmpty
         ? '?'
         : customer.name.trim().split(' ').length > 1
@@ -555,7 +602,7 @@ class _CustomerCard extends ConsumerWidget {
             : customer.name.trim()[0].toUpperCase();
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 2),
       child: Dismissible(
         key: ValueKey(customer.id),
         background: _SwipeBackground(
@@ -593,38 +640,31 @@ class _CustomerCard extends ConsumerWidget {
           }
           return false; // never actually dismiss
         },
-        child: GlassCard(
-          padding: EdgeInsets.zero,
-          borderRadius: BorderRadius.circular(20),
+        child: InkWell(
           onTap: () => context.push('/customers/${customer.id}'),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
             child: Row(
               children: [
                 // Avatar
                 Container(
-                  width: 50,
-                  height: 50,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF4781F).withValues(alpha: 0.12),
+                    color: avatarColor,
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFF4781F).withValues(alpha: 0.25),
-                      width: 1.5,
-                    ),
                   ),
-                  child: Center(
-                    child: Text(
-                      initials,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFFF4781F),
-                      ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    initials,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: avatarTextColor,
                     ),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 16),
                 // Main info
                 Expanded(
                   child: Column(
@@ -635,22 +675,24 @@ class _CustomerCard extends ConsumerWidget {
                           Expanded(
                             child: Text(
                               customer.name,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface,
                                 letterSpacing: -0.2,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          const SizedBox(width: 8),
                           // Status chip
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: isDark
-                                  ? _statusColor(context).withValues(alpha: 0.2)
+                                  ? _statusColor(context).withValues(alpha: 0.15)
                                   : _statusBg(),
                               borderRadius: BorderRadius.circular(99),
                             ),
@@ -658,7 +700,7 @@ class _CustomerCard extends ConsumerWidget {
                               _statusLabel(),
                               style: TextStyle(
                                 fontSize: 10,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w800,
                                 color: _statusColor(context),
                               ),
                             ),
@@ -700,7 +742,7 @@ class _CustomerCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 // Revenue + chevron
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -710,10 +752,10 @@ class _CustomerCard extends ConsumerWidget {
                       Text(
                         NumberFormat.compactCurrency(symbol: '£')
                             .format(customer.totalSpent),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFFF4781F),
+                          fontWeight: FontWeight.w700,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                     const SizedBox(height: 4),

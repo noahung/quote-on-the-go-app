@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
@@ -594,13 +593,8 @@ class InvoiceDetailScreen extends ConsumerWidget {
                               side: BorderSide(color: colorScheme.outlineVariant),
                               backgroundColor: colorScheme.onSurface.withValues(alpha: 0.05),
                             ),
-                            onPressed: () async {
-                              final uri = Uri.parse('$_webAppBaseUrl/api/invoices/${invoice.id}/pdf');
-                              if (await canLaunchUrl(uri)) {
-                                await launchUrl(uri, mode: LaunchMode.externalApplication);
-                              } else if (context.mounted) {
-                                ref.read(feedbackControllerProvider).error(context, 'Could not open PDF.');
-                              }
+                            onPressed: () {
+                              context.push('/pdf-preview/invoice/${invoice.id}');
                             },
                             child: Text(
                               'View PDF',
@@ -621,7 +615,8 @@ class InvoiceDetailScreen extends ConsumerWidget {
                         width: double.infinity,
                         child: FilledButton(
                           style: FilledButton.styleFrom(
-                            backgroundColor: colorScheme.primary,
+                            backgroundColor: isDark ? const Color(0xFF004A77) : const Color(0xFFC2E7FF),
+                            foregroundColor: isDark ? const Color(0xFFC2E7FF) : const Color(0xFF001D35),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: const StadiumBorder(),
                           ),
@@ -646,7 +641,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
                               color: colorScheme.outlineVariant,
                               width: 1.2,
                             ),
-                            backgroundColor: colorScheme.onSurface.withValues(alpha: 0.04),
+                            backgroundColor: isDark ? const Color(0xFF1E1E24) : const Color(0xFFF0F4F9),
                           ),
                           onPressed: () =>
                               _sendReminder(context, ref, invoice),

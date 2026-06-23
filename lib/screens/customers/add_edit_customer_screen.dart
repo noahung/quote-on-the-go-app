@@ -67,9 +67,7 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
     final companyId = ref.read(companyIdProvider);
     if (companyId == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Company not found')),
-        );
+        ref.read(feedbackControllerProvider).error(context, 'Company not found');
       }
       return;
     }
@@ -98,9 +96,7 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
           },
         );
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Customer updated successfully')),
-          );
+          ref.read(feedbackControllerProvider).success(context, 'Customer updated successfully');
           context.pop();
         }
       } else {
@@ -133,9 +129,7 @@ class _AddEditCustomerScreenState extends ConsumerState<AddEditCustomerScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save customer: $e')),
-        );
+        ref.read(feedbackControllerProvider).error(context, 'Failed to save customer: $e');
       }
     } finally {
       if (mounted) {

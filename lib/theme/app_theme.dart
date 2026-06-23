@@ -82,7 +82,7 @@ class AppTheme {
         scrolledUnderElevation: 0,
         iconTheme: IconThemeData(color: colorScheme.onSurface),
         titleTextStyle: GoogleFonts.dmSans(
-          fontSize: 20,
+          fontSize: 16,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.5,
           color: colorScheme.onSurface,
@@ -162,15 +162,15 @@ class AppTheme {
       tabBarTheme: TabBarThemeData(
         dividerColor: Colors.transparent,
         indicatorSize: TabBarIndicatorSize.tab,
-        labelColor: colorScheme.primary,
+        labelColor: Colors.white,
         unselectedLabelColor: colorScheme.onSurface.withValues(alpha: 0.6),
         labelStyle: const TextStyle(
             fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: 0.1),
         unselectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.w600, fontSize: 13, letterSpacing: 0.1),
         indicator: BoxDecoration(
-          color: colorScheme.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(16),
+          color: colorScheme.primary,
+          borderRadius: BorderRadius.circular(999),
         ),
       ),
       popupMenuTheme: PopupMenuThemeData(
@@ -186,6 +186,19 @@ class AppTheme {
           fontWeight: FontWeight.w600,
         ),
       ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.white,
+        contentTextStyle: GoogleFonts.dmSans(
+          color: const Color(0xFF1F1F1F),
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        elevation: 4,
+      ),
       extensions: [SemanticColors.light],
     );
   }
@@ -193,8 +206,8 @@ class AppTheme {
   static ThemeData get darkTheme {
     const colorScheme = ColorScheme(
       brightness: Brightness.dark,
-      primary: Color(0xFFFFB786),
-      onPrimary: Color(0xFF502400),
+      primary: Color(0xFFF4781F),
+      onPrimary: Colors.white,
       primaryContainer: Color(0xFFF57C00),
       onPrimaryContainer: Color(0xFF572800),
       secondary: Color(0xFFC8C6C5),
@@ -224,7 +237,7 @@ class AppTheme {
       inversePrimary: Color(0xFF964900),
       scrim: Color(0xFF000000),
       shadow: Color(0xFF000000),
-      surfaceTint: Color(0xFFFFB786),
+      surfaceTint: Color(0xFFF4781F),
     );
 
     return ThemeData(
@@ -239,7 +252,7 @@ class AppTheme {
         scrolledUnderElevation: 0,
         iconTheme: IconThemeData(color: colorScheme.onSurface),
         titleTextStyle: GoogleFonts.dmSans(
-          fontSize: 20,
+          fontSize: 16,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.5,
           color: colorScheme.onSurface,
@@ -319,15 +332,15 @@ class AppTheme {
       tabBarTheme: TabBarThemeData(
         dividerColor: Colors.transparent,
         indicatorSize: TabBarIndicatorSize.tab,
-        labelColor: colorScheme.primary,
+        labelColor: colorScheme.onPrimary,
         unselectedLabelColor: colorScheme.onSurface.withValues(alpha: 0.6),
         labelStyle: const TextStyle(
             fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: 0.1),
         unselectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.w600, fontSize: 13, letterSpacing: 0.1),
         indicator: BoxDecoration(
-          color: colorScheme.primary.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(16),
+          color: colorScheme.primary,
+          borderRadius: BorderRadius.circular(999),
         ),
       ),
       popupMenuTheme: PopupMenuThemeData(
@@ -342,6 +355,19 @@ class AppTheme {
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF2C2C35),
+        contentTextStyle: GoogleFonts.dmSans(
+          color: const Color(0xFFF1F1F4),
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        elevation: 4,
       ),
       dividerTheme: DividerThemeData(
         color: Colors.white.withValues(alpha: 0.08),
