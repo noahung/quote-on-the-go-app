@@ -22,6 +22,21 @@ Stream<List<WorkflowTemplate>> workflowsStream(WorkflowsStreamRef ref) {
           .toList());
 }
 
+@riverpod
+Stream<WorkflowTemplate?> workflowTemplateStream(WorkflowTemplateStreamRef ref, String templateId) {
+  final firestore = ref.watch(firestoreProvider);
+  return firestore
+      .collection('workflows')
+      .doc(templateId)
+      .snapshots()
+      .map((doc) => doc.exists ? WorkflowTemplate.fromFirestore(doc) : null);
+}
+
+@riverpod
+WorkflowTemplate? workflowTemplate(WorkflowTemplateRef ref, String templateId) {
+  return ref.watch(workflowTemplateStreamProvider(templateId)).valueOrNull;
+}
+
 class WorkflowRepository {
   final FirebaseFirestore _firestore;
 

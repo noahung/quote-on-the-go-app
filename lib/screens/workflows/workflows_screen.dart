@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../components/curved_header.dart';
 import '../../models/workflow.dart';
 import '../../providers/providers.dart';
 import '../../theme/semantic_colors.dart';
 import 'create_workflow_screen.dart';
+import 'workflow_execution_log_screen.dart';
 
 class WorkflowsScreen extends ConsumerStatefulWidget {
   const WorkflowsScreen({super.key});
@@ -53,6 +55,11 @@ class _WorkflowsScreenState extends ConsumerState<WorkflowsScreen> with SingleTi
           CurvedHeader(
             title: 'Workflows',
             actions: [
+              IconButton(
+                icon: const Icon(LucideIcons.history, color: Colors.white),
+                tooltip: 'Execution log',
+                onPressed: () => context.push('/workflows/executions'),
+              ),
               IconButton(
                 icon: const Icon(Icons.add, color: Colors.white),
                 onPressed: () {
@@ -218,6 +225,43 @@ class _WorkflowsScreenState extends ConsumerState<WorkflowsScreen> with SingleTi
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: _buildSequenceVisualizer(context, workflow, colors, isDark),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.push(
+                        '/workflows/${workflow.id}/executions',
+                      ),
+                      icon: const Icon(LucideIcons.history, size: 16),
+                      label: const Text('View Log'),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: isDark ? Colors.white24 : Colors.black.withValues(alpha: 0.12),
+                        ),
+                        foregroundColor: isDark ? Colors.white : Colors.black87,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: workflow.isActive
+                          ? () => showRunWorkflowSheet(context, workflow.id)
+                          : null,
+                      icon: const Icon(LucideIcons.play, size: 16),
+                      label: const Text('Run Now'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFF4781F),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ],

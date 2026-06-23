@@ -216,13 +216,23 @@ class TeamManagementScreen extends ConsumerWidget {
                                           color: Colors.orange.withValues(alpha: 0.12),
                                           borderRadius: BorderRadius.circular(100),
                                         ),
-                                        child: Text(
-                                          '${pending.length} pending',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.orange,
-                                          ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              '${pending.length} pending',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                                color: Colors.orange,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            GestureDetector(
+                                              onTap: () => _cleanupExpired(context, ref),
+                                              child: const Icon(Icons.cleaning_services_outlined, size: 14, color: Colors.orange),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
@@ -281,6 +291,22 @@ class TeamManagementScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _cleanupExpired(BuildContext context, WidgetRef ref) async {
+    try {
+      final cleaned = await ref.read(teamServiceProvider).cleanupExpiredInvitations();
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).success(
+          context,
+          cleaned > 0 ? 'Cleaned up $cleaned expired invitation(s)' : 'No expired invitations found',
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).error(context, 'Error: $e');
+      }
+    }
+  }
+
   Future<void> _cancelInvitation(
     BuildContext context,
     WidgetRef ref,
@@ -310,10 +336,7 @@ class TeamManagementScreen extends ConsumerWidget {
     if (confirmed != true) return;
 
     try {
-      await FirebaseFirestore.instance
-          .collection('invitations')
-          .doc(invitation.id)
-          .update({'status': 'cancelled'});
+      await ref.read(teamServiceProvider).cancelInvitation(invitationId: invitation.id);
 
       if (context.mounted) {
         ref.read(feedbackControllerProvider).success(context, 'Invitation cancelled');
@@ -451,10 +474,7 @@ class TeamManagementScreen extends ConsumerWidget {
   Future<void> _updateRole(
       BuildContext context, WidgetRef ref, String uid, String newRole) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .update({'role': newRole});
+      await ref.read(teamServiceProvider).changeRole(userId: uid, newRole: newRole);
       if (context.mounted) {
         ref.read(feedbackControllerProvider).success(context, 'Role updated successfully');
       }
@@ -472,7 +492,7 @@ class TeamManagementScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Remove Member'),
         content: Text(
-            'Remove ${member.displayName ?? member.email ?? 'this member'} from your team?'),
+            'Remove ${member.displayName ?? member.email ?? 'this member'} from your team? They will lose access to all company data.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -486,8 +506,17 @@ class TeamManagementScreen extends ConsumerWidget {
         ],
       ),
     );
-    if (confirmed == true && context.mounted) {
-      ref.read(feedbackControllerProvider).info(context, 'Member removed — coming soon');
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(teamServiceProvider).removeMember(userId: member.uid);
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).success(context, 'Member removed successfully');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).error(context, 'Error: $e');
+      }
     }
   }
 }

@@ -30,7 +30,7 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -187,6 +187,16 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
       documentType: widget.documentType,
     )));
 
+    final timelineAsync = ref.watch(documentTimelineProvider((
+      documentId: widget.documentId,
+      documentType: widget.documentType,
+    )));
+
+    final approvalAsync = ref.watch(activeApprovalWorkflowProvider((
+      documentId: widget.documentId,
+      documentType: widget.documentType,
+    )));
+
     // Watch the actual document to display details and capture snapshot
     String docNumber = widget.documentId.substring(0, 4);
     Map<String, dynamic> docSnapshot = {};
@@ -211,6 +221,7 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
 
     final commentCount = commentsAsync.valueOrNull?.length ?? 0;
     final versionCount = versionsAsync.valueOrNull?.length ?? 0;
+    final timelineCount = timelineAsync.valueOrNull?.length ?? 0;
 
     return MeshBackground(
       child: Scaffold(
@@ -316,6 +327,8 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
                   tabs: [
                     Tab(text: 'Versions ($versionCount)'),
                     Tab(text: 'Team Comments ($commentCount)'),
+                    Tab(text: 'Timeline ($timelineCount)'),
+                    Tab(text: 'Approvals'),
                   ],
                 ),
               ),
@@ -329,6 +342,8 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
                 children: [
                   _buildVersionsTab(context, versionsAsync, commentsAsync, docSnapshot, semanticColors, isDark),
                   _buildCommentsTab(context, commentsAsync, semanticColors, isDark),
+                  _buildTimelineTab(context, timelineAsync, semanticColors, isDark),
+                  _buildApprovalsTab(context, approvalAsync, semanticColors, isDark),
                 ],
               ),
             ),
@@ -449,17 +464,15 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
                               ),
                               const SizedBox(width: 8),
                               OutlinedButton(
-                                onPressed: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Comparing versions - coming soon')),
-                                  );
-                                },
+                                onPressed: version.isActive
+                                    ? null
+                                    : () => _restoreVersion(context, version.id),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                   minimumSize: Size.zero,
                                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 ),
-                                child: const Text('Compare', style: TextStyle(fontSize: 12)),
+                                child: Text(version.isActive ? 'Current' : 'Restore', style: const TextStyle(fontSize: 12)),
                               ),
                               const SizedBox(width: 4),
                               IconButton(
@@ -617,6 +630,37 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
                                   style: const TextStyle(fontSize: 13),
                                 ),
                               ),
+                              if (comment.isResolved) ...[
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.check_circle, size: 14, color: Colors.green),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Resolved',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ] else ...[
+                                const SizedBox(height: 6),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: () => _resolveComment(context, comment.id),
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    child: const Text('Resolve', style: TextStyle(fontSize: 12, color: Color(0xFFF4781F))),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -660,6 +704,398 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _resolveComment(BuildContext context, String commentId) async {
+    final userProfile = ref.read(userProfileProvider);
+    if (userProfile == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(collaborationRepositoryProvider).resolveComment(
+            commentId: commentId,
+            userId: userProfile.uid,
+            userName: userProfile.displayName ?? userProfile.email ?? 'Anonymous',
+            userEmail: userProfile.email ?? '',
+          );
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Comment resolved'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Failed to resolve comment: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _restoreVersion(BuildContext context, String versionId) async {
+    final userProfile = ref.read(userProfileProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    if (userProfile == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('User profile not loaded.')),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restore version?'),
+        content: const Text('This will overwrite the current document with the selected version.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(collaborationRepositoryProvider).restoreDocumentVersion(
+            documentId: widget.documentId,
+            documentType: widget.documentType,
+            versionId: versionId,
+            userId: userProfile.uid,
+            userName: userProfile.displayName ?? userProfile.email ?? 'Anonymous',
+            userEmail: userProfile.email ?? '',
+            companyId: userProfile.companyId,
+          );
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Document restored'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Failed to restore: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _initiateApproval(BuildContext context) async {
+    final userProfile = ref.read(userProfileProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    if (userProfile == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('User profile not loaded.')),
+      );
+      return;
+    }
+
+    try {
+      await ref.read(collaborationRepositoryProvider).initiateApprovalWorkflow(
+            documentId: widget.documentId,
+            documentType: widget.documentType,
+            workflowType: 'custom',
+            userId: userProfile.uid,
+            userName: userProfile.displayName ?? userProfile.email ?? 'Anonymous',
+            userEmail: userProfile.email ?? '',
+            companyId: userProfile.companyId,
+          );
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Approval workflow initiated'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Failed to initiate approval: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _processApprovalDecision(
+    BuildContext context,
+    ApprovalWorkflow workflow,
+    ApprovalWorkflowStep step,
+    String decision,
+  ) async {
+    final userProfile = ref.read(userProfileProvider);
+    if (userProfile == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+
+    final commentController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${decision[0].toUpperCase()}${decision.substring(1)} step ${step.stepNumber}?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Add an optional comment:'),
+            const SizedBox(height: 8),
+            TextField(
+              controller: commentController,
+              decoration: const InputDecoration(hintText: 'Comment'),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: decision == 'approved' ? Colors.green : Colors.red,
+            ),
+            child: Text(decision[0].toUpperCase() + decision.substring(1)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(collaborationRepositoryProvider).processApprovalDecision(
+            workflowId: workflow.id,
+            stepNumber: step.stepNumber,
+            decision: decision,
+            comments: commentController.text.trim(),
+            userId: userProfile.uid,
+            userName: userProfile.displayName ?? userProfile.email ?? 'Anonymous',
+            userEmail: userProfile.email ?? '',
+          );
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Step ${step.stepNumber} $decision'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Failed to process decision: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Widget _buildTimelineTab(
+    BuildContext context,
+    AsyncValue<List<ActivityTimelineItem>> timelineAsync,
+    SemanticColors colors,
+    bool isDark,
+  ) {
+    return timelineAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Error: $err')),
+      data: (items) {
+        if (items.isEmpty) {
+          return const Center(child: Text('No activity recorded yet.', style: TextStyle(color: Colors.grey)));
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            final actorName = item.actor['userName'] ?? item.actor['displayName'] ?? 'Anonymous';
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4781F),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    if (index < items.length - 1)
+                      Container(width: 2, height: 50, color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.08)),
+                  ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.description,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$actorName • ${_formatTimeAgo(item.timestamp)}',
+                        style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.black54),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildApprovalsTab(
+    BuildContext context,
+    AsyncValue<ApprovalWorkflow?> approvalAsync,
+    SemanticColors colors,
+    bool isDark,
+  ) {
+    return approvalAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Error: $err')),
+      data: (workflow) {
+        if (workflow == null) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.verified, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  const Text('No approval workflow active', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Start an approval workflow to collect sign-off on this document.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: isDark ? Colors.white60 : Colors.black54),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () => _initiateApproval(context),
+                    icon: const Icon(Icons.verified),
+                    label: const Text('Start Approval'),
+                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFFF4781F)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _ApprovalStatusBadge(status: workflow.status),
+                ),
+                if (workflow.status == 'pending' || workflow.status == 'approved' || workflow.status == 'rejected')
+                  TextButton.icon(
+                    onPressed: () => _initiateApproval(context),
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('Restart', style: TextStyle(fontSize: 12)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...workflow.steps.map((step) {
+              final isCurrent = step.stepNumber == workflow.currentStep && workflow.status == 'pending';
+              return Card(
+                elevation: 0,
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                ),
+                margin: const EdgeInsets.only(bottom: 12),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          _ApprovalStatusBadge(status: step.status),
+                          const Spacer(),
+                          Text(
+                            'Step ${step.stepNumber}',
+                            style: TextStyle(fontSize: 12, color: isDark ? Colors.white.withValues(alpha: 0.5) : Colors.black45, fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Approver: ${step.approverRole[0].toUpperCase()}${step.approverRole.substring(1)}',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                      ),
+                      if (step.comments != null && step.comments!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          step.comments!,
+                          style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.black54),
+                        ),
+                      ],
+                      if (isCurrent && step.status == 'pending') ...[
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => _processApprovalDecision(context, workflow, step, 'rejected'),
+                                style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                                child: const Text('Reject'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: () => _processApprovalDecision(context, workflow, step, 'approved'),
+                                style: FilledButton.styleFrom(backgroundColor: Colors.green),
+                                child: const Text('Approve'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ApprovalStatusBadge extends StatelessWidget {
+  final String status;
+
+  const _ApprovalStatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final (color, label) = switch (status) {
+      'pending' => (Colors.orange, 'Pending'),
+      'approved' => (Colors.green, 'Approved'),
+      'rejected' => (Colors.red, 'Rejected'),
+      _ => (Colors.grey, status),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(100),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w800),
+      ),
     );
   }
 }

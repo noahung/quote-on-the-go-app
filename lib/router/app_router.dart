@@ -44,6 +44,7 @@ import '../screens/schedule/schedule_screen.dart';
 import '../screens/schedule/create_job_screen.dart';
 import '../screens/schedule/job_detail_screen.dart';
 import '../screens/workflows/workflows_screen.dart';
+import '../screens/workflows/workflow_execution_log_screen.dart';
 import '../screens/analytics/analytics_screen.dart';
 import '../screens/collaboration/collaboration_screen.dart';
 import '../screens/pricing/smart_pricing_screen.dart';
@@ -198,6 +199,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/pipeline',
         builder: (context, state) => const KanbanBoardScreen(),
+      ),
+      GoRoute(
+        path: '/workflows/executions',
+        builder: (context, state) => const WorkflowExecutionLogScreen(),
+      ),
+      GoRoute(
+        path: '/workflows/:id/executions',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return WorkflowExecutionLogScreen(workflowTemplateId: id);
+        },
       ),
       GoRoute(
         path: '/quotations/new',

@@ -8,6 +8,7 @@ export 'service.dart' hide TimestampConverter;
 export 'expense.dart' hide TimestampConverter;
 export 'calendar_event.dart' hide TimestampConverter;
 export 'workflow.dart' hide TimestampConverter;
+export 'workflow_execution.dart' hide TimestampConverter;
 export 'job_note.dart';
 export 'job_media.dart';
 export 'interaction_log.dart' hide _TimestampConverter;
