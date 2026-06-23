@@ -31,9 +31,18 @@ class InvoiceDetailScreen extends ConsumerWidget {
       case 'Overdue':
         return semanticColors.error;
       case 'Draft':
-        return semanticColors.accentOrange;
+        return semanticColors.warning;
       default:
         return Colors.grey;
+    }
+  }
+
+  String _formatDate(String dateStr) {
+    try {
+      final parsed = DateTime.parse(dateStr);
+      return DateFormat('d MMM yyyy').format(parsed);
+    } catch (_) {
+      return dateStr;
     }
   }
 
@@ -236,19 +245,19 @@ class InvoiceDetailScreen extends ConsumerWidget {
               title: 'Invoice #${invoice.invoiceNumber.replaceFirst('INV-', '')}',
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.forum_outlined, color: Colors.white),
+                  icon: const Icon(LucideIcons.messageSquare),
                   tooltip: 'Collaboration & History',
                   onPressed: () =>
                       context.push('/collaboration/invoice/${invoice.id}'),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.visibility, color: Colors.white),
+                  icon: const Icon(LucideIcons.eye),
                   tooltip: 'View as Client',
                   onPressed: () =>
                       context.push('/invoices/${invoice.id}/portal'),
                 ),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: Colors.white),
+                  icon: const Icon(LucideIcons.moreVertical),
                   onSelected: (value) async {
                     if (value == 'edit') {
                       context.push('/invoices/${invoice.id}/edit',
@@ -329,10 +338,6 @@ class InvoiceDetailScreen extends ConsumerWidget {
                             decoration: BoxDecoration(
                               color: statusColor.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: statusColor.withValues(alpha: 0.24),
-                                width: 1,
-                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -409,12 +414,12 @@ class InvoiceDetailScreen extends ConsumerWidget {
                         children: [
                           _DetailRow(
                             label: 'Issue Date',
-                            value: invoice.date,
+                            value: _formatDate(invoice.date),
                           ),
                           const SizedBox(height: 12),
                           _DetailRow(
                             label: 'Due Date',
-                            value: invoice.dueDate,
+                            value: _formatDate(invoice.dueDate),
                             valueColor: invoice.status == 'Overdue'
                                 ? semanticColors.error
                                 : (invoice.status == 'Paid'
@@ -586,7 +591,8 @@ class InvoiceDetailScreen extends ConsumerWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 8),
                               shape: const StadiumBorder(),
-                              side: BorderSide(color: colorScheme.outline),
+                              side: BorderSide(color: colorScheme.outlineVariant),
+                              backgroundColor: colorScheme.onSurface.withValues(alpha: 0.05),
                             ),
                             onPressed: () async {
                               final uri = Uri.parse('$_webAppBaseUrl/api/invoices/${invoice.id}/pdf');
@@ -637,9 +643,10 @@ class InvoiceDetailScreen extends ConsumerWidget {
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: const StadiumBorder(),
                             side: BorderSide(
-                              color: colorScheme.outline,
-                              width: 1.5,
+                              color: colorScheme.outlineVariant,
+                              width: 1.2,
                             ),
+                            backgroundColor: colorScheme.onSurface.withValues(alpha: 0.04),
                           ),
                           onPressed: () =>
                               _sendReminder(context, ref, invoice),

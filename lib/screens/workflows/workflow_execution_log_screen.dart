@@ -50,7 +50,7 @@ class _WorkflowExecutionLogScreenState
             actions: [
               if (widget.workflowTemplateId != null)
                 IconButton(
-                  icon: const Icon(LucideIcons.play, color: Colors.white),
+                  icon: const Icon(LucideIcons.play),
                   tooltip: 'Run workflow',
                   onPressed: () => _showRunWorkflowSheet(context),
                 ),

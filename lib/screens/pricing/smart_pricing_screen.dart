@@ -93,15 +93,19 @@ class _SmartPricingScreenState extends ConsumerState<SmartPricingScreen> with Si
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.black.withValues(alpha: 0.03),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: _selectedServiceId,
                         isExpanded: true,
-                        dropdownColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        dropdownColor: isDark
+                            ? const Color(0xFF1E1E2C)
+                            : const Color(0xFFF0F4F9),
                         hint: const Text('Select Service to Optimize'),
                         items: services.map((s) {
                           return DropdownMenuItem<String>(
@@ -133,17 +137,6 @@ class _SmartPricingScreenState extends ConsumerState<SmartPricingScreen> with Si
                     ),
                     child: TabBar(
                       controller: _tabController,
-                      dividerColor: Colors.transparent,
-                      indicatorColor: Colors.transparent,
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      indicator: BoxDecoration(
-                        color: isDark ? const Color(0xFFF4781F).withValues(alpha: 0.15) : const Color(0xFFF4781F).withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      labelColor: const Color(0xFFF4781F),
-                      unselectedLabelColor: isDark ? Colors.white70 : Colors.black54,
-                      labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                      unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
                       tabs: const [
                         Tab(text: 'Optimizer'),
                         Tab(text: 'Bundles'),

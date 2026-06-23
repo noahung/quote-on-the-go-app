@@ -92,10 +92,10 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: Colors.black.withValues(alpha: 0.06)),
+          side: BorderSide.none,
         ),
         color: Colors.white.withValues(
-            alpha: 0.7), // Transparent base for glass backdrop filter
+            alpha: 0.65), // Transparent base for glass backdrop filter
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -115,31 +115,35 @@ class AppTheme {
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        filled: false,
+        filled: true,
+        fillColor: Colors.black.withValues(alpha: 0.03),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.primary.withValues(alpha: 0.3), width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.error),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.error.withValues(alpha: 0.3), width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.error, width: 1.5),
         ),
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       ),
       chipTheme: ChipThemeData(
         shape: const StadiumBorder(),
-        backgroundColor: Colors.white.withValues(alpha: 0.6),
-        side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        backgroundColor: Colors.white.withValues(alpha: 0.7),
+        side: BorderSide.none,
         labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
       ),
       navigationBarTheme: NavigationBarThemeData(
@@ -165,12 +169,21 @@ class AppTheme {
         unselectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.w600, fontSize: 13, letterSpacing: 0.1),
         indicator: BoxDecoration(
-          color: colorScheme.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: colorScheme.primary.withValues(alpha: 0.25),
-            width: 1,
-          ),
+          color: colorScheme.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        elevation: 3,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide.none,
+        ),
+        color: const Color(0xFFF0F4F9),
+        textStyle: GoogleFonts.dmSans(
+          color: colorScheme.onSurface,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
         ),
       ),
       extensions: [SemanticColors.light],
@@ -236,10 +249,10 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
+          side: BorderSide.none,
         ),
         color: Colors.black
-            .withValues(alpha: 0.4), // Dark semi-transparent container base
+            .withValues(alpha: 0.35), // Dark semi-transparent container base
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -259,30 +272,35 @@ class AppTheme {
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        filled: false,
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: 0.05),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF2A2A32)),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF2A2A32)),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFFFB786), width: 1.5),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.primary.withValues(alpha: 0.3), width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.error),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.error.withValues(alpha: 0.3), width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.error, width: 1.5),
         ),
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       ),
       chipTheme: ChipThemeData(
         shape: const StadiumBorder(),
-        backgroundColor: Colors.white.withValues(alpha: 0.04),
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
+        backgroundColor: Colors.white.withValues(alpha: 0.05),
+        side: BorderSide.none,
         labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
       ),
       navigationBarTheme: NavigationBarThemeData(
@@ -308,12 +326,21 @@ class AppTheme {
         unselectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.w600, fontSize: 13, letterSpacing: 0.1),
         indicator: BoxDecoration(
-          color: colorScheme.primary.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: colorScheme.primary.withValues(alpha: 0.3),
-            width: 1,
-          ),
+          color: colorScheme.primary.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        elevation: 3,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide.none,
+        ),
+        color: colorScheme.surfaceContainerHigh,
+        textStyle: GoogleFonts.dmSans(
+          color: colorScheme.onSurface,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
         ),
       ),
       dividerTheme: DividerThemeData(

@@ -29,13 +29,7 @@ class GlassCard extends StatelessWidget {
 
     final effectiveBorderRadius = borderRadius ?? BorderRadius.circular(24);
 
-    final effectiveBorder = border ??
-        Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.08)
-              : Colors.black.withValues(alpha: 0.05),
-          width: 1,
-        );
+    final effectiveBorder = border; // No borders by default for a clean Gemini look
 
     final backgroundColor = isDark
         ? Colors.black.withValues(alpha: 0.35)

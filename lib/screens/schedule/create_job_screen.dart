@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -315,7 +316,6 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
                   decoration: BoxDecoration(
                     color: colorScheme.onSurface.withValues(alpha: 0.04),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: colorScheme.outlineVariant),
                   ),
                   child: Row(
                     children: [
@@ -354,9 +354,13 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
               // Status dropdown
               DropdownButtonFormField<String>(
                 initialValue: _selectedStatus,
-                decoration: const InputDecoration(
+                borderRadius: BorderRadius.circular(20),
+                dropdownColor: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF1E1E2C)
+                    : const Color(0xFFF0F4F9),
+                decoration: InputDecoration(
                   labelText: 'Status',
-                  prefixIcon: Icon(Icons.flag_outlined),
+                  prefixIcon: Icon(LucideIcons.flag),
                 ),
                 items: _jobStatuses
                     .map((s) => DropdownMenuItem(value: s, child: Text(s)))

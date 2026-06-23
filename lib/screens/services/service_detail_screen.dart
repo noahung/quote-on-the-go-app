@@ -59,11 +59,11 @@ class _ServiceDetailView extends ConsumerWidget {
               title: 'Service Detail',
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                  icon: const Icon(LucideIcons.pencil),
                   onPressed: () => _showEditSheet(context, ref),
                 ),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: Colors.white),
+                  icon: const Icon(LucideIcons.moreVertical),
                   onSelected: (v) {
                     if (v == 'delete') _confirmDelete(context, ref);
                   },

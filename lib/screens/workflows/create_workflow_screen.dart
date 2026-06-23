@@ -347,11 +347,6 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
             ? Colors.white.withValues(alpha: 0.05)
             : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark
-              ? Colors.white10
-              : Colors.black.withValues(alpha: 0.06),
-        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),

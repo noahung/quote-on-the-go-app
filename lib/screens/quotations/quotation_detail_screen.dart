@@ -40,6 +40,15 @@ class QuotationDetailScreen extends ConsumerWidget {
     }
   }
 
+  String _formatDate(String dateStr) {
+    try {
+      final parsed = DateTime.parse(dateStr);
+      return DateFormat('d MMM yyyy').format(parsed);
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
   Future<void> _sendByEmail(
       BuildContext context, WidgetRef ref, quotation, {DateTime? sendAt}) async {
     try {
@@ -310,20 +319,19 @@ class QuotationDetailScreen extends ConsumerWidget {
               title: 'Quotation #${quotation.quotationNumber.replaceFirst('Q-', '')}',
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.forum_outlined, color: Colors.white),
+                  icon: const Icon(LucideIcons.messageSquare),
                   tooltip: 'Collaboration & History',
                   onPressed: () =>
                       context.push('/collaboration/quotation/${quotation.id}'),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.visibility_outlined,
-                      color: Colors.white),
+                  icon: const Icon(LucideIcons.eye),
                   tooltip: 'View as Client',
                   onPressed: () =>
                       context.push('/quotations/${quotation.id}/portal'),
                 ),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: Colors.white),
+                  icon: const Icon(LucideIcons.moreVertical),
                   onSelected: (value) async {
                     if (value == 'edit') {
                       context.push('/quotations/${quotation.id}/edit',
@@ -433,10 +441,6 @@ class QuotationDetailScreen extends ConsumerWidget {
                             decoration: BoxDecoration(
                               color: statusColor.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: statusColor.withValues(alpha: 0.24),
-                                width: 1,
-                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -523,6 +527,29 @@ class QuotationDetailScreen extends ConsumerWidget {
                                 ],
                               ],
                             ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Quotation Schedule Card
+                    GlassCard(
+                      child: Column(
+                        children: [
+                          _DetailRow(
+                            label: 'Issue Date',
+                            value: _formatDate(quotation.date),
+                          ),
+                          const SizedBox(height: 12),
+                          _DetailRow(
+                            label: 'Valid Until',
+                            value: _formatDate(quotation.expiryDate),
+                            valueColor: quotation.status == 'Declined'
+                                ? semanticColors.error
+                                : (quotation.status == 'Accepted'
+                                    ? semanticColors.success
+                                    : semanticColors.warning),
                           ),
                         ],
                       ),
@@ -699,7 +726,8 @@ class QuotationDetailScreen extends ConsumerWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 8),
                               shape: const StadiumBorder(),
-                              side: BorderSide(color: colorScheme.outline),
+                              side: BorderSide(color: colorScheme.outlineVariant),
+                              backgroundColor: colorScheme.onSurface.withValues(alpha: 0.05),
                             ),
                             onPressed: () async {
                               final uri = Uri.parse('$_webAppBaseUrl/api/quotations/${quotation.id}/pdf');
@@ -749,13 +777,12 @@ class QuotationDetailScreen extends ConsumerWidget {
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(999),
-                            ),
+                            shape: const StadiumBorder(),
                             side: BorderSide(
-                              color: colorScheme.outline,
-                              width: 1.5,
+                              color: colorScheme.outlineVariant,
+                              width: 1.2,
                             ),
+                            backgroundColor: colorScheme.onSurface.withValues(alpha: 0.04),
                           ),
                           onPressed: () =>
                               _declineQuote(context, ref, quotation.id),
@@ -778,6 +805,43 @@ class QuotationDetailScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: valueColor ?? colorScheme.onSurface,
+          ),
+        ),
+      ],
     );
   }
 }

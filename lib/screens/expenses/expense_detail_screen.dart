@@ -567,11 +567,9 @@ class _ExpenseDetailScreenState extends ConsumerState<ExpenseDetailScreen> {
           TextFormField(
             controller: _merchantController,
             textCapitalization: TextCapitalization.words,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               labelText: 'Merchant / Supplier',
-              prefixIcon: const Icon(Icons.store_outlined),
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              prefixIcon: Icon(LucideIcons.store),
             ),
             validator: (v) =>
                 v == null || v.trim().isEmpty ? 'Required' : null,
@@ -579,11 +577,13 @@ class _ExpenseDetailScreenState extends ConsumerState<ExpenseDetailScreen> {
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             value: _selectedCategory,
-            decoration: InputDecoration(
+            borderRadius: BorderRadius.circular(20),
+            dropdownColor: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF1E1E2C)
+                : const Color(0xFFF0F4F9),
+            decoration: const InputDecoration(
               labelText: 'Category',
-              prefixIcon: const Icon(Icons.category_outlined),
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              prefixIcon: Icon(LucideIcons.tag),
             ),
             items: _kCategories
                 .map((c) => DropdownMenuItem(value: c, child: Text(c)))
@@ -596,12 +596,10 @@ class _ExpenseDetailScreenState extends ConsumerState<ExpenseDetailScreen> {
             onTap: _pickDate,
             borderRadius: BorderRadius.circular(12),
             child: InputDecorator(
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Date',
-                prefixIcon: const Icon(Icons.calendar_today_outlined),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                suffixIcon: const Icon(Icons.arrow_drop_down),
+                prefixIcon: Icon(LucideIcons.calendar),
+                suffixIcon: Icon(Icons.arrow_drop_down),
               ),
               child: Text(
                 DateFormat('EEE, d MMMM yyyy').format(_selectedDate),
@@ -614,11 +612,9 @@ class _ExpenseDetailScreenState extends ConsumerState<ExpenseDetailScreen> {
             controller: _descriptionController,
             maxLines: 3,
             textCapitalization: TextCapitalization.sentences,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               labelText: 'Notes (optional)',
-              prefixIcon: const Icon(Icons.notes_outlined),
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              prefixIcon: Icon(LucideIcons.notebook),
               alignLabelWithHint: true,
             ),
           ),

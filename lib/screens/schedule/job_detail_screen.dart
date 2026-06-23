@@ -227,7 +227,7 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
               },
               actions: [
                 IconButton(
-                  icon: const Icon(LucideIcons.pencil, color: Colors.white),
+                  icon: const Icon(LucideIcons.pencil),
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => CreateJobScreen(event: widget.job),
@@ -235,7 +235,6 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
                   ),
                 ),
                 PopupMenuButton<String>(
-                  iconColor: Colors.white,
                   onSelected: (v) {
                     if (v == 'delete') _confirmDelete();
                   },

@@ -7,6 +7,7 @@ import '../../providers/providers.dart';
 import '../../providers/auth_provider.dart';
 import '../../components/glass_card.dart';
 import '../../components/mesh_background.dart';
+import '../../components/curved_header.dart';
 
 final referralStatsProvider =
     StreamProvider.autoDispose<Map<String, dynamic>>((ref) {
@@ -45,51 +46,11 @@ class ReferralScreen extends ConsumerWidget {
     return MeshBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(100),
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFFF6B00), Color(0xFFF4781F)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(32),
-                bottomRight: Radius.circular(32),
-              ),
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () {
-                        if (Navigator.of(context).canPop()) {
-                          Navigator.of(context).pop();
-                        }
-                      },
-                    ),
-                    const Expanded(
-                      child: Text(
-                        'Referral Programme',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        body: statsAsync.when(
+        body: Column(
+          children: [
+            const CurvedHeader(title: 'Referral Programme'),
+            Expanded(
+              child: statsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('Error: $e')),
           data: (stats) {
@@ -385,7 +346,10 @@ class ReferralScreen extends ConsumerWidget {
           },
         ),
       ),
-    );
+    ],
+  ),
+),
+);
   }
 }
 

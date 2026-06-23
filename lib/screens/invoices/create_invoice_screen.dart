@@ -328,7 +328,9 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.withValues(alpha: 0.35)),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black.withValues(alpha: 0.04),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: const Row(
@@ -363,21 +365,13 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
                 fontSize: 15,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
-              decoration: InputDecoration(
-                prefixIcon: const Icon(LucideIcons.userSearch, color: Color(0xFFF4781F)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: Color(0xFFF4781F), width: 1.5),
-                ),
+              borderRadius: BorderRadius.circular(20),
+              dropdownColor: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF1E1E2C)
+                  : const Color(0xFFF0F4F9),
+              decoration: const InputDecoration(
+                prefixIcon: Icon(LucideIcons.userSearch, color: Color(0xFFF4781F)),
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
               items: [
                 const DropdownMenuItem(
@@ -463,7 +457,9 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.withValues(alpha: 0.25)),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.05)
+                : Colors.black.withValues(alpha: 0.03),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Column(

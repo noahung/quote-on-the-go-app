@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../components/mesh_background.dart';
+import '../../components/curved_header.dart';
 import '../../theme/semantic_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/collaboration_provider.dart';
@@ -227,77 +228,42 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(100),
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFFF6B00), Color(0xFFF4781F)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(32),
-                bottomRight: Radius.circular(32),
-              ),
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () {
-                        if (GoRouter.of(context).canPop()) {
-                          GoRouter.of(context).pop();
-                        } else {
-                          if (widget.documentType == 'quotation') {
-                            context.go('/quotations/${widget.documentId}');
-                          } else {
-                            context.go('/invoices/${widget.documentId}');
-                          }
-                        }
-                      },
-                    ),
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              widget.documentType == 'quotation' ? 'Quote Collaboration' : 'Invoice Collaboration',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Card(
-                            elevation: 0,
-                            color: Colors.white24,
-                            shape: const StadiumBorder(),
-                            margin: EdgeInsets.zero,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                              child: Text(
-                                '#$docNumber',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+          preferredSize: const Size.fromHeight(64),
+          child: CurvedHeader(
+            title: widget.documentType == 'quotation' ? 'Quote Collaboration' : 'Invoice Collaboration',
+            onBackPressed: () {
+              if (GoRouter.of(context).canPop()) {
+                GoRouter.of(context).pop();
+              } else {
+                if (widget.documentType == 'quotation') {
+                  context.go('/quotations/${widget.documentId}');
+                } else {
+                  context.go('/invoices/${widget.documentId}');
+                }
+              }
+            },
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 16.0),
+                child: Card(
+                  elevation: 0,
+                  color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
+                  shape: const StadiumBorder(),
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
+                    child: Text(
+                      '#$docNumber',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
         body: Column(
@@ -313,17 +279,6 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
                 ),
                 child: TabBar(
                   controller: _tabController,
-                  dividerColor: Colors.transparent,
-                  indicatorColor: Colors.transparent,
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  indicator: BoxDecoration(
-                    color: isDark ? const Color(0xFFF4781F).withValues(alpha: 0.15) : const Color(0xFFF4781F).withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  labelColor: const Color(0xFFF4781F),
-                  unselectedLabelColor: isDark ? Colors.white70 : Colors.black54,
-                  labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                   tabs: [
                     Tab(text: 'Versions ($versionCount)'),
                     Tab(text: 'Team Comments ($commentCount)'),

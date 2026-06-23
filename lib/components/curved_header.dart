@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class CurvedHeader extends StatelessWidget {
   final String title;
@@ -97,46 +98,54 @@ class CurvedHeader extends StatelessWidget {
 
     // ── Simple flat AppBar for all other screens ──
     final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      color: isDark ? const Color(0xFF1A1A1A) : colorScheme.primary,
+      color: Colors.transparent, // Fully transparent to let Mesh background flow
       child: SafeArea(
         bottom: false,
-        child: SizedBox(
-          height: 56,
-          child: Row(
-            children: [
-              if (canPop)
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: _buildBackHandler(context),
-                )
-              else if (shouldShowMenu)
-                IconButton(
-                  icon: const Icon(Icons.menu, color: Colors.white),
-                  onPressed: onMenuPressed ?? () {
-                    final scaffoldState = Scaffold.maybeOf(context);
-                    scaffoldState?.openDrawer();
-                  },
-                )
-              else
-                const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.3,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: SizedBox(
+            height: 64, // Slightly taller for premium breathing room
+            child: Row(
+              children: [
+                if (canPop)
+                  IconButton(
+                    icon: Icon(LucideIcons.arrowLeft, color: colorScheme.onSurface),
+                    onPressed: _buildBackHandler(context),
+                  )
+                else if (shouldShowMenu)
+                  IconButton(
+                    icon: Icon(LucideIcons.menu, color: colorScheme.onSurface),
+                    onPressed: onMenuPressed ?? () {
+                      final scaffoldState = Scaffold.maybeOf(context);
+                      scaffoldState?.openDrawer();
+                    },
+                  )
+                else
+                  const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              if (actions != null) ...actions!,
-              const SizedBox(width: 4),
-            ],
+                if (actions != null)
+                  IconTheme(
+                    data: IconThemeData(color: colorScheme.onSurface),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: actions!,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

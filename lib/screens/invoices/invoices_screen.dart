@@ -92,7 +92,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
             title: 'Invoices',
             actions: [
               IconButton(
-                icon: const Icon(Icons.add, color: Colors.white),
+                icon: const Icon(LucideIcons.plus),
                 onPressed: () => context.push('/invoices/new'),
               ),
             ],
@@ -149,23 +149,6 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
                   isScrollable: true,
                   tabAlignment: TabAlignment.start,
                   padding: EdgeInsets.zero,
-                  dividerColor: Colors.transparent,
-                  indicatorColor: Colors.transparent,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: isDark ? Colors.white70 : Colors.black87,
-                  indicator: BoxDecoration(
-                    color: const Color(0xFFF4781F),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  labelStyle: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.1,
-                  ),
-                  unselectedLabelStyle: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
                   tabs: _tabs.asMap().entries.map((entry) {
                     final index = entry.key;
                     final tab = entry.value;
@@ -183,7 +166,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
                             _CountBadge(
                               count: count,
                               isSelected: isSelected,
-                              activeColor: const Color(0xFFF4781F),
+                              activeColor: Theme.of(context).colorScheme.primary,
                             ),
                           ],
                         ],
@@ -482,7 +465,9 @@ class _CountBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: isSelected ? Colors.white : activeColor.withValues(alpha: 0.15),
+        color: isSelected
+            ? activeColor.withValues(alpha: 0.2)
+            : activeColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(

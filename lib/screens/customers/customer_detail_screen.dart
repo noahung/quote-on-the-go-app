@@ -401,11 +401,8 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                               children: customer.tags.map((tag) => Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF4781F).withValues(alpha: 0.1),
+                                  color: const Color(0xFFF4781F).withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(99),
-                                  border: Border.all(
-                                    color: const Color(0xFFF4781F).withValues(alpha: 0.3),
-                                  ),
                                 ),
                                 child: Text(
                                   tag,
@@ -1058,9 +1055,8 @@ class _QuickActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

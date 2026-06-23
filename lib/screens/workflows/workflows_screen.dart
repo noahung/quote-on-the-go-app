@@ -56,12 +56,12 @@ class _WorkflowsScreenState extends ConsumerState<WorkflowsScreen> with SingleTi
             title: 'Workflows',
             actions: [
               IconButton(
-                icon: const Icon(LucideIcons.history, color: Colors.white),
+                icon: const Icon(LucideIcons.history),
                 tooltip: 'Execution log',
                 onPressed: () => context.push('/workflows/executions'),
               ),
               IconButton(
-                icon: const Icon(Icons.add, color: Colors.white),
+                icon: const Icon(LucideIcons.plus),
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -85,17 +85,6 @@ class _WorkflowsScreenState extends ConsumerState<WorkflowsScreen> with SingleTi
                 padding: const EdgeInsets.all(4),
                 child: TabBar(
                   controller: _tabController,
-                  dividerColor: Colors.transparent,
-                  indicatorColor: Colors.transparent,
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  indicator: BoxDecoration(
-                    color: const Color(0xFFF4781F),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  labelColor: Colors.white,
-                  unselectedLabelColor: isDark ? Colors.white70 : Colors.black87,
-                  labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                  unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                   tabs: const [
                     Tab(text: 'Active Sequences'),
                     Tab(text: 'Template Library'),
