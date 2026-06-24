@@ -52,6 +52,7 @@ import '../screens/auth/onboarding_screen.dart';
 import '../screens/auth/email_verification_screen.dart';
 import '../screens/shared/in_app_web_view_screen.dart';
 import '../screens/shared/pdf_preview_screen.dart';
+import '../screens/auth/splash_screen.dart';
 
 /// Converts a Firebase auth stream into a [Listenable] for GoRouter's
 /// refreshListenable, so the router re-evaluates redirects without being
@@ -78,7 +79,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(() => refreshListenable.dispose());
 
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: '/splash',
     debugLogDiagnostics: true,
     refreshListenable: refreshListenable,
     redirect: (context, state) async {
@@ -90,6 +91,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoggingIn = location == '/login' || location == '/register';
       final isOnboarding = location == '/onboarding';
       final isVerifyingEmail = location == '/verify-email';
+      final isSplash = location == '/splash';
+
+      // Allow the splash screen to display without redirection
+      if (isSplash) {
+        return null;
+      }
 
       // If not authenticated, redirect to login (unless already on login/register)
       if (!isAuthenticated && !isLoggingIn) {
@@ -130,6 +137,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      // Splash route
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
       // Auth routes
       GoRoute(
         path: '/login',
