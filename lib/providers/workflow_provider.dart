@@ -13,7 +13,7 @@ Stream<List<WorkflowTemplate>> workflowsStream(WorkflowsStreamRef ref) {
   if (companyId == null) return const Stream.empty();
 
   return firestore
-      .collection('workflows')
+      .collection('workflow_templates')
       .where('companyId', isEqualTo: companyId)
       .orderBy('name')
       .snapshots()
@@ -26,7 +26,7 @@ Stream<List<WorkflowTemplate>> workflowsStream(WorkflowsStreamRef ref) {
 Stream<WorkflowTemplate?> workflowTemplateStream(WorkflowTemplateStreamRef ref, String templateId) {
   final firestore = ref.watch(firestoreProvider);
   return firestore
-      .collection('workflows')
+      .collection('workflow_templates')
       .doc(templateId)
       .snapshots()
       .map((doc) => doc.exists ? WorkflowTemplate.fromFirestore(doc) : null);
@@ -43,7 +43,7 @@ class WorkflowRepository {
   WorkflowRepository(this._firestore);
 
   Future<void> createWorkflow(WorkflowTemplate workflow) async {
-    await _firestore.collection('workflows').add({
+    await _firestore.collection('workflow_templates').add({
       ...workflow.toJson()..remove('id'),
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
@@ -51,19 +51,19 @@ class WorkflowRepository {
   }
 
   Future<void> updateWorkflow(WorkflowTemplate workflow) async {
-    await _firestore.collection('workflows').doc(workflow.id).update({
+    await _firestore.collection('workflow_templates').doc(workflow.id).update({
       ...workflow.toJson()..remove('id'),
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
   Future<void> deleteWorkflow(String workflowId) async {
-    await _firestore.collection('workflows').doc(workflowId).delete();
+    await _firestore.collection('workflow_templates').doc(workflowId).delete();
   }
 
   Future<void> toggleWorkflowStatus(String workflowId, bool isActive) async {
     await _firestore
-        .collection('workflows')
+        .collection('workflow_templates')
         .doc(workflowId)
         .update({'isActive': isActive});
   }

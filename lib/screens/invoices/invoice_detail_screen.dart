@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import '../../providers/providers.dart';
+import '../../providers/collaboration_provider.dart';
 import '../../theme/semantic_colors.dart';
 import '../../components/curved_header.dart';
 import '../../components/mesh_background.dart';
@@ -13,6 +14,8 @@ import '../../components/glass_card.dart';
 import '../../components/custom_date_time_picker.dart';
 import '../../utils/feedback_controller.dart';
 import '../../models/feedback_type.dart';
+import '../../models/models.dart';
+import '../client_responses/client_activity_card.dart';
 
 const _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
 
@@ -212,9 +215,39 @@ class InvoiceDetailScreen extends ConsumerWidget {
     await _sendByEmail(context, ref, invoice);
   }
 
+  Future<bool> _showLockWarningDialog(BuildContext context, String lockedBy) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Document Locked'),
+          ],
+        ),
+        content: Text('This document is currently being edited by another user (ID: $lockedBy). Editing it simultaneously might overwrite changes. Do you want to proceed anyway?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Proceed'),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final invoice = ref.watch(invoiceProvider(invoiceId));
+    final lockAsync = ref.watch(documentLockProvider((documentId: invoiceId, documentType: 'invoice')));
+    final lockInfo = lockAsync.valueOrNull;
+    final currentUserId = ref.watch(userProfileProvider)?.uid;
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -259,8 +292,15 @@ class InvoiceDetailScreen extends ConsumerWidget {
                   icon: const Icon(LucideIcons.moreVertical),
                   onSelected: (value) async {
                     if (value == 'edit') {
-                      context.push('/invoices/${invoice.id}/edit',
-                          extra: invoice);
+                      final isLocked = lockInfo != null && lockInfo.isLocked && lockInfo.lockedBy != currentUserId;
+                      if (isLocked) {
+                        final proceed = await _showLockWarningDialog(context, lockInfo.lockedBy!);
+                        if (!proceed) return;
+                      }
+                      if (context.mounted) {
+                        context.push('/invoices/${invoice.id}/edit',
+                            extra: invoice);
+                      }
                     } else if (value == 'send') {
                       await _showSendOptions(context, ref, invoice);
                     } else if (value == 'mark_paid') {
@@ -308,6 +348,24 @@ class InvoiceDetailScreen extends ConsumerWidget {
                 ),
               ],
             ),
+            if (lockInfo != null && lockInfo.isLocked && lockInfo.lockedBy != currentUserId)
+              Container(
+                width: double.infinity,
+                color: Colors.amber.shade900,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: const Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded, color: Colors.white),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Warning: This document is currently locked/edited by another user.',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -607,6 +665,16 @@ class InvoiceDetailScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    _ReminderHistorySection(invoice: invoice),
+                    const SizedBox(height: 16),
+
+                    // Client Activity (portal responses)
+                    ClientActivityCard(
+                      documentId: invoice.id,
+                      documentType: 'invoice',
+                      customerName: invoice.customerName,
+                    ),
                     const SizedBox(height: 24),
 
                     // Bottom Actions
@@ -663,6 +731,246 @@ class InvoiceDetailScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ReminderHistorySection extends StatefulWidget {
+  final Invoice invoice;
+
+  const _ReminderHistorySection({required this.invoice});
+
+  @override
+  State<_ReminderHistorySection> createState() => _ReminderHistorySectionState();
+}
+
+class _ReminderHistorySectionState extends State<_ReminderHistorySection> {
+  bool _isExpanded = false;
+  bool _isSending = false;
+
+  Future<void> _triggerManualReminder(BuildContext context, WidgetRef ref) async {
+    setState(() => _isSending = true);
+    try {
+      final repo = ref.read(reminderRepositoryProvider);
+      await repo.sendManualReminderEmail(widget.invoice.id, widget.invoice.customerEmail);
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).success(
+          context,
+          'Manual payment reminder sent to ${widget.invoice.customerEmail}',
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).error(
+          context,
+          'Failed to send reminder: $e',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          ListTile(
+            leading: Icon(LucideIcons.history, color: colorScheme.primary, size: 20),
+            title: const Text(
+              'Reminder History',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            trailing: Icon(
+              _isExpanded ? LucideIcons.chevronDown : LucideIcons.chevronRight,
+              size: 18,
+            ),
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+          ),
+          if (_isExpanded) ...[
+            const Divider(height: 1, thickness: 1),
+            Consumer(
+              builder: (context, ref, child) {
+                final historyAsync = ref.watch(reminderHistoryStreamProvider(widget.invoice.id));
+                return historyAsync.when(
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (err, stack) => Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text('Error loading history: $err'),
+                  ),
+                  data: (history) {
+                    return Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Send History Log',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  shape: const StadiumBorder(),
+                                  minimumSize: const Size(0, 32),
+                                ),
+                                onPressed: _isSending ? null : () => _triggerManualReminder(context, ref),
+                                icon: _isSending
+                                    ? const SizedBox(
+                                        width: 12,
+                                        height: 12,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : const Icon(LucideIcons.mail, size: 12),
+                                label: const Text('Send Reminder Now', style: TextStyle(fontSize: 11)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          if (history.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12.0),
+                              child: Text(
+                                'No reminders sent yet.',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontStyle: FontStyle.italic,
+                                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            )
+                          else
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: history.length,
+                              itemBuilder: (context, index) {
+                                final entry = history[index];
+                                final isSent = entry.status == 'Sent';
+                                final formattedDate = DateFormat('d MMM yyyy, HH:mm').format(entry.sentAt);
+
+                                return IntrinsicHeight(
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      // Timeline column
+                                      Column(
+                                        children: [
+                                          Container(
+                                            width: 10,
+                                            height: 10,
+                                            decoration: BoxDecoration(
+                                              color: isSent ? semanticColors.success : semanticColors.error,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          if (index < history.length - 1)
+                                            Expanded(
+                                              child: Container(
+                                                width: 2,
+                                                color: colorScheme.outline.withValues(alpha: 0.2),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(width: 16),
+                                      // Log Details column
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(bottom: 16.0),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                children: [
+                                                  Text(
+                                                    '${entry.triggerType} Reminder',
+                                                    style: const TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: (isSent ? semanticColors.success : semanticColors.error)
+                                                          .withValues(alpha: 0.1),
+                                                      borderRadius: BorderRadius.circular(4),
+                                                    ),
+                                                    child: Text(
+                                                      entry.status,
+                                                      style: TextStyle(
+                                                        color: isSent ? semanticColors.success : semanticColors.error,
+                                                        fontWeight: FontWeight.w700,
+                                                        fontSize: 10,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'To: ${entry.recipientEmail}',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: colorScheme.onSurface.withValues(alpha: 0.7),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                formattedDate,
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                                                ),
+                                              ),
+                                              if (entry.error != null) ...[
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  'Error: ${entry.error}',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: semanticColors.error,
+                                                    fontStyle: FontStyle.italic,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ],
       ),
     );
   }

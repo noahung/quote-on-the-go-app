@@ -79,8 +79,20 @@ class _WorkflowExecutionLogScreenState
     );
   }
 
+  String _getFilterLabel(String filter) {
+    if (filter == 'all') return 'All';
+    if (filter == 'active') return 'Active';
+    if (filter == 'success') return 'Success';
+    if (filter == 'completed') return 'Completed';
+    if (filter == 'failed') return 'Failed';
+    if (filter == 'cancelled') return 'Cancelled';
+    if (filter == 'stopped') return 'Stopped';
+    if (filter == 'error') return 'Error';
+    return filter[0].toUpperCase() + filter.substring(1);
+  }
+
   Widget _buildFilterChips(ColorScheme colorScheme, bool isDark) {
-    final filters = ['all', 'active', 'completed', 'stopped', 'error'];
+    final filters = ['all', 'active', 'success', 'completed', 'failed', 'cancelled', 'stopped', 'error'];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -90,7 +102,7 @@ class _WorkflowExecutionLogScreenState
             padding: const EdgeInsets.only(right: 8),
             child: ChoiceChip(
               label: Text(
-                status[0].toUpperCase() + status.substring(1),
+                _getFilterLabel(status),
                 style: TextStyle(
                   color: selected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
                   fontWeight: FontWeight.w600,
@@ -146,6 +158,24 @@ class _WorkflowExecutionLogScreenState
               Row(
                 children: [
                   _StatusBadge(status: execution.status, colors: colors),
+                  if (execution.retryCount > 0) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Retries: ${execution.retryCount}',
+                        style: const TextStyle(
+                          color: Colors.amber,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                   const Spacer(),
                   _DocumentChip(
                     type: execution.targetType,
@@ -180,6 +210,37 @@ class _WorkflowExecutionLogScreenState
                 ],
               ),
               const SizedBox(height: 12),
+              if (execution.lastError != null && execution.lastError!.isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: colors.error.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: colors.error.withValues(alpha: 0.15),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(LucideIcons.alertTriangle, size: 14, color: colors.error),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          execution.lastError!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colors.error,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -378,8 +439,10 @@ class _WorkflowExecutionLogScreenState
       case 'active':
         return Colors.blue;
       case 'completed':
+      case 'success':
         return colors.success;
       case 'stopped':
+      case 'cancelled':
         return Colors.orange;
       case 'error':
       case 'failed':
@@ -463,10 +526,10 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (color, label) = switch (status) {
       'active' => (Colors.blue, 'Active'),
-      'completed' => (colors.success, 'Completed'),
-      'stopped' => (Colors.orange, 'Stopped'),
-      'error' || 'failed' => (colors.error, 'Error'),
-      _ => (Colors.grey, status),
+      'completed' || 'success' => (colors.success, 'Success'),
+      'stopped' || 'cancelled' => (Colors.orange, 'Cancelled'),
+      'error' || 'failed' => (colors.error, 'Failed'),
+      _ => (Colors.grey, status[0].toUpperCase() + status.substring(1)),
     };
 
     return Container(

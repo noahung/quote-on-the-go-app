@@ -37,6 +37,12 @@ class Invoice with _$Invoice {
     String? stripePaymentIntentId,
     String? stripePaymentStatus,
     String? brevoMessageId,
+    // Document discounts & status
+    double? discount,
+    String? discountType, // 'percentage' | 'fixed'
+    double? discountAmount,
+    @Default(false) bool isArchived,
+    String? recurringSetupId,
     // Job linking
     String? jobId,
     // Monday.com Integration

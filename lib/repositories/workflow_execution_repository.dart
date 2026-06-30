@@ -39,6 +39,25 @@ class WorkflowExecutionRepository {
     return WorkflowExecution.fromFirestore(doc);
   }
 
+  DateTime calculateNextExecution(DateTime baseTime, DelayConfig delay) {
+    if (delay.type == 'hours') {
+      return baseTime.add(Duration(hours: delay.value));
+    } else if (delay.type == 'business_days') {
+      DateTime result = baseTime;
+      int daysToAdd = delay.value;
+      while (daysToAdd > 0) {
+        result = result.add(const Duration(days: 1));
+        if (result.weekday != DateTime.saturday && result.weekday != DateTime.sunday) {
+          daysToAdd--;
+        }
+      }
+      return result;
+    } else {
+      // Default to 'days' or fallback
+      return baseTime.add(Duration(days: delay.value));
+    }
+  }
+
   Future<String> startExecution({
     required String templateId,
     required String targetDocumentId,
@@ -52,8 +71,16 @@ class WorkflowExecutionRepository {
     final now = DateTime.now().toUtc();
     final firstStep = steps.isNotEmpty ? steps.first : null;
     final currentStepId = firstStep != null ? 'step_${firstStep.order}' : '';
-    final waitDays = firstStep?.waitDays ?? 0;
-    final nextExecutionAt = now.add(Duration(days: waitDays));
+    
+    DateTime nextExecutionAt = now;
+    if (firstStep != null) {
+      if (firstStep.delay != null) {
+        nextExecutionAt = calculateNextExecution(now, firstStep.delay!);
+      } else {
+        final waitDays = firstStep.waitDays ?? 0;
+        nextExecutionAt = now.add(Duration(days: waitDays));
+      }
+    }
 
     final docRef = _firestore.collection('workflow_executions').doc();
     final execution = WorkflowExecution(

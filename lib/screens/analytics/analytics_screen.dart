@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../components/curved_header.dart';
 import '../../theme/semantic_colors.dart';
 import '../../providers/providers.dart';
+import '../../utils/feedback_controller.dart';
 
 class AnalyticsScreen extends ConsumerStatefulWidget {
   const AnalyticsScreen({super.key});
@@ -20,7 +22,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -82,7 +84,22 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
       backgroundColor: Colors.transparent,
       body: Column(
         children: [
-          CurvedHeader(title: 'Analytics'),
+          CurvedHeader(
+            title: 'Analytics',
+            actions: [
+              IconButton(
+                icon: const Icon(LucideIcons.download),
+                tooltip: 'Export report',
+                onPressed: () => _exportReport(
+                  context,
+                  quotations: quotations,
+                  invoices: invoices,
+                  customers: allCustomers,
+                  allInvoices: allInvoices,
+                ),
+              ),
+            ],
+          ),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(16),
@@ -175,10 +192,13 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                     indicatorColor: const Color(0xFFF4781F),
                     labelColor: const Color(0xFFF4781F),
                     unselectedLabelColor: isDark ? Colors.white54 : Colors.black54,
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
                     tabs: const [
                       Tab(text: 'Profit'),
                       Tab(text: 'Pipeline'),
                       Tab(text: 'LTV'),
+                      Tab(text: 'Trends'),
                       Tab(text: 'Insights'),
                     ],
                   ),
@@ -193,6 +213,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                       _buildProfitTab(context, invoices, semanticColors, isDark, currency),
                       _buildPipelineTab(context, quotations, isDark, currency),
                       _buildLtvTab(context, allCustomers, allInvoices, isDark, currency),
+                      _buildTrendsTab(context, allInvoices, semanticColors, isDark, currency),
                       _buildInsightsTab(context, quotations, invoices, semanticColors, isDark),
                     ],
                   ),
@@ -545,6 +566,225 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
         ],
       ),
     );
+  }
+
+  // ── Trends Tab (seasonal + forecast) ──────────────────────────────────────
+  List<({DateTime month, double revenue})> _monthlyRevenue(
+      List<dynamic> allInvoices, int months) {
+    final now = DateTime.now();
+    final series = <({DateTime month, double revenue})>[];
+    final paid = allInvoices.where((i) => i.status == 'Paid').toList();
+    for (int i = months - 1; i >= 0; i--) {
+      final m = DateTime(now.year, now.month - i);
+      final revenue = paid
+          .where((inv) {
+            final d = inv.createdAt ?? DateTime(2000);
+            return d.year == m.year && d.month == m.month;
+          })
+          .fold(0.0, (s, inv) => s + (inv.total as num).toDouble());
+      series.add((month: m, revenue: revenue));
+    }
+    return series;
+  }
+
+  Widget _buildTrendsTab(BuildContext context, List<dynamic> allInvoices,
+      SemanticColors colors, bool isDark, NumberFormat currency) {
+    final series = _monthlyRevenue(allInvoices, 12);
+    final hasData = series.any((e) => e.revenue > 0);
+    if (!hasData) {
+      return _emptyCard('No paid revenue yet to chart trends.', isDark);
+    }
+
+    final maxRevenue =
+        series.map((e) => e.revenue).reduce((a, b) => a > b ? a : b);
+
+    // Seasonal: best & worst months.
+    final sorted = [...series]..sort((a, b) => b.revenue.compareTo(a.revenue));
+    final best = sorted.first;
+    final worst = sorted.last;
+
+    // Forecast: 3-month moving average, adjusted by recent growth trend.
+    final last3 = series.length >= 3 ? series.sublist(series.length - 3) : series;
+    final prev3 = series.length >= 6
+        ? series.sublist(series.length - 6, series.length - 3)
+        : <({DateTime month, double revenue})>[];
+    final last3Avg =
+        last3.fold(0.0, (s, e) => s + e.revenue) / (last3.isEmpty ? 1 : last3.length);
+    final prev3Avg = prev3.isEmpty
+        ? last3Avg
+        : prev3.fold(0.0, (s, e) => s + e.revenue) / prev3.length;
+    final growth = prev3Avg > 0 ? (last3Avg - prev3Avg) / prev3Avg : 0.0;
+    final forecast = (last3Avg * (1 + growth)).clamp(0, double.infinity);
+    final nextMonth = DateTime(DateTime.now().year, DateTime.now().month + 1);
+
+    final monthLabel = DateFormat('MMM');
+
+    return Card(
+      elevation: 0,
+      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Revenue Trends (12 mo)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 12),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    ...series.map((e) {
+                      final pct = maxRevenue > 0 ? e.revenue / maxRevenue : 0.0;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                                width: 36,
+                                child: Text(monthLabel.format(e.month),
+                                    style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600))),
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(100),
+                                child: LinearProgressIndicator(
+                                  value: pct.clamp(0.0, 1.0),
+                                  minHeight: 8,
+                                  backgroundColor: Colors.black12,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      colors.accentPrimary),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              width: 56,
+                              child: Text(currency.format(e.revenue),
+                                  textAlign: TextAlign.right,
+                                  style: const TextStyle(
+                                      fontSize: 11, color: Colors.grey)),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+            const Divider(),
+            Row(
+              children: [
+                Expanded(
+                  child: _trendStat('Peak month',
+                      '${monthLabel.format(best.month)} · ${currency.format(best.revenue)}',
+                      colors.success),
+                ),
+                Expanded(
+                  child: _trendStat('Slowest month',
+                      '${monthLabel.format(worst.month)} · ${currency.format(worst.revenue)}',
+                      colors.warning),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colors.accentPrimary.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  Icon(LucideIcons.trendingUp,
+                      size: 18, color: colors.accentPrimary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Forecast · ${monthLabel.format(nextMonth)}',
+                          style: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          '${currency.format(forecast)}  (${growth >= 0 ? '+' : ''}${(growth * 100).toStringAsFixed(1)}% trend)',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? Colors.white70 : Colors.black54),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _trendStat(String label, String value, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        const SizedBox(height: 2),
+        Text(value,
+            style: TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+      ],
+    );
+  }
+
+  // ── Export ────────────────────────────────────────────────────────────────
+  void _exportReport(
+    BuildContext context, {
+    required List<dynamic> quotations,
+    required List<dynamic> invoices,
+    required List<dynamic> customers,
+    required List<dynamic> allInvoices,
+  }) {
+    final paid = invoices.where((i) => i.status == 'Paid').toList();
+    final totalRevenue = paid.fold(0.0, (s, i) => s + (i.total as num).toDouble());
+    final pipeline = quotations
+        .where((q) => q.status == 'Draft' || q.status == 'Sent')
+        .fold(0.0, (s, q) => s + (q.total as num).toDouble());
+    final sent = quotations
+        .where((q) =>
+            q.status == 'Sent' || q.status == 'Accepted' || q.status == 'Declined')
+        .length;
+    final accepted = quotations.where((q) => q.status == 'Accepted').length;
+    final conv = sent > 0 ? accepted / sent * 100 : 0.0;
+    final series = _monthlyRevenue(allInvoices, 12);
+
+    final buffer = StringBuffer()
+      ..writeln('Quote On The Go — Analytics Report')
+      ..writeln('Range: $_selectedDateRange')
+      ..writeln('Generated: ${DateFormat('d MMM yyyy, HH:mm').format(DateTime.now())}')
+      ..writeln('')
+      ..writeln('Metric,Value')
+      ..writeln('Total Revenue (paid),${totalRevenue.toStringAsFixed(2)}')
+      ..writeln('Pipeline Value,${pipeline.toStringAsFixed(2)}')
+      ..writeln('Customers,${customers.length}')
+      ..writeln('Quotes Sent,$sent')
+      ..writeln('Quotes Accepted,$accepted')
+      ..writeln('Conversion Rate,${conv.toStringAsFixed(1)}%')
+      ..writeln('')
+      ..writeln('Month,Revenue');
+    for (final e in series) {
+      buffer.writeln(
+          '${DateFormat('MMM yyyy').format(e.month)},${e.revenue.toStringAsFixed(2)}');
+    }
+
+    Share.share(buffer.toString(), subject: 'Analytics Report');
+    ref.read(feedbackControllerProvider).success(context, 'Report ready to share');
   }
 
   Widget _emptyCard(String message, bool isDark) {

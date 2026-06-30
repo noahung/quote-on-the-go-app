@@ -13,6 +13,9 @@ class LineItem with _$LineItem {
     required double unitPrice,
     required double total,
     String? serviceId,
+    double? discount,
+    String? discountType, // 'percentage' | 'fixed'
+    double? discountAmount,
   }) = _LineItem;
 
   factory LineItem.fromJson(Map<String, dynamic> json) =>

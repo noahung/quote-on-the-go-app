@@ -6,6 +6,7 @@ export 'expense_provider.dart';
 export 'service_provider.dart';
 export 'schedule_provider.dart';
 export 'workflow_provider.dart';
+export 'document_template_provider.dart';
 export 'workflow_execution_provider.dart';
 export 'notification_provider.dart';
 export 'theme_provider.dart';
@@ -16,3 +17,7 @@ export 'drawer_controller_provider.dart';
 export 'integration_provider.dart';
 export 'pricing_provider.dart';
 export 'team_provider.dart';
+export 'reminder_provider.dart';
+export 'recurring_invoice_provider.dart';
+export 'portal_activity_provider.dart';
+

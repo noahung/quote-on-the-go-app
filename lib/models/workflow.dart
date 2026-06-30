@@ -4,6 +4,53 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 part 'workflow.freezed.dart';
 part 'workflow.g.dart';
 
+const List<String> kWorkflowTriggers = [
+  'quotation_created',
+  'quotation_sent',
+  'quotation_accepted',
+  'quotation_declined',
+  'invoice_created',
+  'invoice_sent',
+  'invoice_paid',
+  'job_status_changed',
+  'customer_created',
+];
+
+const Map<String, String> kWorkflowTriggerLabels = {
+  'quotation_created': 'Quotation Created',
+  'quotation_sent': 'Quotation Sent',
+  'quotation_accepted': 'Quotation Accepted',
+  'quotation_declined': 'Quotation Declined',
+  'invoice_created': 'Invoice Created',
+  'invoice_sent': 'Invoice Sent',
+  'invoice_paid': 'Invoice Paid',
+  'job_status_changed': 'Job Status Changed',
+  'customer_created': 'Customer Created',
+};
+
+@freezed
+class DelayConfig with _$DelayConfig {
+  const factory DelayConfig({
+    required String type, // 'hours', 'days', 'business_days'
+    required int value,
+  }) = _DelayConfig;
+
+  factory DelayConfig.fromJson(Map<String, dynamic> json) =>
+      _$DelayConfigFromJson(json);
+}
+
+@freezed
+class TriggerCondition with _$TriggerCondition {
+  const factory TriggerCondition({
+    required String field,
+    required String operator, // 'equals', 'not_equals', 'greater_than', 'less_than'
+    required String value,
+  }) = _TriggerCondition;
+
+  factory TriggerCondition.fromJson(Map<String, dynamic> json) =>
+      _$TriggerConditionFromJson(json);
+}
+
 @freezed
 class WorkflowStep with _$WorkflowStep {
   const factory WorkflowStep({
@@ -12,6 +59,7 @@ class WorkflowStep with _$WorkflowStep {
     String? subject,
     String? body,
     int? waitDays,
+    DelayConfig? delay,
   }) = _WorkflowStep;
 
   factory WorkflowStep.fromJson(Map<String, dynamic> json) =>
@@ -28,6 +76,10 @@ class WorkflowTemplate with _$WorkflowTemplate {
     required bool isActive,
     required String companyId,
     @Default([]) List<WorkflowStep> steps,
+    int? maxRetries,
+    int? retryDelaySeconds,
+    String? onFailureAction, // 'none', 'notify_owner', 'stop'
+    List<TriggerCondition>? conditions,
     @TimestampConverter() DateTime? createdAt,
     @TimestampConverter() DateTime? updatedAt,
   }) = _WorkflowTemplate;
@@ -38,13 +90,27 @@ class WorkflowTemplate with _$WorkflowTemplate {
   factory WorkflowTemplate.fromFirestore(DocumentSnapshot doc) {
     final data = Map<String, dynamic>.from(doc.data() as Map<String, dynamic>);
     _convertTimestamps(data);
+    
     if (data['steps'] is List) {
       data['steps'] = (data['steps'] as List)
-          .map((s) => Map<String, dynamic>.from(s as Map))
+          .map((s) {
+            final stepMap = Map<String, dynamic>.from(s as Map);
+            if (stepMap['delay'] is Map) {
+              stepMap['delay'] = Map<String, dynamic>.from(stepMap['delay'] as Map);
+            }
+            return stepMap;
+          })
           .toList();
     } else {
       data['steps'] = <Map<String, dynamic>>[];
     }
+
+    if (data['conditions'] is List) {
+      data['conditions'] = (data['conditions'] as List)
+          .map((c) => Map<String, dynamic>.from(c as Map))
+          .toList();
+    }
+
     return WorkflowTemplate.fromJson({
       'name': '',
       'type': '',

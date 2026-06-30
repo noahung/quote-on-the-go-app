@@ -185,7 +185,7 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
         return;
       }
 
-      final isEditing = _editingEvent != null;
+      final isEditing = _editingEvent != null && _editingEvent!.id.isNotEmpty;
 
       final event = CalendarEvent(
         id: isEditing ? _editingEvent!.id : '',
@@ -216,7 +216,7 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
           context.pop();
         }
       } else {
-        final newId = await repository.createEvent(event);
+        await repository.createEvent(event);
         if (mounted) {
           await ref.read(feedbackControllerProvider).showCelebration(
             context: context,
@@ -275,7 +275,7 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
             },
           ),
           title: Text(
-            _editingEvent != null ? 'Edit Job' : 'New Job',
+            (_editingEvent != null && _editingEvent!.id.isNotEmpty) ? 'Edit Job' : 'New Job',
             style: const TextStyle(fontWeight: FontWeight.w700),
           ),
         ),
@@ -511,8 +511,8 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
                             color: Colors.white, strokeWidth: 2))
                     : const Icon(Icons.save),
                 label: Text(_isLoading
-                    ? (_editingEvent != null ? 'Saving...' : 'Creating...')
-                    : (_editingEvent != null ? 'Save Changes' : 'Create Job')),
+                    ? ((_editingEvent != null && _editingEvent!.id.isNotEmpty) ? 'Saving...' : 'Creating...')
+                    : ((_editingEvent != null && _editingEvent!.id.isNotEmpty) ? 'Save Changes' : 'Create Job')),
                 style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14)),
               ),

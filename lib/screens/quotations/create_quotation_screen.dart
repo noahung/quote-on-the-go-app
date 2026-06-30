@@ -236,6 +236,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
                   children: [
                     _buildDocNumberRow(context),
                     const SizedBox(height: 16),
+                    _buildTemplateSelectorCard(),
                     _buildCustomerCard(),
                     const SizedBox(height: 16),
                     _buildDatesCard(context),
@@ -341,6 +342,100 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
         color: Colors.grey,
       ),
     );
+  }
+
+  Widget _buildTemplateSelectorCard() {
+    final templates = ref.watch(documentTemplatesProvider)
+        .where((t) => t.type == 'quotation')
+        .toList();
+
+    if (templates.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: GlassCard(
+        borderRadius: BorderRadius.circular(24),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(LucideIcons.fileSpreadsheet, size: 20, color: Color(0xFFF4781F)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Apply Template',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                decoration: InputDecoration(
+                  hintText: 'Select a quote template...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  isDense: true,
+                ),
+                items: templates.map((t) {
+                  return DropdownMenuItem<String>(
+                    value: t.id,
+                    child: Text(t.name),
+                  );
+                }).toList(),
+                onChanged: (templateId) {
+                  if (templateId == null) return;
+                  final template = templates.firstWhere((t) => t.id == templateId);
+                  
+                  // Confirm to overwrite items if there are already items
+                  if (_lineItems.isNotEmpty) {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Overwrite Items?'),
+                        content: const Text('Applying this template will replace your current line items, notes, and tax rate. Do you want to proceed?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFF4781F)),
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              _applyTemplate(template);
+                            },
+                            child: const Text('Apply'),
+                          ),
+                        ],
+                      ),
+                    );
+                  } else {
+                    _applyTemplate(template);
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _applyTemplate(DocumentTemplate template) {
+    setState(() {
+      _lineItems.clear();
+      _lineItems.addAll(template.items);
+      _notesController.text = template.notes ?? '';
+      _taxRate = template.taxRate ?? 0.0;
+      _taxRateController.text = _taxRate.toStringAsFixed(1);
+    });
+    ref.read(feedbackControllerProvider).success(context, 'Template applied: ${template.name}');
   }
 
   Widget _buildCustomerCard() {
@@ -905,6 +1000,8 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
   late final TextEditingController _descriptionController;
   late final TextEditingController _quantityController;
   late final TextEditingController _priceController;
+  late final TextEditingController _discountController;
+  String _discountType = 'percentage';
 
   // AI prompt controller
   final _aiPromptController = TextEditingController();
@@ -921,6 +1018,10 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
     _priceController = TextEditingController(
       text: existing != null ? existing.unitPrice.toString() : '',
     );
+    _discountController = TextEditingController(
+      text: existing?.discount != null ? existing!.discount.toString() : '',
+    );
+    _discountType = existing?.discountType ?? 'percentage';
   }
 
   @override
@@ -928,6 +1029,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
     _descriptionController.dispose();
     _quantityController.dispose();
     _priceController.dispose();
+    _discountController.dispose();
     _aiPromptController.dispose();
     super.dispose();
   }
@@ -936,18 +1038,33 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
     final description = _descriptionController.text.trim();
     final quantity = double.tryParse(_quantityController.text) ?? 1;
     final price = double.tryParse(_priceController.text) ?? 0;
+    final discount = double.tryParse(_discountController.text) ?? 0.0;
 
     if (description.isEmpty || price <= 0) {
       ref.read(feedbackControllerProvider).warning(context, 'Please enter a valid description and price');
       return;
     }
 
+    double discountAmount = 0.0;
+    if (discount > 0) {
+      if (_discountType == 'percentage') {
+        discountAmount = (quantity * price) * (discount / 100);
+      } else {
+        discountAmount = discount;
+      }
+    }
+
+    final total = (quantity * price) - discountAmount;
+
     final item = LineItem(
       id: widget.existingItem?.id ?? const Uuid().v4(),
       description: description,
       quantity: quantity,
       unitPrice: price,
-      total: quantity * price,
+      discount: discount > 0 ? discount : null,
+      discountType: discount > 0 ? _discountType : null,
+      discountAmount: discount > 0 ? discountAmount : null,
+      total: total,
     );
 
     Navigator.pop(context, item);
@@ -1089,7 +1206,7 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
     );
   }
 
-  InputDecoration _fieldDeco(String label, String hint, {String? prefixText}) {
+  InputDecoration _fieldDeco(String label, String hint, {String? prefixText, String? suffixText}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return InputDecoration(
       labelText: label,
@@ -1106,6 +1223,8 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
       ),
       prefixText: prefixText,
       prefixStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+      suffixText: suffixText,
+      suffixStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
       filled: true,
       fillColor: isDark
           ? Colors.white.withValues(alpha: 0.07)
@@ -1161,6 +1280,53 @@ class _AddItemBottomSheetState extends ConsumerState<_AddItemBottomSheet> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: TextField(
+                controller: _discountController,
+                style: const TextStyle(fontSize: 14),
+                decoration: _fieldDeco(
+                  'Discount',
+                  '0.00',
+                  prefixText: _discountType == 'fixed' ? '£ ' : null,
+                  suffixText: _discountType == 'percentage' ? '%' : null,
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: DropdownButtonFormField<String>(
+                initialValue: _discountType,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                decoration: _fieldDeco('Type', ''),
+                dropdownColor: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF1C1C1E)
+                    : Colors.white,
+                items: const [
+                  DropdownMenuItem(value: 'percentage', child: Text('%')),
+                  DropdownMenuItem(value: 'fixed', child: Text('£')),
+                ],
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() {
+                      _discountType = val;
+                    });
+                  }
+                },
               ),
             ),
           ],

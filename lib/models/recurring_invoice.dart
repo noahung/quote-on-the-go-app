@@ -1,69 +1,61 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'company.dart';
 import 'line_item.dart';
 
-part 'quotation.freezed.dart';
-part 'quotation.g.dart';
+part 'recurring_invoice.freezed.dart';
+part 'recurring_invoice.g.dart';
 
 @freezed
-class Quotation with _$Quotation {
-  const factory Quotation({
+class RecurringInvoice with _$RecurringInvoice {
+  const factory RecurringInvoice({
     required String id,
     required String companyId,
-    required String createdBy,
-    required String quotationNumber,
+    required String customerId,
     required String customerName,
     required String customerEmail,
     String? customerPhone,
     String? customerAddress,
-    required String date,
-    required String expiryDate,
+    required String frequency, // 'weekly' | 'monthly' | 'quarterly' | 'yearly'
+    required String startDate, // ISO
+    String? endDate, // ISO
+    required String nextRunDate, // ISO
+    required bool isActive,
     required List<LineItem> items,
     required double subtotal,
     double? taxRate,
     double? taxAmount,
-    required double total,
-    @Default('Draft') String status,
-    String? notes,
-    CompanyProfile? company,
-    @TimestampConverter() DateTime? createdAt,
-    @TimestampConverter() DateTime? updatedAt,
-    String? amendmentComments,
-    @Default(false) bool isArchived,
-    @TimestampConverter() DateTime? scheduledSendAt,
-    String? brevoMessageId,
-    // Document discounts
     double? discount,
     String? discountType, // 'percentage' | 'fixed'
     double? discountAmount,
-    // Job linking
-    String? jobId,
-    // Monday.com Integration
-    String? mondayItemId,
-    String? mondayBoardId,
-    String? mondaySyncStatus,
-    String? mondaySyncError,
-    @TimestampConverter() DateTime? mondayLastSyncAt,
-  }) = _Quotation;
+    required double total,
+    String? notes,
+    String? pdfTemplateId,
+    String? pdfThemeColor,
+    @TimestampConverter() DateTime? createdAt,
+    @TimestampConverter() DateTime? updatedAt,
+    @TimestampConverter() DateTime? lastRunAt,
+    required List<String> generatedInvoiceIds,
+  }) = _RecurringInvoice;
 
-  factory Quotation.fromJson(Map<String, dynamic> json) =>
-      _$QuotationFromJson(json);
+  factory RecurringInvoice.fromJson(Map<String, dynamic> json) =>
+      _$RecurringInvoiceFromJson(json);
 
-  factory Quotation.fromFirestore(DocumentSnapshot doc) {
+  factory RecurringInvoice.fromFirestore(DocumentSnapshot doc) {
     final data = Map<String, dynamic>.from(doc.data() as Map<String, dynamic>);
     _convertTimestamps(data);
-    return Quotation.fromJson({
+    return RecurringInvoice.fromJson({
       'companyId': '',
-      'createdBy': '',
-      'quotationNumber': '',
+      'customerId': '',
       'customerName': '',
       'customerEmail': '',
-      'date': '',
-      'expiryDate': '',
+      'frequency': 'monthly',
+      'startDate': '',
+      'nextRunDate': '',
+      'isActive': true,
       'items': [],
       'subtotal': 0.0,
       'total': 0.0,
+      'generatedInvoiceIds': <String>[],
       ...data,
       'id': doc.id,
     });

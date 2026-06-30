@@ -5,13 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../components/glass_card.dart';
 import '../../components/mesh_background.dart';
 import '../../models/checklist_template.dart';
-import '../../providers/checklist_template_provider.dart';
 import '../../providers/providers.dart';
 import '../../theme/semantic_colors.dart';
 import '../../utils/feedback_controller.dart';
 
 class ChecklistTemplatesScreen extends ConsumerStatefulWidget {
-  const ChecklistTemplatesScreen({super.key});
+  final bool isTab;
+  const ChecklistTemplatesScreen({super.key, this.isTab = false});
 
   @override
   ConsumerState<ChecklistTemplatesScreen> createState() => _ChecklistTemplatesScreenState();
@@ -189,6 +189,32 @@ class _ChecklistTemplatesScreenState extends ConsumerState<ChecklistTemplatesScr
     final role = userProfile?.role.toLowerCase();
     final canEdit = role == 'owner' || role == 'admin';
 
+    final body = ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Description
+        Text(
+          'Create and manage pre-defined checklist templates to quickly apply checklist tasks to scheduled jobs.',
+          style: TextStyle(
+            fontSize: 14,
+            color: colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Templates List
+        _buildTemplatesList(templatesAsync, colorScheme, semanticColors, isDark, canEdit),
+        const SizedBox(height: 20),
+
+        // Create/Edit Form
+        _buildForm(colorScheme, semanticColors, isDark, canEdit),
+      ],
+    );
+
+    if (widget.isTab) {
+      return body;
+    }
+
     return MeshBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -211,27 +237,7 @@ class _ChecklistTemplatesScreenState extends ConsumerState<ChecklistTemplatesScr
             style: TextStyle(fontWeight: FontWeight.w700),
           ),
         ),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Description
-            Text(
-              'Create and manage pre-defined checklist templates to quickly apply checklist tasks to scheduled jobs.',
-              style: TextStyle(
-                fontSize: 14,
-                color: colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Templates List
-            _buildTemplatesList(templatesAsync, colorScheme, semanticColors, isDark, canEdit),
-            const SizedBox(height: 20),
-
-            // Create/Edit Form
-            _buildForm(colorScheme, semanticColors, isDark, canEdit),
-          ],
-        ),
+        body: body,
       ),
     );
   }

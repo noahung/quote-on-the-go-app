@@ -1,7 +1,43 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'quotation_provider.dart'; // to reuse firestoreProvider
+
+class UnifiedActivityItem {
+  final String id;
+  final String type; // 'comment' | 'timeline'
+  final DateTime timestamp;
+  final String authorName;
+  final String initials;
+  final String content;
+  final String badgeText;
+  final String badgeColor;
+  final bool isResolved;
+  final bool isPrivate;
+
+  UnifiedActivityItem({
+    required this.id,
+    required this.type,
+    required this.timestamp,
+    required this.authorName,
+    required this.initials,
+    required this.content,
+    required this.badgeText,
+    required this.badgeColor,
+    required this.isResolved,
+    required this.isPrivate,
+  });
+}
+
+class DocumentLockInfo {
+  final String? lockedBy;
+  final DateTime? lockedAt;
+
+  DocumentLockInfo({this.lockedBy, this.lockedAt});
+
+  bool get isLocked => lockedBy != null;
+}
 
 class InternalComment {
   final String id;
@@ -391,10 +427,200 @@ final collaborationVersionsProvider = StreamProvider.family<List<DocumentVersion
       });
 });
 
+final unifiedActivityStreamProvider = StreamProvider.family<List<UnifiedActivityItem>, ({String documentId, String documentType})>((ref, arg) {
+  final controller = StreamController<List<UnifiedActivityItem>>();
+  
+  List<InternalComment> currentComments = [];
+  List<ActivityTimelineItem> currentTimeline = [];
+
+  void emitMerged() {
+    final merged = <UnifiedActivityItem>[];
+    
+    for (final comment in currentComments) {
+      final initials = _getInitials(comment.authorName);
+      merged.add(UnifiedActivityItem(
+        id: comment.id,
+        type: 'comment',
+        timestamp: comment.createdAt,
+        authorName: comment.authorName,
+        initials: initials,
+        content: comment.content,
+        badgeText: comment.isPrivate ? 'Internal' : 'Customer',
+        badgeColor: comment.isPrivate ? 'blue' : 'green',
+        isResolved: comment.isResolved,
+        isPrivate: comment.isPrivate,
+      ));
+    }
+
+    for (final item in currentTimeline) {
+      final name = item.actor['userName'] as String? ?? item.actor['displayName'] as String? ?? 'System';
+      final initials = _getInitials(name);
+      merged.add(UnifiedActivityItem(
+        id: item.id,
+        type: 'timeline',
+        timestamp: item.timestamp,
+        authorName: name,
+        initials: initials,
+        content: item.description,
+        badgeText: 'System',
+        badgeColor: 'grey',
+        isResolved: false,
+        isPrivate: false,
+      ));
+    }
+
+    merged.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    if (!controller.isClosed) {
+      controller.add(merged);
+    }
+  }
+
+  ref.listen<AsyncValue<List<InternalComment>>>(collaborationCommentsProvider(arg), (previous, next) {
+    currentComments = next.valueOrNull ?? [];
+    emitMerged();
+  }, fireImmediately: true);
+
+  ref.listen<AsyncValue<List<ActivityTimelineItem>>>(documentTimelineProvider(arg), (previous, next) {
+    currentTimeline = next.valueOrNull ?? [];
+    emitMerged();
+  }, fireImmediately: true);
+
+  ref.onDispose(() {
+    controller.close();
+  });
+
+  return controller.stream;
+});
+
+String _getInitials(String name) {
+  if (name.isEmpty) return '?';
+  final parts = name.trim().split(RegExp(r'\s+'));
+  if (parts.length > 1) {
+    final first = parts.first.isNotEmpty ? parts.first[0] : '';
+    final last = parts.last.isNotEmpty ? parts.last[0] : '';
+    return (first + last).toUpperCase();
+  }
+  return name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : '?';
+}
+
+final documentLockProvider = StreamProvider.family<DocumentLockInfo, ({String documentId, String documentType})>((ref, arg) {
+  final firestore = ref.watch(firestoreProvider);
+  
+  final lockDocStream = firestore.collection('document_locks').doc(arg.documentId).snapshots();
+  final docCollection = arg.documentType == 'quotation' ? 'quotations' : 'invoices';
+  final docStream = firestore.collection(docCollection).doc(arg.documentId).snapshots();
+
+  final controller = StreamController<DocumentLockInfo>();
+  
+  String? lockDocLockedBy;
+  DateTime? lockDocLockedAt;
+  
+  String? mainDocLockedBy;
+  DateTime? mainDocLockedAt;
+
+  void emitLock() {
+    if (lockDocLockedBy != null) {
+      if (!controller.isClosed) {
+        controller.add(DocumentLockInfo(lockedBy: lockDocLockedBy, lockedAt: lockDocLockedAt));
+      }
+    } else if (mainDocLockedBy != null) {
+      if (!controller.isClosed) {
+        controller.add(DocumentLockInfo(lockedBy: mainDocLockedBy, lockedAt: mainDocLockedAt));
+      }
+    } else {
+      if (!controller.isClosed) {
+        controller.add(DocumentLockInfo(lockedBy: null, lockedAt: null));
+      }
+    }
+  }
+
+  final sub1 = lockDocStream.listen((snapshot) {
+    if (snapshot.exists) {
+      final data = snapshot.data();
+      lockDocLockedBy = data?['lockedBy'] as String?;
+      final t = data?['lockedAt'];
+      if (t is Timestamp) {
+        lockDocLockedAt = t.toDate();
+      } else if (t is String) {
+        lockDocLockedAt = DateTime.tryParse(t);
+      } else {
+        lockDocLockedAt = null;
+      }
+    } else {
+      lockDocLockedBy = null;
+      lockDocLockedAt = null;
+    }
+    emitLock();
+  }, onError: (err) {
+    debugPrint('Error in lockDocStream: $err');
+  });
+
+  final sub2 = docStream.listen((snapshot) {
+    if (snapshot.exists) {
+      final data = snapshot.data();
+      mainDocLockedBy = data?['lockedBy'] as String?;
+      final t = data?['lockedAt'];
+      if (t is Timestamp) {
+        mainDocLockedAt = t.toDate();
+      } else if (t is String) {
+        mainDocLockedAt = DateTime.tryParse(t);
+      } else {
+        mainDocLockedAt = null;
+      }
+    } else {
+      mainDocLockedBy = null;
+      mainDocLockedAt = null;
+    }
+    emitLock();
+  }, onError: (err) {
+    debugPrint('Error in docStream: $err');
+  });
+
+  ref.onDispose(() {
+    sub1.cancel();
+    sub2.cancel();
+    controller.close();
+  });
+
+  return controller.stream;
+});
+
 class CollaborationRepository {
   final FirebaseFirestore _firestore;
 
   CollaborationRepository(this._firestore);
+
+  Future<void> lockDocument({
+    required String documentId,
+    required String documentType,
+    required String userId,
+  }) async {
+    final collection = documentType == 'quotation' ? 'quotations' : 'invoices';
+    await _firestore.collection(collection).doc(documentId).update({
+      'lockedBy': userId,
+      'lockedAt': FieldValue.serverTimestamp(),
+    });
+
+    await _firestore.collection('document_locks').doc(documentId).set({
+      'documentId': documentId,
+      'documentType': documentType,
+      'lockedBy': userId,
+      'lockedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> unlockDocument({
+    required String documentId,
+    required String documentType,
+  }) async {
+    final collection = documentType == 'quotation' ? 'quotations' : 'invoices';
+    await _firestore.collection(collection).doc(documentId).update({
+      'lockedBy': null,
+      'lockedAt': null,
+    });
+
+    await _firestore.collection('document_locks').doc(documentId).delete();
+  }
 
   Future<void> addComment({
     required String documentId,

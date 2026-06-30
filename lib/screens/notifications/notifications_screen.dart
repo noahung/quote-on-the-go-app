@@ -215,6 +215,10 @@ class NotificationsScreen extends ConsumerWidget {
         case 'quotation':
           context.go('/quotations/${n.relatedDocumentId}');
           break;
+        case 'comment_added':
+        case 'comment':
+          context.go('/client-responses');
+          break;
         case 'invoice_paid':
         case 'invoice_reminder':
         case 'invoice':
@@ -280,6 +284,9 @@ class _NotificationTile extends StatelessWidget {
         return LucideIcons.xCircle;
       case 'quotation_amended':
         return LucideIcons.pencil;
+      case 'comment_added':
+      case 'comment':
+        return LucideIcons.messageCircle;
       case 'invoice_paid':
         return LucideIcons.creditCard;
       case 'invoice_reminder':
@@ -309,6 +316,9 @@ class _NotificationTile extends StatelessWidget {
         return cs.error;
       case 'quotation_amended':
         return cs.secondary;
+      case 'comment_added':
+      case 'comment':
+        return cs.primary;
       case 'invoice_paid':
         return cs.tertiary;
       case 'invoice_reminder':

@@ -32,6 +32,8 @@ class WorkflowExecution with _$WorkflowExecution {
     String? targetCustomerName,
     String? currentStepId,
     @Default('active') String status,
+    @Default(0) int retryCount,
+    String? lastError,
     @TimestampConverter() DateTime? startedAt,
     @TimestampConverter() DateTime? completedAt,
     @TimestampConverter() DateTime? nextExecutionAt,

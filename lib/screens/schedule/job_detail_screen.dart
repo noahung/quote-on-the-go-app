@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -116,6 +117,7 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
     Tab(text: 'Overview'),
     Tab(text: 'Quotes'),
     Tab(text: 'Invoices'),
+    Tab(text: 'Bookings'),
     Tab(text: 'Expenses'),
     Tab(text: 'Materials'),
     Tab(text: 'Signature'),
@@ -126,7 +128,7 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 8, vsync: this);
+    _tabController = TabController(length: 9, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging ||
           _tabController.index != _currentTabIndex) {
@@ -227,6 +229,37 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
               },
               actions: [
                 IconButton(
+                  tooltip: 'Add to Calendar',
+                  icon: const Icon(LucideIcons.calendarDays),
+                  onPressed: () async {
+                    final startDateTime = DateTime.tryParse(widget.job.start)?.toUtc() ?? DateTime.now().toUtc();
+                    final endDateTime = DateTime.tryParse(widget.job.end)?.toUtc() ?? DateTime.now().add(const Duration(hours: 1)).toUtc();
+                    final formatter = DateFormat("yyyyMMdd'T'HHmmss'Z'");
+                    final startStr = formatter.format(startDateTime);
+                    final endStr = formatter.format(endDateTime);
+
+                    final url = Uri.https(
+                      'calendar.google.com',
+                      '/calendar/render',
+                      {
+                        'action': 'TEMPLATE',
+                        'text': widget.job.title,
+                        'dates': '$startStr/$endStr',
+                        'details': widget.job.description ?? '',
+                        'location': widget.job.customerAddress ?? '',
+                      },
+                    );
+
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    } else {
+                      if (context.mounted) {
+                        ref.read(feedbackControllerProvider).error(context, 'Could not launch Google Calendar');
+                      }
+                    }
+                  },
+                ),
+                IconButton(
                   icon: const Icon(LucideIcons.pencil),
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
@@ -293,6 +326,7 @@ class _JobDetailViewState extends ConsumerState<_JobDetailView>
                   _OverviewTab(job: widget.job),
                   _QuotesTab(jobId: widget.job.id, job: widget.job),
                   _InvoicesTab(jobId: widget.job.id, job: widget.job),
+                  _BookingsTab(job: widget.job),
                   _ExpensesTab(jobId: widget.job.id, job: widget.job),
                   _MaterialsTab(job: widget.job),
                   _SignatureTab(job: widget.job),
@@ -750,9 +784,9 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
         if (!hasSignature && status == 'Completed') ...[
           GestureDetector(
             onTap: () {
-              // Switch to Signature tab (index 5)
+              // Switch to Signature tab (index 6)
               final state = context.findAncestorStateOfType<_JobDetailViewState>();
-              state?._tabController.animateTo(5);
+              state?._tabController.animateTo(6);
             },
             child: Container(
               margin: const EdgeInsets.only(bottom: 16),
@@ -1939,6 +1973,81 @@ class _InvoicesTab extends ConsumerWidget {
           ],
         );
       },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Bookings Tab
+// ─────────────────────────────────────────────────────────────────
+class _BookingsTab extends ConsumerWidget {
+  final CalendarEvent job;
+  const _BookingsTab({required this.job});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(LucideIcons.calendarDays, color: colorScheme.primary, size: 24),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Bookings',
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Schedule visits: Plan follow-up visits or site appointments for this job.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => CreateJobScreen(
+                            event: CalendarEvent(
+                              id: '',
+                              companyId: job.companyId,
+                              userId: job.userId,
+                              title: 'Follow-up: ${job.title}',
+                              start: DateTime.now().toIso8601String(),
+                              end: DateTime.now().add(const Duration(hours: 1)).toIso8601String(),
+                              customerId: job.customerId,
+                              customerName: job.customerName,
+                              customerAddress: job.customerAddress,
+                              status: 'Draft',
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(LucideIcons.calendarDays),
+                    label: const Text('Schedule Visit'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

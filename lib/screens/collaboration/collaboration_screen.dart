@@ -31,7 +31,7 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -188,7 +188,7 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
       documentType: widget.documentType,
     )));
 
-    final timelineAsync = ref.watch(documentTimelineProvider((
+    final activityAsync = ref.watch(unifiedActivityStreamProvider((
       documentId: widget.documentId,
       documentType: widget.documentType,
     )));
@@ -220,9 +220,8 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
       });
     }
 
-    final commentCount = commentsAsync.valueOrNull?.length ?? 0;
     final versionCount = versionsAsync.valueOrNull?.length ?? 0;
-    final timelineCount = timelineAsync.valueOrNull?.length ?? 0;
+    final activityCount = activityAsync.valueOrNull?.length ?? 0;
 
     return MeshBackground(
       child: Scaffold(
@@ -286,8 +285,7 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
                   padding: EdgeInsets.zero,
                   tabs: [
                     Tab(text: 'Versions ($versionCount)'),
-                    Tab(text: 'Team Comments ($commentCount)'),
-                    Tab(text: 'Timeline ($timelineCount)'),
+                    Tab(text: 'Activity Feed ($activityCount)'),
                     Tab(text: 'Approvals'),
                   ],
                 ),
@@ -301,8 +299,7 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
                 controller: _tabController,
                 children: [
                   _buildVersionsTab(context, versionsAsync, commentsAsync, docSnapshot, semanticColors, isDark),
-                  _buildCommentsTab(context, commentsAsync, semanticColors, isDark),
-                  _buildTimelineTab(context, timelineAsync, semanticColors, isDark),
+                  _buildActivityFeedTab(context, activityAsync, semanticColors, isDark),
                   _buildApprovalsTab(context, approvalAsync, semanticColors, isDark),
                 ],
               ),
@@ -434,6 +431,27 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
                                 ),
                                 child: Text(version.isActive ? 'Current' : 'Restore', style: const TextStyle(fontSize: 12)),
                               ),
+                              const SizedBox(width: 8),
+                              OutlinedButton(
+                                onPressed: () {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (context) => VersionComparisonBottomSheet(
+                                      selectedVersion: version,
+                                      currentDocSnapshot: docSnapshot,
+                                      allVersions: versions,
+                                    ),
+                                  );
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: const Text('Compare', style: TextStyle(fontSize: 12)),
+                              ),
                               const SizedBox(width: 4),
                               IconButton(
                                 icon: const Icon(Icons.visibility, size: 18),
@@ -519,27 +537,41 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
     );
   }
 
-  Widget _buildCommentsTab(BuildContext context, AsyncValue<List<InternalComment>> commentsAsync, SemanticColors colors, bool isDark) {
+  Widget _buildActivityFeedTab(
+    BuildContext context,
+    AsyncValue<List<UnifiedActivityItem>> activityAsync,
+    SemanticColors colors,
+    bool isDark,
+  ) {
     return Column(
       children: [
         Expanded(
-          child: commentsAsync.when(
+          child: activityAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (err, stack) => Center(child: Text('Error: $err')),
-            data: (comments) {
-              if (comments.isEmpty) {
-                return const Center(child: Text('No comments posted yet.', style: TextStyle(color: Colors.grey)));
+            data: (items) {
+              if (items.isEmpty) {
+                return const Center(child: Text('No activity recorded yet.', style: TextStyle(color: Colors.grey)));
               }
 
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
-                itemCount: comments.length,
+                itemCount: items.length,
                 itemBuilder: (context, index) {
-                  final comment = comments[index];
-                  // Compute initials
-                  final String initials = comment.authorName.isNotEmpty
-                      ? comment.authorName.split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
-                      : 'AN';
+                  final item = items[index];
+                  
+                  // Determine badge color
+                  Color badgeColor = Colors.grey;
+                  if (item.type == 'comment') {
+                    if (item.isPrivate) {
+                      badgeColor = Colors.blue;
+                    } else {
+                      badgeColor = Colors.green; // Customer badge
+                    }
+                  }
+
+                  Color avatarBgColor = badgeColor.withValues(alpha: 0.12);
+                  Color avatarTextColor = badgeColor;
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16.0),
@@ -547,12 +579,12 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         CircleAvatar(
-                          backgroundColor: const Color(0xFFF4781F).withValues(alpha: 0.12),
+                          backgroundColor: avatarBgColor,
                           radius: 18,
                           child: Text(
-                            initials,
-                            style: const TextStyle(
-                              color: Color(0xFFF4781F),
+                            item.initials,
+                            style: TextStyle(
+                              color: avatarTextColor,
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
                             ),
@@ -564,14 +596,30 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    comment.authorName,
+                                    item.authorName,
                                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                                   ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: badgeColor.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      item.badgeText,
+                                      style: TextStyle(
+                                        color: badgeColor,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const Spacer(),
                                   Text(
-                                    _formatTimeAgo(comment.createdAt),
+                                    _formatTimeAgo(item.timestamp),
                                     style: const TextStyle(fontSize: 11, color: Colors.grey),
                                   ),
                                 ],
@@ -586,40 +634,42 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
                                   border: Border.all(color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
                                 ),
                                 child: Text(
-                                  comment.content,
+                                  item.content,
                                   style: const TextStyle(fontSize: 13),
                                 ),
                               ),
-                              if (comment.isResolved) ...[
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.check_circle, size: 14, color: Colors.green),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Resolved',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.green,
-                                        fontWeight: FontWeight.w700,
+                              if (item.type == 'comment') ...[
+                                if (item.isResolved) ...[
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.check_circle, size: 14, color: Colors.green),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Resolved',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.green,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ] else ...[
-                                const SizedBox(height: 6),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton(
-                                    onPressed: () => _resolveComment(context, comment.id),
-                                    style: TextButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      minimumSize: Size.zero,
-                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                    ),
-                                    child: const Text('Resolve', style: TextStyle(fontSize: 12, color: Color(0xFFF4781F))),
+                                    ],
                                   ),
-                                ),
+                                ] else ...[
+                                  const SizedBox(height: 6),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton(
+                                      onPressed: () => _resolveComment(context, item.id),
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        minimumSize: Size.zero,
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      child: const Text('Resolve', style: TextStyle(fontSize: 12, color: Color(0xFFF4781F))),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ],
                           ),
@@ -844,66 +894,6 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
     }
   }
 
-  Widget _buildTimelineTab(
-    BuildContext context,
-    AsyncValue<List<ActivityTimelineItem>> timelineAsync,
-    SemanticColors colors,
-    bool isDark,
-  ) {
-    return timelineAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err')),
-      data: (items) {
-        if (items.isEmpty) {
-          return const Center(child: Text('No activity recorded yet.', style: TextStyle(color: Colors.grey)));
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: items.length,
-          itemBuilder: (context, index) {
-            final item = items[index];
-            final actorName = item.actor['userName'] ?? item.actor['displayName'] ?? 'Anonymous';
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Column(
-                  children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF4781F),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    if (index < items.length - 1)
-                      Container(width: 2, height: 50, color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.08)),
-                  ],
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.description,
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '$actorName • ${_formatTimeAgo(item.timestamp)}',
-                        style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.black54),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
 
   Widget _buildApprovalsTab(
     BuildContext context,
@@ -1055,6 +1045,252 @@ class _ApprovalStatusBadge extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+}
+
+class VersionComparisonBottomSheet extends StatefulWidget {
+  final DocumentVersion selectedVersion;
+  final Map<String, dynamic> currentDocSnapshot;
+  final List<DocumentVersion> allVersions;
+
+  const VersionComparisonBottomSheet({
+    super.key,
+    required this.selectedVersion,
+    required this.currentDocSnapshot,
+    required this.allVersions,
+  });
+
+  @override
+  State<VersionComparisonBottomSheet> createState() => _VersionComparisonBottomSheetState();
+}
+
+class _VersionComparisonBottomSheetState extends State<VersionComparisonBottomSheet> {
+  late Map<String, dynamic> _compareWithSnapshot;
+  String _compareTargetLabel = 'Current Document';
+
+  @override
+  void initState() {
+    super.initState();
+    _compareWithSnapshot = widget.currentDocSnapshot;
+  }
+
+  List<Map<String, dynamic>> _computeDifferences(Map<String, dynamic> oldSnap, Map<String, dynamic> newSnap) {
+    final diffs = <Map<String, dynamic>>[];
+    
+    final fields = {
+      'total': 'Total Amount',
+      'customerName': 'Client/Customer Name',
+      'notes': 'Notes',
+      'expiryDate': 'Expiry Date',
+      'date': 'Date',
+      'status': 'Status',
+      'discount': 'Discount',
+    };
+
+    for (final entry in fields.entries) {
+      final field = entry.key;
+      final label = entry.value;
+      
+      final oldVal = oldSnap[field];
+      final newVal = newSnap[field];
+
+      if (oldVal != newVal) {
+        String formatVal(dynamic val) {
+          if (val == null) return 'N/A';
+          if (val is num) return '£${val.toStringAsFixed(2)}';
+          return val.toString();
+        }
+        diffs.add({
+          'field': label,
+          'oldValue': formatVal(oldVal),
+          'newValue': formatVal(newVal),
+        });
+      }
+    }
+
+    final oldItems = oldSnap['items'] as List? ?? [];
+    final newItems = newSnap['items'] as List? ?? [];
+    if (oldItems.length != newItems.length) {
+      diffs.add({
+        'field': 'Number of Items',
+        'oldValue': '${oldItems.length} items',
+        'newValue': '${newItems.length} items',
+      });
+    } else {
+      for (int i = 0; i < oldItems.length; i++) {
+        final oldItem = oldItems[i] as Map? ?? {};
+        final newItem = newItems[i] as Map? ?? {};
+        final oldDesc = oldItem['description'] ?? oldItem['name'] ?? 'Item ${i + 1}';
+        final newDesc = newItem['description'] ?? newItem['name'] ?? 'Item ${i + 1}';
+        final oldPrice = oldItem['rate'] ?? oldItem['price'] ?? oldItem['unitPrice'] ?? 0.0;
+        final newPrice = newItem['rate'] ?? newItem['price'] ?? newItem['unitPrice'] ?? 0.0;
+        final oldQty = oldItem['quantity'] ?? 0;
+        final newQty = newItem['quantity'] ?? 0;
+
+        if (oldDesc != newDesc || oldPrice != newPrice || oldQty != newQty) {
+          diffs.add({
+            'field': 'Item ${i + 1} (${newDesc})',
+            'oldValue': '$oldQty x £${(oldPrice as num).toStringAsFixed(2)}',
+            'newValue': '$newQty x £${(newPrice as num).toStringAsFixed(2)}',
+          });
+        }
+      }
+    }
+
+    return diffs;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final differences = _computeDifferences(widget.selectedVersion.snapshot, _compareWithSnapshot);
+
+    return Container(
+      padding: const EdgeInsets.only(left: 24, right: 24, top: 16, bottom: 24),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white24 : Colors.black12,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Compare Version ${widget.selectedVersion.versionNumber}',
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text('Compare with:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue: _compareTargetLabel,
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            items: [
+              const DropdownMenuItem(
+                value: 'Current Document',
+                child: Text('Current Document Snapshot'),
+              ),
+              ...widget.allVersions
+                  .where((v) => v.id != widget.selectedVersion.id)
+                  .map((v) => DropdownMenuItem(
+                        value: 'Version ${v.versionNumber}',
+                        child: Text('Version ${v.versionNumber} snapshot'),
+                      ))
+            ],
+            onChanged: (val) {
+              if (val == null) return;
+              setState(() {
+                _compareTargetLabel = val;
+                if (val == 'Current Document') {
+                  _compareWithSnapshot = widget.currentDocSnapshot;
+                } else {
+                  final selectedVerNum = int.tryParse(val.replaceAll('Version ', ''));
+                  final selectedVer = widget.allVersions.firstWhere((v) => v.versionNumber == selectedVerNum);
+                  _compareWithSnapshot = selectedVer.snapshot;
+                }
+              });
+            },
+          ),
+          const SizedBox(height: 24),
+          const Text('Differences:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          if (differences.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 32.0),
+                child: Text('No differences found. The versions are identical.', style: TextStyle(color: Colors.grey)),
+              ),
+            )
+          else
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: differences.length,
+                itemBuilder: (context, index) {
+                  final diff = differences[index];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.black.withValues(alpha: 0.02),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          diff['field'] as String,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Old Value (Selected Version)', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    diff['oldValue'] as String,
+                                    style: const TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward, size: 16, color: Colors.grey),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('New Value ($_compareTargetLabel)', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    diff['newValue'] as String,
+                                    style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          const SizedBox(height: 16),
+        ],
       ),
     );
   }

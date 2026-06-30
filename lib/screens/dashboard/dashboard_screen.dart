@@ -74,6 +74,28 @@ class DashboardScreen extends ConsumerWidget {
                             ),
                           ),
                         ),
+                        Builder(
+                          builder: (context) {
+                            final unread =
+                                ref.watch(unreadClientActivityCountProvider);
+                            return SizedBox(
+                              width: 40,
+                              height: 40,
+                              child: IconButton(
+                                padding: EdgeInsets.zero,
+                                tooltip: 'Client Responses',
+                                icon: Badge(
+                                  isLabelVisible: unread > 0,
+                                  label: Text(
+                                      unread > 99 ? '99+' : unread.toString()),
+                                  child: const Icon(LucideIcons.messageSquare),
+                                ),
+                                onPressed: () =>
+                                    context.push('/client-responses'),
+                              ),
+                            );
+                          },
+                        ),
                         SizedBox(
                           width: 40,
                           height: 40,

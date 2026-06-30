@@ -20,6 +20,8 @@ import '../screens/quotations/quotation_portal_screen.dart';
 import '../screens/invoices/invoices_screen.dart';
 import '../screens/invoices/invoice_detail_screen.dart';
 import '../screens/invoices/invoice_portal_screen.dart';
+import '../screens/invoices/add_edit_recurring_invoice_screen.dart';
+
 import '../screens/customers/customers_screen.dart';
 import '../screens/customers/customer_detail_screen.dart';
 import '../screens/customers/add_edit_customer_screen.dart';
@@ -30,8 +32,10 @@ import '../screens/settings/settings_screen.dart';
 import '../screens/settings/company_branding_screen.dart';
 import '../screens/settings/integrations_screen.dart';
 import '../screens/settings/collaboration_overview_screen.dart';
-import '../screens/settings/checklist_templates_screen.dart';
+import '../screens/settings/templates_screen.dart';
+import '../screens/settings/add_edit_document_template_screen.dart';
 import '../screens/settings/sign_in_methods_screen.dart';
+import '../screens/settings/reminder_settings_screen.dart';
 import '../screens/expenses/expenses_screen.dart';
 import '../screens/expenses/expense_detail_screen.dart';
 import '../screens/expenses/log_expense_screen.dart';
@@ -47,6 +51,7 @@ import '../screens/workflows/workflows_screen.dart';
 import '../screens/workflows/workflow_execution_log_screen.dart';
 import '../screens/analytics/analytics_screen.dart';
 import '../screens/collaboration/collaboration_screen.dart';
+import '../screens/client_responses/client_responses_screen.dart';
 import '../screens/pricing/smart_pricing_screen.dart';
 import '../screens/auth/onboarding_screen.dart';
 import '../screens/auth/email_verification_screen.dart';
@@ -283,6 +288,22 @@ final routerProvider = Provider<GoRouter>((ref) {
           return CreateInvoiceScreen(existingInvoice: invoice);
         },
       ),
+      GoRoute(
+        path: '/invoices/recurring/new',
+        builder: (context, state) => const AddEditRecurringInvoiceScreen(),
+      ),
+      GoRoute(
+        path: '/invoices/recurring/:id/edit',
+        builder: (context, state) {
+          final rec = state.extra as RecurringInvoice?;
+          final id = state.pathParameters['id']!;
+          return AddEditRecurringInvoiceScreen(
+            existingRecurringInvoice: rec,
+            recurringInvoiceId: id,
+          );
+        },
+      ),
+
 
       GoRoute(
         path: '/customers/new',
@@ -335,6 +356,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
+        path: '/settings/reminders',
+        builder: (context, state) => const ReminderSettingsScreen(),
+      ),
+      GoRoute(
         path: '/integrations',
         builder: (context, state) => const IntegrationsScreen(),
       ),
@@ -343,8 +368,23 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const CollaborationOverviewScreen(),
       ),
       GoRoute(
+        path: '/client-responses',
+        builder: (context, state) => const ClientResponsesScreen(),
+      ),
+      GoRoute(
         path: '/checklist-templates',
-        builder: (context, state) => const ChecklistTemplatesScreen(),
+        builder: (context, state) => const TemplatesScreen(initialTab: 1),
+      ),
+      GoRoute(
+        path: '/settings/templates',
+        builder: (context, state) => const TemplatesScreen(initialTab: 0),
+      ),
+      GoRoute(
+        path: '/settings/templates/add-edit',
+        builder: (context, state) {
+          final template = state.extra as DocumentTemplate?;
+          return AddEditDocumentTemplateScreen(existingTemplate: template);
+        },
       ),
       GoRoute(
         path: '/sign-in-methods',

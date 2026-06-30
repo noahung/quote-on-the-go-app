@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../providers/providers.dart';
+import '../../providers/collaboration_provider.dart';
 import '../../models/models.dart';
 import '../../theme/semantic_colors.dart';
 import '../../components/curved_header.dart';
@@ -16,6 +17,7 @@ import '../../components/glass_card.dart';
 import '../../components/custom_date_time_picker.dart';
 import '../../utils/feedback_controller.dart';
 import '../../models/feedback_type.dart';
+import '../client_responses/client_activity_card.dart';
 
 const _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
 
@@ -286,12 +288,42 @@ class QuotationDetailScreen extends ConsumerWidget {
     );
   }
 
+  Future<bool> _showLockWarningDialog(BuildContext context, String lockedBy) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Document Locked'),
+          ],
+        ),
+        content: Text('This document is currently being edited by another user (ID: $lockedBy). Editing it simultaneously might overwrite changes. Do you want to proceed anyway?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Proceed'),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final quotation = ref.watch(quotationProvider(quotationId));
+    final lockAsync = ref.watch(documentLockProvider((documentId: quotationId, documentType: 'quotation')));
+    final lockInfo = lockAsync.valueOrNull;
+    final currentUserId = ref.watch(userProfileProvider)?.uid;
 
     if (quotation == null) {
       return const MeshBackground(
@@ -333,8 +365,15 @@ class QuotationDetailScreen extends ConsumerWidget {
                   icon: const Icon(LucideIcons.moreVertical),
                   onSelected: (value) async {
                     if (value == 'edit') {
-                      context.push('/quotations/${quotation.id}/edit',
-                          extra: quotation);
+                      final isLocked = lockInfo != null && lockInfo.isLocked && lockInfo.lockedBy != currentUserId;
+                      if (isLocked) {
+                        final proceed = await _showLockWarningDialog(context, lockInfo.lockedBy!);
+                        if (!proceed) return;
+                      }
+                      if (context.mounted) {
+                        context.push('/quotations/${quotation.id}/edit',
+                            extra: quotation);
+                      }
                     } else if (value == 'send') {
                       await _showSendOptions(context, ref, quotation);
                     } else if (value == 'copy_link') {
@@ -411,6 +450,24 @@ class QuotationDetailScreen extends ConsumerWidget {
                 ),
               ],
             ),
+            if (lockInfo != null && lockInfo.isLocked && lockInfo.lockedBy != currentUserId)
+              Container(
+                width: double.infinity,
+                color: Colors.amber.shade900,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: const Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded, color: Colors.white),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Warning: This document is currently locked/edited by another user.',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -741,6 +798,14 @@ class QuotationDetailScreen extends ConsumerWidget {
                           ),
                         ],
                       ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Client Activity (portal responses)
+                    ClientActivityCard(
+                      documentId: quotation.id,
+                      documentType: 'quotation',
+                      customerName: quotation.customerName,
                     ),
                     const SizedBox(height: 24),
 

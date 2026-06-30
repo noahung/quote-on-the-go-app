@@ -418,16 +418,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     trailing: const Icon(LucideIcons.chevronRight, size: 14),
                     onTap: () => context.push('/expenses'),
                   ),
-                  _buildSubtleDivider(isDark),
-                  ListTile(
-                    leading: Icon(LucideIcons.listChecks, color: colorScheme.primary),
-                    title: const Text('Checklist Templates',
+                   ListTile(
+                    leading: Icon(LucideIcons.layout, color: colorScheme.primary),
+                    title: const Text('Templates',
                         style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('Create templates for job checklists',
+                    subtitle: Text('Manage your document & checklist templates',
                         style: TextStyle(
                             color: colorScheme.onSurface.withValues(alpha: 0.6))),
                     trailing: const Icon(LucideIcons.chevronRight, size: 14),
-                    onTap: () => context.push('/checklist-templates'),
+                    onTap: () => context.push('/settings/templates'),
+                  ),
+                  _buildSubtleDivider(isDark),
+                  ListTile(
+                    leading: Icon(LucideIcons.bell, color: colorScheme.primary),
+                    title: const Text('Payment Reminders',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text('Configure automated invoice reminders',
+                        style: TextStyle(
+                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
+                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
+                    onTap: () => context.push('/settings/reminders'),
                   ),
                 ],
               ),
@@ -566,6 +576,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             color: colorScheme.onSurface.withValues(alpha: 0.6))),
                     trailing: const Icon(LucideIcons.chevronRight, size: 14),
                     onTap: () => context.push('/collaboration'),
+                  ),
+                  _buildSubtleDivider(isDark),
+                  ListTile(
+                    leading: Icon(LucideIcons.messageCircle,
+                        color: colorScheme.primary),
+                    title: const Text('Client Responses',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text('Customer comments, approvals & activity',
+                        style: TextStyle(
+                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
+                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
+                    onTap: () => context.push('/client-responses'),
                   ),
                   _buildSubtleDivider(isDark),
                   ListTile(
