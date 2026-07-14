@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/providers.dart';
 import '../../providers/collaboration_provider.dart';
 import '../../theme/semantic_colors.dart';
@@ -211,8 +214,163 @@ class InvoiceDetailScreen extends ConsumerWidget {
 
   Future<void> _sendReminder(
       BuildContext context, WidgetRef ref, invoice) async {
-    // Send email reminder
-    await _sendByEmail(context, ref, invoice);
+    try {
+      final reminderRepo = ReminderRepository(FirebaseFirestore.instance);
+      await reminderRepo.sendManualReminderEmail(invoice.id, invoice.customerEmail);
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).success(context, 'Payment reminder sent!');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).error(context, 'Failed to send reminder: $e');
+      }
+    }
+  }
+
+  void _copyPortalLink(BuildContext context, WidgetRef ref, invoice) {
+    final link = '$_webAppBaseUrl/portal/invoices/${invoice.id}';
+    Clipboard.setData(ClipboardData(text: link));
+    ref.read(feedbackControllerProvider).success(context, 'Client portal link copied to clipboard!');
+  }
+
+  void _sharePdf(BuildContext context, invoice) {
+    final link = '$_webAppBaseUrl/portal/invoices/${invoice.id}';
+    Share.share(
+      'View your invoice here: $link',
+      subject: 'Invoice #${invoice.invoiceNumber.replaceFirst('INV-', '')}',
+    );
+  }
+
+  Future<void> _duplicateInvoice(
+      BuildContext context, WidgetRef ref, Invoice invoice) async {
+    final companyId = ref.read(companyIdProvider);
+    final userProfile = ref.read(userProfileProvider);
+    if (companyId == null || userProfile == null) return;
+
+    try {
+      final newInvoice = Invoice(
+        id: '',
+        companyId: companyId,
+        createdBy: userProfile.uid,
+        invoiceNumber: 'INV-${DateTime.now().millisecondsSinceEpoch}',
+        customerName: invoice.customerName,
+        customerEmail: invoice.customerEmail,
+        customerPhone: invoice.customerPhone,
+        customerAddress: invoice.customerAddress,
+        date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        dueDate: DateFormat('yyyy-MM-dd')
+            .format(DateTime.now().add(const Duration(days: 14))),
+        items: invoice.items,
+        subtotal: invoice.subtotal,
+        taxRate: invoice.taxRate,
+        taxAmount: invoice.taxAmount,
+        total: invoice.total,
+        status: 'Draft',
+        notes: invoice.notes,
+        discount: invoice.discount,
+        discountType: invoice.discountType,
+        discountAmount: invoice.discountAmount,
+        jobId: invoice.jobId,
+      );
+      final newId = await ref.read(invoiceRepositoryProvider).createInvoice(newInvoice);
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).success(context, 'Invoice duplicated successfully!');
+        context.push('/invoices/$newId');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).error(context, 'Failed to duplicate: $e');
+      }
+    }
+  }
+
+  Future<void> _markAsSent(
+      BuildContext context, WidgetRef ref, String id) async {
+    try {
+      await ref
+          .read(invoiceRepositoryProvider)
+          .updateInvoiceStatus(id, 'Sent');
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).success(context, 'Invoice marked as Sent.');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).error(context, 'Failed: $e');
+      }
+    }
+  }
+
+  Future<void> _showSaveAsTemplateDialog(
+      BuildContext context, WidgetRef ref, Invoice invoice) async {
+    final nameCtrl = TextEditingController(
+        text: 'Template for Invoice ${invoice.invoiceNumber}');
+    final descCtrl = TextEditingController(
+        text: 'Preset items and terms from invoice ${invoice.invoiceNumber}');
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Save as Template'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Template Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descCtrl,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'Description (optional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != true) return;
+
+    final companyId = ref.read(companyIdProvider);
+    if (companyId == null) return;
+
+    try {
+      await ref.read(documentTemplateRepositoryProvider).createTemplate(
+        companyId: companyId,
+        name: nameCtrl.text.trim(),
+        description: descCtrl.text.trim(),
+        type: 'invoice',
+        items: invoice.items,
+        notes: invoice.notes,
+        taxRate: invoice.taxRate,
+        discount: invoice.discount,
+        discountType: invoice.discountType,
+        discountAmount: invoice.discountAmount,
+      );
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).success(context, 'Template saved successfully!');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).error(context, 'Failed to save template: $e');
+      }
+    }
   }
 
   Future<bool> _showLockWarningDialog(BuildContext context, String lockedBy) async {
@@ -240,6 +398,46 @@ class InvoiceDetailScreen extends ConsumerWidget {
         ],
       ),
     ) ?? false;
+  }
+
+  Future<void> _showRenameDialog(
+      BuildContext context, WidgetRef ref, Invoice invoice) async {
+    final titleCtrl = TextEditingController(text: invoice.title ?? '');
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Rename Invoice'),
+        content: TextField(
+          controller: titleCtrl,
+          maxLength: 100,
+          decoration: const InputDecoration(
+            labelText: 'Title / Project Reference',
+            hintText: 'e.g. Kitchen Renovation Phase 2',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      final newTitle = titleCtrl.text.trim();
+      await ref
+          .read(invoiceRepositoryProvider)
+          .updateInvoice(invoice.id, {'title': newTitle});
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).success(context, 'Invoice renamed.');
+      }
+    }
   }
 
   @override
@@ -273,7 +471,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         body: Column(
           children: [
-            CurvedHeader(
+             CurvedHeader(
               title: 'Invoice #${invoice.invoiceNumber.replaceFirst('INV-', '')}',
               actions: [
                 IconButton(
@@ -281,6 +479,21 @@ class InvoiceDetailScreen extends ConsumerWidget {
                   tooltip: 'Collaboration & History',
                   onPressed: () =>
                       context.push('/collaboration/invoice/${invoice.id}'),
+                ),
+                IconButton(
+                  icon: Icon(
+                    invoice.isStarred ? Icons.star : Icons.star_border,
+                    color: invoice.isStarred ? Colors.amber : null,
+                  ),
+                  tooltip: invoice.isStarred ? 'Remove Star' : 'Star Invoice',
+                  onPressed: () async {
+                    final companyId = ref.read(companyIdProvider);
+                    if (companyId != null) {
+                      await ref
+                          .read(invoiceRepositoryProvider)
+                          .updateInvoice(invoice.id, {'isStarred': !invoice.isStarred});
+                    }
+                  },
                 ),
                 IconButton(
                   icon: const Icon(LucideIcons.eye),
@@ -305,6 +518,20 @@ class InvoiceDetailScreen extends ConsumerWidget {
                       await _showSendOptions(context, ref, invoice);
                     } else if (value == 'mark_paid') {
                       await _markPaid(context, ref, invoice.id);
+                    } else if (value == 'mark_sent') {
+                      await _markAsSent(context, ref, invoice.id);
+                    } else if (value == 'send_reminder') {
+                      await _sendReminder(context, ref, invoice);
+                    } else if (value == 'copy_link') {
+                      _copyPortalLink(context, ref, invoice);
+                    } else if (value == 'share_pdf') {
+                      _sharePdf(context, invoice);
+                    } else if (value == 'duplicate') {
+                      await _duplicateInvoice(context, ref, invoice);
+                    } else if (value == 'save_template') {
+                      await _showSaveAsTemplateDialog(context, ref, invoice);
+                    } else if (value == 'rename') {
+                      await _showRenameDialog(context, ref, invoice);
                     } else if (value == 'delete') {
                       await _deleteInvoice(context, ref, invoice.id);
                     }
@@ -318,6 +545,14 @@ class InvoiceDetailScreen extends ConsumerWidget {
                         Text('Edit')
                       ]),
                     ),
+                    const PopupMenuItem(
+                      value: 'rename',
+                      child: Row(children: [
+                        Icon(Icons.edit_note_outlined),
+                        SizedBox(width: 8),
+                        Text('Rename')
+                      ]),
+                    ),
                     PopupMenuItem(
                       value: 'send',
                       child: Row(children: [
@@ -327,12 +562,61 @@ class InvoiceDetailScreen extends ConsumerWidget {
                       ]),
                     ),
                     PopupMenuItem(
+                      value: 'mark_sent',
+                      child: Row(children: [
+                        Icon(Icons.send_outlined, color: semanticColors.info),
+                        const SizedBox(width: 8),
+                        const Text('Mark as Sent'),
+                      ]),
+                    ),
+                    PopupMenuItem(
                       value: 'mark_paid',
                       child: Row(children: [
                         Icon(Icons.check_circle_outline,
                             color: semanticColors.success),
                         const SizedBox(width: 8),
                         const Text('Mark as Paid')
+                      ]),
+                    ),
+                    PopupMenuItem(
+                      value: 'send_reminder',
+                      child: Row(children: [
+                        Icon(Icons.notifications_active_outlined,
+                            color: semanticColors.warning),
+                        const SizedBox(width: 8),
+                        const Text('Send Reminder'),
+                      ]),
+                    ),
+                    PopupMenuItem(
+                      value: 'copy_link',
+                      child: Row(children: [
+                        Icon(Icons.link, color: semanticColors.info),
+                        const SizedBox(width: 8),
+                        const Text('Copy Portal Link'),
+                      ]),
+                    ),
+                    PopupMenuItem(
+                      value: 'share_pdf',
+                      child: Row(children: [
+                        Icon(Icons.share_outlined, color: semanticColors.info),
+                        const SizedBox(width: 8),
+                        const Text('Share PDF Link'),
+                      ]),
+                    ),
+                    PopupMenuItem(
+                      value: 'duplicate',
+                      child: Row(children: [
+                        Icon(Icons.copy_outlined, color: colorScheme.primary),
+                        const SizedBox(width: 8),
+                        const Text('Duplicate'),
+                      ]),
+                    ),
+                    PopupMenuItem(
+                      value: 'save_template',
+                      child: Row(children: [
+                        Icon(Icons.bookmark_add_outlined, color: colorScheme.primary),
+                        const SizedBox(width: 8),
+                        const Text('Save as Template'),
                       ]),
                     ),
                     PopupMenuItem(
@@ -378,6 +662,18 @@ class InvoiceDetailScreen extends ConsumerWidget {
                     Center(
                       child: Column(
                         children: [
+                          if (invoice.title != null && invoice.title!.isNotEmpty) ...[
+                            Text(
+                              invoice.title!,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 6),
+                          ],
                           Text(
                             NumberFormat.currency(symbol: '£')
                                 .format(invoice.total),

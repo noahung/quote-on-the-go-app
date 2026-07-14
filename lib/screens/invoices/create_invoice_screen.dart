@@ -32,6 +32,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
 
   // Step 1: Customer
   Customer? _selectedCustomer;
+  final _titleController = TextEditingController();
   final _customerNameController = TextEditingController();
   final _customerEmailController = TextEditingController();
   final _customerPhoneController = TextEditingController();
@@ -69,6 +70,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
     super.initState();
     final inv = widget.existingInvoice;
     if (inv != null) {
+      _titleController.text = inv.title ?? '';
       _customerNameController.text = inv.customerName;
       _customerEmailController.text = inv.customerEmail;
       _customerPhoneController.text = inv.customerPhone ?? '';
@@ -93,6 +95,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
 
   @override
   void dispose() {
+    _titleController.dispose();
     _customerNameController.dispose();
     _customerEmailController.dispose();
     _customerPhoneController.dispose();
@@ -132,6 +135,9 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
 
       if (_isEditing) {
         await repository.updateInvoice(widget.existingInvoice!.id, {
+          'title': _titleController.text.trim().isEmpty
+              ? null
+              : _titleController.text.trim(),
           'customerName': _customerNameController.text.trim(),
           'customerEmail': _customerEmailController.text.trim(),
           'customerPhone': _customerPhoneController.text.trim().isEmpty
@@ -161,6 +167,9 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
           companyId: companyId,
           createdBy: userProfile.uid,
           invoiceNumber: 'INV-${DateTime.now().millisecondsSinceEpoch}',
+          title: _titleController.text.trim().isEmpty
+              ? null
+              : _titleController.text.trim(),
           customerName: _customerNameController.text.trim(),
           customerEmail: _customerEmailController.text.trim(),
           customerPhone: _customerPhoneController.text.trim().isEmpty
@@ -250,6 +259,8 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
                   children: [
                     _buildDocNumberRow(context),
                     const SizedBox(height: 16),
+                    _buildTitleCard(),
+                    const SizedBox(height: 16),
                     _buildTemplateSelectorCard(),
                     _buildCustomerCard(),
                     const SizedBox(height: 16),
@@ -267,6 +278,30 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
           ],
         ),
         bottomNavigationBar: _buildBottomStickyAction(),
+      ),
+    );
+  }
+
+  Widget _buildTitleCard() {
+    return GlassCard(
+      borderRadius: BorderRadius.circular(24),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionLabel('TITLE / PROJECT REFERENCE'),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _titleController,
+            style: const TextStyle(fontSize: 14),
+            decoration: const InputDecoration(
+              labelText: 'Title (optional)',
+              prefixIcon: Icon(LucideIcons.fileText),
+              hintText: 'e.g. Kitchen Renovation Phase 2',
+            ),
+            textCapitalization: TextCapitalization.sentences,
+          ),
+        ],
       ),
     );
   }

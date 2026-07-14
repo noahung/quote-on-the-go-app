@@ -23,6 +23,7 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen>
   late TabController _tabController;
   final _searchController = TextEditingController();
   String _searchQuery = '';
+  bool _showStarredOnly = false;
 
   final List<_StatusTab> _tabs = const [
     _StatusTab(label: 'All', status: null),
@@ -62,10 +63,14 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen>
 
   List<Quotation> _filterByStatus(List<Quotation> quotations, String? status) {
     var list = status == null ? quotations : quotations.where((q) => q.status == status).toList();
+    if (_showStarredOnly) {
+      list = list.where((q) => q.isStarred).toList();
+    }
     if (_searchQuery.isNotEmpty) {
       list = list.where((q) =>
         q.customerName.toLowerCase().contains(_searchQuery) ||
-        q.quotationNumber.toLowerCase().contains(_searchQuery)
+        q.quotationNumber.toLowerCase().contains(_searchQuery) ||
+        (q.title ?? '').toLowerCase().contains(_searchQuery)
       ).toList();
     }
     return list;
@@ -88,6 +93,14 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen>
           CurvedHeader(
             title: 'Quotations',
             actions: [
+              IconButton(
+                icon: Icon(
+                  _showStarredOnly ? Icons.star : Icons.star_border,
+                  color: _showStarredOnly ? Colors.amber : null,
+                ),
+                tooltip: 'Starred Only',
+                onPressed: () => setState(() => _showStarredOnly = !_showStarredOnly),
+              ),
               IconButton(
                 icon: const Icon(LucideIcons.plus),
                 onPressed: () => context.push('/quotations/new'),
@@ -331,7 +344,7 @@ class _QuotationList extends StatelessWidget {
   }
 }
 
-class _QuotationCard extends StatelessWidget {
+class _QuotationCard extends ConsumerWidget {
   final Quotation quotation;
 
   const _QuotationCard({required this.quotation});
@@ -398,7 +411,7 @@ class _QuotationCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     final statusColor = _getStatusColor(quotation.status, semanticColors);
@@ -417,6 +430,25 @@ class _QuotationCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            GestureDetector(
+              onTap: () async {
+                final companyId = ref.read(companyIdProvider);
+                if (companyId != null) {
+                  await ref
+                      .read(quotationRepositoryProvider)
+                      .updateQuotation(quotation.id, {'isStarred': !quotation.isStarred});
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                child: Icon(
+                  quotation.isStarred ? Icons.star : Icons.star_border,
+                  color: quotation.isStarred ? Colors.amber : Colors.grey.withValues(alpha: 0.4),
+                  size: 22,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
             Container(
               width: 44,
               height: 44,
@@ -452,7 +484,9 @@ class _QuotationCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    '${quotation.quotationNumber} • ${quotation.date}',
+                    quotation.title != null && quotation.title!.isNotEmpty
+                        ? '${quotation.quotationNumber} • ${quotation.title}'
+                        : '${quotation.quotationNumber} • ${quotation.date}',
                     style: TextStyle(
                       fontSize: 13,
                       color: colorScheme.onSurface.withValues(alpha: 0.5),

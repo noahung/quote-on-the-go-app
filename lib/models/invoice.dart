@@ -30,6 +30,8 @@ class Invoice with _$Invoice {
     @Default('Draft') String status,
     @TimestampConverter() DateTime? scheduledSendAt,
     String? notes,
+    String? title,
+    @Default(false) bool isStarred,
     CompanyProfile? company,
     @TimestampConverter() DateTime? createdAt,
     @TimestampConverter() DateTime? updatedAt,

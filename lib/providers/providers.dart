@@ -20,4 +20,5 @@ export 'team_provider.dart';
 export 'reminder_provider.dart';
 export 'recurring_invoice_provider.dart';
 export 'portal_activity_provider.dart';
+export 'search_provider.dart';
 

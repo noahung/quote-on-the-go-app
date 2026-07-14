@@ -110,6 +110,16 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ),
 
+                const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+                // ── Global Search ────────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _GlobalSearchBar(),
+                  ),
+                ),
+
                 const SliverToBoxAdapter(child: SizedBox(height: 20)),
 
                 // ── Smart Insights Card ──────────────────────────────────
@@ -344,6 +354,218 @@ class DashboardScreen extends ConsumerWidget {
           style: const TextStyle(color: Colors.grey, fontSize: 13),
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Global Search Bar
+// ─────────────────────────────────────────────────────────────────────────────
+class _GlobalSearchBar extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_GlobalSearchBar> createState() => _GlobalSearchBarState();
+}
+
+class _GlobalSearchBarState extends ConsumerState<_GlobalSearchBar> {
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      setState(() => _isFocused = _focusNode.hasFocus);
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  IconData _iconForType(String type) {
+    switch (type) {
+      case 'quotation':
+        return LucideIcons.fileText;
+      case 'invoice':
+        return LucideIcons.receipt;
+      case 'customer':
+        return LucideIcons.user;
+      case 'job':
+        return LucideIcons.calendar;
+      default:
+        return LucideIcons.search;
+    }
+  }
+
+  Color _colorForType(String type, ColorScheme colorScheme) {
+    switch (type) {
+      case 'quotation':
+        return const Color(0xFFF4781F);
+      case 'invoice':
+        return Colors.green;
+      case 'customer':
+        return Colors.blue;
+      case 'job':
+        return Colors.purple;
+      default:
+        return colorScheme.primary;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+    final query = ref.watch(dashboardSearchProvider);
+    final results = ref.watch(searchResultsProvider);
+
+    return Column(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: _isFocused
+                  ? const Color(0xFFF4781F)
+                  : Colors.transparent,
+              width: 1.5,
+            ),
+          ),
+          child: TextField(
+            controller: _controller,
+            focusNode: _focusNode,
+            onChanged: (value) =>
+                ref.read(dashboardSearchProvider.notifier).state = value,
+            style: TextStyle(
+              fontSize: 15,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Search quotes, invoices, customers, jobs...',
+              hintStyle: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.white38 : Colors.black38,
+              ),
+              prefixIcon: Icon(
+                LucideIcons.search,
+                size: 20,
+                color: isDark ? Colors.white38 : Colors.black38,
+              ),
+              suffixIcon: query.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(
+                        LucideIcons.x,
+                        size: 18,
+                        color: isDark ? Colors.white38 : Colors.black38,
+                      ),
+                      onPressed: () {
+                        _controller.clear();
+                        ref.read(dashboardSearchProvider.notifier).state = '';
+                      },
+                    )
+                  : null,
+              border: InputBorder.none,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+          ),
+        ),
+        if (query.isNotEmpty && results.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.black.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: Text(
+                  'No results found for "$query"',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? Colors.white54 : Colors.black54,
+                  ),
+                ),
+              ),
+            ),
+          )
+        else if (query.isNotEmpty && results.isNotEmpty)
+          Container(
+            constraints: const BoxConstraints(maxHeight: 320),
+            margin: const EdgeInsets.only(top: 8),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E24) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              itemCount: results.length,
+              separatorBuilder: (_, __) => Divider(
+                height: 1,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black.withValues(alpha: 0.06),
+              ),
+              itemBuilder: (context, index) {
+                final r = results[index];
+                final iconColor = _colorForType(r.type, colorScheme);
+                return ListTile(
+                  leading: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: iconColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(_iconForType(r.type), color: iconColor, size: 18),
+                  ),
+                  title: Text(
+                    r.title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    r.subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white54 : Colors.black54,
+                    ),
+                  ),
+                  trailing: Icon(
+                    LucideIcons.chevronRight,
+                    size: 16,
+                    color: isDark ? Colors.white24 : Colors.black54,
+                  ),
+                  onTap: () {
+                    _controller.clear();
+                    ref.read(dashboardSearchProvider.notifier).state = '';
+                    context.push(r.route);
+                  },
+                );
+              },
+            ),
+          ),
+      ],
     );
   }
 }

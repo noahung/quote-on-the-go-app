@@ -25,6 +25,7 @@ class Customer with _$Customer {
     @TimestampConverter() DateTime? quickbooksLastSyncAt,
     // CRM Segmentation
     @Default([]) List<String> tags,
+    @Default('Lead') String lifecycleStage,
     String? notes,
     // Monday.com Integration
     String? mondayItemId,

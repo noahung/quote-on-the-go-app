@@ -27,6 +27,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
   final _searchController = TextEditingController();
   String _searchQuery = '';
   String _currentMainTab = 'invoices'; // 'invoices' | 'recurring'
+  bool _showStarredOnly = false;
 
 
   final List<_StatusTab> _tabs = const [
@@ -66,10 +67,14 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
 
   List<Invoice> _filterByStatus(List<Invoice> invoices, String? status) {
     var list = status == null ? invoices : invoices.where((i) => i.status == status).toList();
+    if (_showStarredOnly && _currentMainTab == 'invoices') {
+      list = list.where((i) => i.isStarred).toList();
+    }
     if (_searchQuery.isNotEmpty) {
       list = list.where((i) =>
         i.customerName.toLowerCase().contains(_searchQuery) ||
-        i.invoiceNumber.toLowerCase().contains(_searchQuery)
+        i.invoiceNumber.toLowerCase().contains(_searchQuery) ||
+        (i.title ?? '').toLowerCase().contains(_searchQuery)
       ).toList();
     }
     return list;
@@ -96,6 +101,15 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
           CurvedHeader(
             title: _currentMainTab == 'invoices' ? 'Invoices' : 'Recurring Invoices',
             actions: [
+              if (_currentMainTab == 'invoices')
+                IconButton(
+                  icon: Icon(
+                    _showStarredOnly ? Icons.star : Icons.star_border,
+                    color: _showStarredOnly ? Colors.amber : null,
+                  ),
+                  tooltip: 'Starred Only',
+                  onPressed: () => setState(() => _showStarredOnly = !_showStarredOnly),
+                ),
               IconButton(
                 icon: const Icon(LucideIcons.plus),
                 onPressed: () {
@@ -496,7 +510,7 @@ class _InvoiceList extends StatelessWidget {
   }
 }
 
-class _InvoiceCard extends StatelessWidget {
+class _InvoiceCard extends ConsumerWidget {
   final Invoice invoice;
 
   const _InvoiceCard({required this.invoice});
@@ -561,7 +575,7 @@ class _InvoiceCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     final statusColor = _getStatusColor(invoice.status, semanticColors);
@@ -580,6 +594,25 @@ class _InvoiceCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            GestureDetector(
+              onTap: () async {
+                final companyId = ref.read(companyIdProvider);
+                if (companyId != null) {
+                  await ref
+                      .read(invoiceRepositoryProvider)
+                      .updateInvoice(invoice.id, {'isStarred': !invoice.isStarred});
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                child: Icon(
+                  invoice.isStarred ? Icons.star : Icons.star_border,
+                  color: invoice.isStarred ? Colors.amber : Colors.grey.withValues(alpha: 0.4),
+                  size: 22,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
             Container(
               width: 44,
               height: 44,
@@ -615,7 +648,9 @@ class _InvoiceCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    '${invoice.invoiceNumber} • Due ${invoice.dueDate}',
+                    invoice.title != null && invoice.title!.isNotEmpty
+                        ? '${invoice.invoiceNumber} • ${invoice.title}'
+                        : '${invoice.invoiceNumber} • Due ${invoice.dueDate}',
                     style: TextStyle(
                       fontSize: 13,
                       color: colorScheme.onSurface.withValues(alpha: 0.5),

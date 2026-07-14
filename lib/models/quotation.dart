@@ -26,6 +26,8 @@ class Quotation with _$Quotation {
     required double total,
     @Default('Draft') String status,
     String? notes,
+    String? title,
+    @Default(false) bool isStarred,
     CompanyProfile? company,
     @TimestampConverter() DateTime? createdAt,
     @TimestampConverter() DateTime? updatedAt,

@@ -117,25 +117,25 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.black.withValues(alpha: 0.03),
-        border: OutlineInputBorder(
+        border: UnderlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
-        enabledBorder: OutlineInputBorder(
+        enabledBorder: UnderlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
-        focusedBorder: OutlineInputBorder(
+        focusedBorder: UnderlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: colorScheme.primary.withValues(alpha: 0.3), width: 1.5),
+          borderSide: BorderSide.none,
         ),
-        errorBorder: OutlineInputBorder(
+        errorBorder: UnderlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: colorScheme.error.withValues(alpha: 0.3), width: 1.5),
+          borderSide: BorderSide.none,
         ),
-        focusedErrorBorder: OutlineInputBorder(
+        focusedErrorBorder: UnderlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: colorScheme.error, width: 1.5),
+          borderSide: BorderSide.none,
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
@@ -287,25 +287,25 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white.withValues(alpha: 0.05),
-        border: OutlineInputBorder(
+        border: UnderlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
-        enabledBorder: OutlineInputBorder(
+        enabledBorder: UnderlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
-        focusedBorder: OutlineInputBorder(
+        focusedBorder: UnderlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: colorScheme.primary.withValues(alpha: 0.3), width: 1.5),
+          borderSide: BorderSide.none,
         ),
-        errorBorder: OutlineInputBorder(
+        errorBorder: UnderlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: colorScheme.error.withValues(alpha: 0.3), width: 1.5),
+          borderSide: BorderSide.none,
         ),
-        focusedErrorBorder: OutlineInputBorder(
+        focusedErrorBorder: UnderlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: colorScheme.error, width: 1.5),
+          borderSide: BorderSide.none,
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 18, vertical: 16),

@@ -273,6 +273,137 @@ class QuotationDetailScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _duplicateQuotation(
+      BuildContext context, WidgetRef ref, Quotation quotation) async {
+    final companyId = ref.read(companyIdProvider);
+    final userProfile = ref.read(userProfileProvider);
+    if (companyId == null || userProfile == null) return;
+
+    try {
+      final newQuote = Quotation(
+        id: '',
+        companyId: companyId,
+        createdBy: userProfile.uid,
+        quotationNumber: 'Q-${DateTime.now().millisecondsSinceEpoch}',
+        customerName: quotation.customerName,
+        customerEmail: quotation.customerEmail,
+        customerPhone: quotation.customerPhone,
+        customerAddress: quotation.customerAddress,
+        date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        expiryDate: DateFormat('yyyy-MM-dd')
+            .format(DateTime.now().add(const Duration(days: 30))),
+        items: quotation.items,
+        subtotal: quotation.subtotal,
+        taxRate: quotation.taxRate,
+        taxAmount: quotation.taxAmount,
+        total: quotation.total,
+        status: 'Draft',
+        notes: quotation.notes,
+        discount: quotation.discount,
+        discountType: quotation.discountType,
+        discountAmount: quotation.discountAmount,
+      );
+      final newId = await ref.read(quotationRepositoryProvider).createQuotation(newQuote);
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).success(context, 'Quotation duplicated successfully!');
+        context.push('/quotations/$newId');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).error(context, 'Failed to duplicate: $e');
+      }
+    }
+  }
+
+  Future<void> _markAsSent(
+      BuildContext context, WidgetRef ref, String id) async {
+    try {
+      await ref
+          .read(quotationRepositoryProvider)
+          .updateQuotationStatus(id, 'Sent');
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).success(context, 'Quotation marked as Sent.');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).error(context, 'Failed: $e');
+      }
+    }
+  }
+
+  Future<void> _showSaveAsTemplateDialog(
+      BuildContext context, WidgetRef ref, Quotation quotation) async {
+    final nameCtrl = TextEditingController(
+        text: 'Template for Quote ${quotation.quotationNumber}');
+    final descCtrl = TextEditingController(
+        text: 'Preset items and terms from quotation ${quotation.quotationNumber}');
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Save as Template'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Template Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descCtrl,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'Description (optional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != true) return;
+
+    final companyId = ref.read(companyIdProvider);
+    if (companyId == null) return;
+
+    try {
+      await ref.read(documentTemplateRepositoryProvider).createTemplate(
+        companyId: companyId,
+        name: nameCtrl.text.trim(),
+        description: descCtrl.text.trim(),
+        type: 'quotation',
+        items: quotation.items,
+        notes: quotation.notes,
+        taxRate: quotation.taxRate,
+        discount: quotation.discount,
+        discountType: quotation.discountType,
+        discountAmount: quotation.discountAmount,
+      );
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).success(context, 'Template saved successfully!');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).error(context, 'Failed to save template: $e');
+      }
+    }
+  }
+
   void _copyPortalLink(BuildContext context, WidgetRef ref, Quotation quotation) {
     final link = '$_webAppBaseUrl/portal/quotations/${quotation.id}';
     Clipboard.setData(ClipboardData(text: link));
@@ -315,6 +446,46 @@ class QuotationDetailScreen extends ConsumerWidget {
     ) ?? false;
   }
 
+  Future<void> _showRenameDialog(
+      BuildContext context, WidgetRef ref, Quotation quotation) async {
+    final titleCtrl = TextEditingController(text: quotation.title ?? '');
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Rename Quotation'),
+        content: TextField(
+          controller: titleCtrl,
+          maxLength: 100,
+          decoration: const InputDecoration(
+            labelText: 'Title / Project Reference',
+            hintText: 'e.g. Kitchen Renovation Phase 2',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      final newTitle = titleCtrl.text.trim();
+      await ref
+          .read(quotationRepositoryProvider)
+          .updateQuotation(quotation.id, {'title': newTitle});
+      if (context.mounted) {
+        ref.read(feedbackControllerProvider).success(context, 'Quotation renamed.');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -346,7 +517,7 @@ class QuotationDetailScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         body: Column(
           children: [
-            CurvedHeader(
+             CurvedHeader(
               title: 'Quotation #${quotation.quotationNumber.replaceFirst('Q-', '')}',
               actions: [
                 IconButton(
@@ -354,6 +525,21 @@ class QuotationDetailScreen extends ConsumerWidget {
                   tooltip: 'Collaboration & History',
                   onPressed: () =>
                       context.push('/collaboration/quotation/${quotation.id}'),
+                ),
+                IconButton(
+                  icon: Icon(
+                    quotation.isStarred ? Icons.star : Icons.star_border,
+                    color: quotation.isStarred ? Colors.amber : null,
+                  ),
+                  tooltip: quotation.isStarred ? 'Remove Star' : 'Star Quotation',
+                  onPressed: () async {
+                    final companyId = ref.read(companyIdProvider);
+                    if (companyId != null) {
+                      await ref
+                          .read(quotationRepositoryProvider)
+                          .updateQuotation(quotation.id, {'isStarred': !quotation.isStarred});
+                    }
+                  },
                 ),
                 IconButton(
                   icon: const Icon(LucideIcons.eye),
@@ -380,6 +566,14 @@ class QuotationDetailScreen extends ConsumerWidget {
                       _copyPortalLink(context, ref, quotation);
                     } else if (value == 'share_pdf') {
                       _sharePdf(context, quotation);
+                    } else if (value == 'mark_sent') {
+                      await _markAsSent(context, ref, quotation.id);
+                    } else if (value == 'duplicate') {
+                      await _duplicateQuotation(context, ref, quotation);
+                    } else if (value == 'save_template') {
+                      await _showSaveAsTemplateDialog(context, ref, quotation);
+                    } else if (value == 'rename') {
+                      await _showRenameDialog(context, ref, quotation);
                     } else if (value == 'archive') {
                       await _archiveQuotation(context, ref, quotation);
                     } else if (value == 'delete') {
@@ -393,6 +587,14 @@ class QuotationDetailScreen extends ConsumerWidget {
                         Icon(Icons.edit_outlined),
                         SizedBox(width: 8),
                         Text('Edit')
+                      ]),
+                    ),
+                    const PopupMenuItem(
+                      value: 'rename',
+                      child: Row(children: [
+                        Icon(Icons.edit_note_outlined),
+                        SizedBox(width: 8),
+                        Text('Rename')
                       ]),
                     ),
                     PopupMenuItem(
@@ -417,6 +619,30 @@ class QuotationDetailScreen extends ConsumerWidget {
                         Icon(Icons.share_outlined, color: semanticColors.info),
                         const SizedBox(width: 8),
                         const Text('Share PDF Link')
+                      ]),
+                    ),
+                    PopupMenuItem(
+                      value: 'mark_sent',
+                      child: Row(children: [
+                        Icon(Icons.send_outlined, color: semanticColors.info),
+                        const SizedBox(width: 8),
+                        const Text('Mark as Sent'),
+                      ]),
+                    ),
+                    PopupMenuItem(
+                      value: 'duplicate',
+                      child: Row(children: [
+                        Icon(Icons.copy_outlined, color: colorScheme.primary),
+                        const SizedBox(width: 8),
+                        const Text('Duplicate'),
+                      ]),
+                    ),
+                    PopupMenuItem(
+                      value: 'save_template',
+                      child: Row(children: [
+                        Icon(Icons.bookmark_add_outlined, color: colorScheme.primary),
+                        const SizedBox(width: 8),
+                        const Text('Save as Template'),
                       ]),
                     ),
                     PopupMenuItem(
@@ -480,6 +706,18 @@ class QuotationDetailScreen extends ConsumerWidget {
                     Center(
                       child: Column(
                         children: [
+                          if (quotation.title != null && quotation.title!.isNotEmpty) ...[
+                            Text(
+                              quotation.title!,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 6),
+                          ],
                           Text(
                             NumberFormat.currency(symbol: '£')
                                 .format(quotation.total),

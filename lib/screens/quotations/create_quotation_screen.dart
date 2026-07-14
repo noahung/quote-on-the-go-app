@@ -32,6 +32,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
 
   // Customer
   Customer? _selectedCustomer;
+  final _titleController = TextEditingController();
   final _customerNameController = TextEditingController();
   final _customerEmailController = TextEditingController();
   final _customerPhoneController = TextEditingController();
@@ -58,6 +59,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
     super.initState();
     final q = widget.existingQuotation;
     if (q != null) {
+      _titleController.text = q.title ?? '';
       _customerNameController.text = q.customerName;
       _customerEmailController.text = q.customerEmail;
       _customerPhoneController.text = q.customerPhone ?? '';
@@ -79,6 +81,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
 
   @override
   void dispose() {
+    _titleController.dispose();
     _customerNameController.dispose();
     _customerEmailController.dispose();
     _customerPhoneController.dispose();
@@ -118,6 +121,9 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
 
       if (_isEditing) {
         await repository.updateQuotation(widget.existingQuotation!.id, {
+          'title': _titleController.text.trim().isEmpty
+              ? null
+              : _titleController.text.trim(),
           'customerName': _customerNameController.text.trim(),
           'customerEmail': _customerEmailController.text.trim(),
           'customerPhone': _customerPhoneController.text.trim().isEmpty
@@ -147,6 +153,9 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
           companyId: companyId,
           createdBy: userProfile.uid,
           quotationNumber: 'QT-${DateTime.now().millisecondsSinceEpoch}',
+          title: _titleController.text.trim().isEmpty
+              ? null
+              : _titleController.text.trim(),
           customerName: _customerNameController.text.trim(),
           customerEmail: _customerEmailController.text.trim(),
           customerPhone: _customerPhoneController.text.trim().isEmpty
@@ -236,6 +245,8 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
                   children: [
                     _buildDocNumberRow(context),
                     const SizedBox(height: 16),
+                    _buildTitleCard(),
+                    const SizedBox(height: 16),
                     _buildTemplateSelectorCard(),
                     _buildCustomerCard(),
                     const SizedBox(height: 16),
@@ -253,6 +264,30 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
           ],
         ),
         bottomNavigationBar: _buildBottomStickyAction(),
+      ),
+    );
+  }
+
+  Widget _buildTitleCard() {
+    return GlassCard(
+      borderRadius: BorderRadius.circular(24),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionLabel('TITLE / PROJECT REFERENCE'),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _titleController,
+            style: const TextStyle(fontSize: 14),
+            decoration: const InputDecoration(
+              labelText: 'Title (optional)',
+              prefixIcon: Icon(LucideIcons.fileText),
+              hintText: 'e.g. Kitchen Renovation Phase 2',
+            ),
+            textCapitalization: TextCapitalization.sentences,
+          ),
+        ],
       ),
     );
   }

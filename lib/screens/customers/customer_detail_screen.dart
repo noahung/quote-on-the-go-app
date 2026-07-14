@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../components/glass_card.dart';
@@ -22,6 +23,243 @@ class CustomerDetailScreen extends ConsumerStatefulWidget {
 
 class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
   String get customerId => widget.customerId;
+
+  static const List<(String, IconData, Color)> _lifecycleStages = [
+    ('Lead', LucideIcons.userPlus, Color(0xFF1976D2)),
+    ('Active', LucideIcons.userCheck, Color(0xFF43A047)),
+    ('Negotiation', LucideIcons.handshake, Color(0xFFFB8C00)),
+    ('Won', LucideIcons.trophy, Color(0xFF7CB342)),
+    ('Lost', LucideIcons.userX, Color(0xFFE53935)),
+  ];
+
+  Future<void> _updateLifecycleStage(String stage) async {
+    try {
+      await ref.read(customerRepositoryProvider).updateCustomer(
+        customerId,
+        {'lifecycleStage': stage},
+      );
+      if (mounted) {
+        ref.read(feedbackControllerProvider).success(
+          context,
+          'Lifecycle stage updated to $stage',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ref.read(feedbackControllerProvider).error(context, 'Failed: $e');
+      }
+    }
+  }
+
+  void _showLifecycleStageSheet() {
+    final customer = ref.read(customerProvider(customerId));
+    String selectedStage = customer?.lifecycleStage ?? 'Lead';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx2, setModal) => Container(
+          decoration: BoxDecoration(
+            color: Theme.of(ctx).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Update Lifecycle Stage',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 16),
+              ..._lifecycleStages.map((stage) {
+                final isSelected = selectedStage == stage.$1;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: InkWell(
+                    onTap: () => setModal(() => selectedStage = stage.$1),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? stage.$3.withValues(alpha: 0.1)
+                            : (Theme.of(ctx2).brightness == Brightness.dark
+                                ? Colors.white.withValues(alpha: 0.05)
+                                : Colors.black.withValues(alpha: 0.03)),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected ? stage.$3 : Colors.transparent,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(stage.$2, color: stage.$3, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              stage.$1,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: isSelected ? stage.$3 : null,
+                              ),
+                            ),
+                          ),
+                          if (isSelected)
+                            Icon(Icons.check_circle, color: stage.$3, size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFF4781F),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: const StadiumBorder(),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _updateLifecycleStage(selectedStage);
+                  },
+                  child: const Text('Update Stage',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCustomEmailSheet() {
+    final customer = ref.read(customerProvider(customerId));
+    final subjectCtrl = TextEditingController();
+    final bodyCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(ctx).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Send Custom Email',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'To: ${customer?.email ?? ""}',
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: subjectCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Subject',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: bodyCtrl,
+                maxLines: 5,
+                decoration: const InputDecoration(
+                  labelText: 'Message',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFF4781F),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: const StadiumBorder(),
+                  ),
+                  onPressed: () async {
+                    if (subjectCtrl.text.trim().isEmpty ||
+                        bodyCtrl.text.trim().isEmpty) return;
+                    try {
+                      await FirebaseFirestore.instance
+                          .collection('mail')
+                          .add({
+                        'to': customer?.email ?? '',
+                        'message': {
+                          'subject': subjectCtrl.text.trim(),
+                          'text': bodyCtrl.text.trim(),
+                        },
+                      });
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (mounted) {
+                        ref.read(feedbackControllerProvider).success(
+                          context,
+                          'Email sent to ${customer?.email}',
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ref.read(feedbackControllerProvider).error(
+                          context,
+                          'Failed to send: $e',
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Send Email',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
 
 
@@ -468,6 +706,11 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                               _buildCircularAction(
                                 icon: LucideIcons.mail,
                                 label: 'Email',
+                                onTap: () => _showCustomEmailSheet(),
+                              ),
+                              _buildCircularAction(
+                                icon: LucideIcons.send,
+                                label: 'Quick Mail',
                                 onTap: () async {
                                   if (customer.email.trim().isNotEmpty) {
                                     final uri = Uri.parse('mailto:${customer.email}');
@@ -492,6 +735,39 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
 
                     // Health score card
                     _HealthScoreCard(score: healthScore),
+                    const SizedBox(height: 16),
+
+                    // Lifecycle Stage Card
+                    GlassCard(
+                      borderRadius: BorderRadius.circular(24),
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  'Lifecycle Stage',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(LucideIcons.pencil, size: 16),
+                                onPressed: _showLifecycleStageSheet,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _LifecycleStageBadge(
+                            stage: customer.lifecycleStage,
+                          ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 16),
 
                     // Next-action nudge
@@ -1334,6 +1610,58 @@ class _ActivityStatusBadge extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w700,
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Lifecycle Stage Badge
+// ─────────────────────────────────────────────────────────────────
+class _LifecycleStageBadge extends StatelessWidget {
+  final String stage;
+  const _LifecycleStageBadge({required this.stage});
+
+  (Color, IconData) _styleForStage() {
+    switch (stage) {
+      case 'Lead':
+        return (const Color(0xFF1976D2), LucideIcons.userPlus);
+      case 'Active':
+        return (const Color(0xFF43A047), LucideIcons.userCheck);
+      case 'Negotiation':
+        return (const Color(0xFFFB8C00), LucideIcons.handshake);
+      case 'Won':
+        return (const Color(0xFF7CB342), LucideIcons.trophy);
+      case 'Lost':
+        return (const Color(0xFFE53935), LucideIcons.userX);
+      default:
+        return (Colors.grey, LucideIcons.user);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final (color, icon) = _styleForStage();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Text(
+            stage,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }
