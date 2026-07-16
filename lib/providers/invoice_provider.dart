@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/models.dart';
 import 'auth_provider.dart';
 import 'quotation_provider.dart';
+import 'collaboration_provider.dart';
 
 part 'invoice_provider.g.dart';
 
@@ -97,27 +98,87 @@ double outstandingRevenue(Ref ref) {
 // Class for invoice operations
 class InvoiceRepository {
   final FirebaseFirestore _firestore;
+  final Ref _ref;
 
-  InvoiceRepository(this._firestore);
+  InvoiceRepository(this._firestore, this._ref);
+
+  Future<void> _checkAndInitiateApproval({
+    required String docId,
+    required String docType,
+    required String companyId,
+    required UserProfile userProfile,
+  }) async {
+    if (userProfile.role.toLowerCase() == 'member') {
+      try {
+        await _ref.read(collaborationRepositoryProvider).initiateApprovalWorkflow(
+          documentId: docId,
+          documentType: docType,
+          workflowType: 'serial',
+          userId: userProfile.uid,
+          userName: userProfile.displayName ?? userProfile.email ?? 'Anonymous',
+          userEmail: userProfile.email ?? '',
+          companyId: companyId,
+        );
+      } catch (e) {
+        debugPrint('[InvoiceRepo] Failed to initiate approval workflow: $e');
+      }
+    }
+  }
 
   Future<String> createInvoice(Invoice invoice) async {
+    final userProfile = _ref.read(userProfileProvider);
+    final isMember = userProfile?.role.toLowerCase() == 'member';
+
     final docRef = _firestore.collection('invoices').doc();
     final data = {
       ...invoice.toJson(),
       'items': invoice.items.map((i) => i.toJson()).toList(),
       'id': docRef.id,
+      'requiresApproval': isMember ? true : false,
+      'approvalStatus': isMember ? 'pending' : 'none',
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     };
     await docRef.set(data);
+
+    if (isMember && userProfile != null) {
+      await _checkAndInitiateApproval(
+        docId: docRef.id,
+        docType: 'invoice',
+        companyId: invoice.companyId,
+        userProfile: userProfile,
+      );
+    }
+
     return docRef.id;
   }
 
   Future<void> updateInvoice(String id, Map<String, dynamic> data) async {
-    await _firestore.collection('invoices').doc(id).update({
+    final userProfile = _ref.read(userProfileProvider);
+    final isMember = userProfile?.role.toLowerCase() == 'member';
+
+    final updateData = {
       ...data,
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    };
+
+    if (isMember) {
+      updateData['requiresApproval'] = true;
+      updateData['approvalStatus'] = 'pending';
+    }
+
+    await _firestore.collection('invoices').doc(id).update(updateData);
+
+    if (isMember && userProfile != null) {
+      final snap = await _firestore.collection('invoices').doc(id).get();
+      final companyId = snap.data()?['companyId'] as String? ?? userProfile.companyId;
+      await _checkAndInitiateApproval(
+        docId: id,
+        docType: 'invoice',
+        companyId: companyId,
+        userProfile: userProfile,
+      );
+    }
   }
 
   Future<void> deleteInvoice(String id) async {
@@ -183,5 +244,5 @@ class InvoiceRepository {
 // Repository provider
 final invoiceRepositoryProvider = Provider<InvoiceRepository>((ref) {
   final firestore = ref.watch(firestoreProvider);
-  return InvoiceRepository(firestore);
+  return InvoiceRepository(firestore, ref);
 });

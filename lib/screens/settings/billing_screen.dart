@@ -10,6 +10,7 @@ import '../../components/glass_card.dart';
 import '../../components/mesh_background.dart';
 import '../../components/curved_header.dart';
 import '../../theme/semantic_colors.dart';
+import '../team/team_management_screen.dart';
 
 const String _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
 
@@ -23,14 +24,15 @@ class BillingScreen extends ConsumerStatefulWidget {
 class _BillingScreenState extends ConsumerState<BillingScreen> {
   bool _isLoading = false;
 
-  Future<void> _handleUpgrade() async {
+  Future<void> _handleUpgrade(String planType) async {
     final company = ref.read(companyProvider);
     final user = FirebaseAuth.instance.currentUser;
     if (company == null || user == null) return;
 
     setState(() => _isLoading = true);
     try {
-      final bool isPremium = company.tier == 'premium' &&
+      final idToken = await user.getIdToken();
+      final bool isPremium = (company.tier == 'premium' || company.tier == 'individual' || company.tier == 'organisation') &&
           (company.subscriptionStatus == 'active' ||
               company.subscriptionStatus == 'referral_trial');
 
@@ -42,7 +44,10 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
         }
         final response = await http.post(
           Uri.parse('$_webAppBaseUrl/api/stripe/create-customer-portal-session'),
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $idToken',
+          },
           body: jsonEncode({'stripeCustomerId': company.stripeCustomerId}),
         );
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -53,10 +58,14 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
       } else {
         final response = await http.post(
           Uri.parse('$_webAppBaseUrl/api/stripe/create-checkout-session'),
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $idToken',
+          },
           body: jsonEncode({
             'companyId': company.id,
             'userEmail': user.email,
+            'planType': planType,
           }),
         );
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -93,9 +102,45 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final isPremium = company?.tier == 'premium' &&
+    final tier = company?.tier ?? 'free';
+    final isPremium = (tier == 'premium' || tier == 'individual' || tier == 'organisation') &&
         (company?.subscriptionStatus == 'active' ||
             company?.subscriptionStatus == 'referral_trial');
+    final isReferralTrial = company?.subscriptionStatus == 'referral_trial';
+
+    int activeMembers = 0;
+    int pendingInvitations = 0;
+    
+    if (tier == 'organisation') {
+      final teamAsync = ref.watch(teamMembersProvider);
+      final pendingAsync = ref.watch(pendingInvitationsProvider);
+      
+      activeMembers = teamAsync.valueOrNull?.length ?? 0;
+      pendingInvitations = pendingAsync.valueOrNull?.length ?? 0;
+    }
+    
+    final totalSeats = activeMembers + pendingInvitations;
+    final extraSeats = (totalSeats - 1).clamp(0, 999999);
+    const double baseCost = 29.00;
+    const double perSeatCost = 4.99;
+    final double totalMonthlyCost = baseCost + (extraSeats * perSeatCost);
+
+    String planDisplayName = 'Starter (Free)';
+    IconData planIcon = LucideIcons.user;
+    Color planIconColor = Colors.grey;
+    if (tier == 'organisation') {
+      planDisplayName = 'Organisation';
+      planIcon = LucideIcons.building2;
+      planIconColor = Colors.orange;
+    } else if (tier == 'individual') {
+      planDisplayName = 'Individual';
+      planIcon = LucideIcons.user;
+      planIconColor = Colors.blue;
+    } else if (tier == 'premium') {
+      planDisplayName = 'Pro';
+      planIcon = LucideIcons.crown;
+      planIconColor = Colors.amber;
+    }
 
     return MeshBackground(
       child: Scaffold(
@@ -107,116 +152,238 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-            // Current Plan badge
-            if (company != null) ...[
-              GlassCard(
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isPremium
-                            ? Colors.amber.withValues(alpha: 0.15)
-                            : colorScheme.primaryContainer
-                                .withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        isPremium ? LucideIcons.crown : LucideIcons.user,
-                        color: isPremium ? Colors.amber : colorScheme.primary,
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
+                  // Current Plan badge
+                  if (company != null) ...[
+                    GlassCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            isPremium ? 'Pro Plan' : 'Free Plan',
-                            style: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.w800),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: planIconColor.withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  planIcon,
+                                  color: planIconColor,
+                                  size: 28,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '$planDisplayName Plan',
+                                      style: const TextStyle(
+                                          fontSize: 18, fontWeight: FontWeight.w800),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      isPremium
+                                          ? 'All features unlocked'
+                                          : 'Limited features',
+                                      style: TextStyle(
+                                          fontSize: 13,
+                                          color: colorScheme.onSurface
+                                              .withValues(alpha: 0.6)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isPremium
+                                      ? semanticColors.success.withValues(alpha: 0.12)
+                                      : Colors.grey.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(100),
+                                ),
+                                child: Text(
+                                  isPremium ? 'Active' : 'Free',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: isPremium ? semanticColors.success : Colors.grey,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            isPremium
-                                ? 'All features unlocked'
-                                : 'Limited features',
-                            style: TextStyle(
-                                fontSize: 13,
-                                color: colorScheme.onSurface
-                                    .withValues(alpha: 0.6)),
-                          ),
+                          if (isPremium) ...[
+                            const SizedBox(height: 16),
+                            Divider(
+                              height: 1,
+                              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+                            ),
+                            const SizedBox(height: 16),
+                            if (isReferralTrial && company.trialEndsAt != null)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Text(
+                                  '⏱ Free trial from referral — expires on ${company.trialEndsAt!.day}/${company.trialEndsAt!.month}/${company.trialEndsAt!.year}',
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.orange),
+                                ),
+                              ),
+                            if (tier == 'organisation') ...[
+                              const Text(
+                                'MONTHLY BREAKDOWN',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.grey,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Base plan (1 seat included)', style: TextStyle(fontSize: 13)),
+                                  Text('£${baseCost.toStringAsFixed(2)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                                ],
+                              ),
+                              if (extraSeats > 0) ...[
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Extra seats ($extraSeats × £${perSeatCost.toStringAsFixed(2)})', style: const TextStyle(fontSize: 13)),
+                                    Text('£${(extraSeats * perSeatCost).toStringAsFixed(2)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                                  ],
+                                ),
+                              ],
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                child: Divider(height: 1),
+                              ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Total per month', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  Text('£${totalMonthlyCost.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Icon(LucideIcons.users, size: 14, color: colorScheme.onSurface.withValues(alpha: 0.5)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '$activeMembers active ${activeMembers == 1 ? "member" : "members"}',
+                                    style: TextStyle(fontSize: 12, color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                                  ),
+                                  if (pendingInvitations > 0) ...[
+                                    const SizedBox(width: 12),
+                                    Container(
+                                      width: 4,
+                                      height: 4,
+                                      decoration: BoxDecoration(color: colorScheme.onSurface.withValues(alpha: 0.3), shape: BoxShape.circle),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      '$pendingInvitations pending ${pendingInvitations == 1 ? "invitation" : "invitations"}',
+                                      style: TextStyle(fontSize: 12, color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ] else ...[
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: const [
+                                  Text('Monthly cost', style: TextStyle(fontSize: 14)),
+                                  Text('£29.00', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Single-user plan with unlimited invoices and quotations.',
+                                style: TextStyle(fontSize: 12, color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                              ),
+                            ],
+                          ],
                         ],
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isPremium
-                            ? semanticColors.success.withValues(alpha: 0.12)
-                            : Colors.grey.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(100),
-                      ),
-                      child: Text(
-                        isPremium ? 'Active' : 'Free',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: isPremium ? semanticColors.success : Colors.grey,
-                        ),
-                      ),
-                    ),
+                    const SizedBox(height: 20),
                   ],
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
 
-            // Free plan card
-            _PlanCard(
-              name: 'Free',
-              price: '£0',
-              period: 'forever',
-              features: const [
-                'Up to 5 quotations/month',
-                'Up to 3 invoices/month',
-                'Basic customer management',
-                'Email support',
-              ],
-              isCurrentPlan: !isPremium,
-              isDark: isDark,
-              colorScheme: colorScheme,
-              ctaLabel: isPremium ? null : 'Current Plan',
-              ctaEnabled: false,
-            ),
-            const SizedBox(height: 16),
+                  // Plan Options List
+                  _PlanCard(
+                    name: 'Starter (Free)',
+                    price: '£0',
+                    period: 'forever',
+                    features: const [
+                      'Up to 5 quotations/month',
+                      'Up to 3 invoices/month',
+                      'Basic customer management',
+                      'Email support',
+                    ],
+                    isCurrentPlan: tier == 'free',
+                    isDark: isDark,
+                    colorScheme: colorScheme,
+                    ctaLabel: tier == 'free' ? 'Current Plan' : null,
+                    ctaEnabled: false,
+                  ),
+                  const SizedBox(height: 16),
 
-            // Pro plan card
-            _PlanCard(
-              name: 'Pro',
-              price: '£29',
-              period: 'per month',
-              features: const [
-                'Unlimited quotations & invoices',
-                'Smart Pricing & AI suggestions',
-                'Workflow automations',
-                'Advanced analytics',
-                'Team management',
-                'QuickBooks & Monday.com integrations',
-                'Priority support',
-              ],
-              isCurrentPlan: isPremium,
-              isDark: isDark,
-              colorScheme: colorScheme,
-              isPrimary: true,
-              ctaLabel: isPremium ? 'Manage Subscription' : 'Upgrade to Pro',
-              ctaEnabled: true,
-              isLoading: _isLoading,
-              onTap: _handleUpgrade,
-            ),
-            const SizedBox(height: 24),
+                  _PlanCard(
+                    name: 'Individual',
+                    price: '£29',
+                    period: 'per month',
+                    features: const [
+                      'Unlimited quotations & invoices',
+                      'Smart Pricing & AI suggestions',
+                      'Workflow automations',
+                      'Advanced analytics',
+                      'Single-user workspace limit',
+                      'QuickBooks & Monday.com integrations',
+                      'Priority support',
+                    ],
+                    isCurrentPlan: tier == 'individual' || tier == 'premium',
+                    isDark: isDark,
+                    colorScheme: colorScheme,
+                    ctaLabel: (tier == 'individual' || tier == 'premium')
+                        ? 'Manage Subscription'
+                        : 'Get Individual',
+                    ctaEnabled: true,
+                    isLoading: _isLoading,
+                    onTap: () => _handleUpgrade('individual'),
+                  ),
+                  const SizedBox(height: 16),
+
+                  _PlanCard(
+                    name: 'Organisation',
+                    price: '£29',
+                    period: 'base seat + £4.99/seat',
+                    features: const [
+                      'Everything in Individual, plus:',
+                      'Multi-user team access',
+                      'Approval workflows & permissions',
+                      'Real-time team collaboration sidebar',
+                      'Team activity audit trails',
+                    ],
+                    isCurrentPlan: tier == 'organisation',
+                    isDark: isDark,
+                    colorScheme: colorScheme,
+                    isPrimary: true,
+                    ctaLabel: tier == 'organisation'
+                        ? 'Manage Subscription'
+                        : 'Get Organisation',
+                    ctaEnabled: true,
+                    isLoading: _isLoading,
+                    onTap: () => _handleUpgrade('organisation'),
+                  ),
+                  const SizedBox(height: 24),
 
             // FAQ
             const Text(

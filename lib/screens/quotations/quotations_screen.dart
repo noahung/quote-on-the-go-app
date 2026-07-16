@@ -82,7 +82,8 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen>
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     final quotationsAsync = ref.watch(quotationsStreamProvider);
     final company = ref.watch(companyProvider);
-    final isPremium = company?.tier == 'premium';
+    final tier = company?.tier;
+    final isPremium = tier == 'premium' || tier == 'individual' || tier == 'organisation';
     final activeCount = quotationsAsync.valueOrNull?.length ?? 0;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 

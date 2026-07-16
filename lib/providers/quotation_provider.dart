@@ -4,6 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/models.dart';
 import 'auth_provider.dart';
+import 'collaboration_provider.dart';
 
 part 'quotation_provider.g.dart';
 
@@ -85,27 +86,87 @@ int acceptedQuotationsCount(Ref ref) {
 // Class for quotation operations
 class QuotationRepository {
   final FirebaseFirestore _firestore;
+  final Ref _ref;
 
-  QuotationRepository(this._firestore);
+  QuotationRepository(this._firestore, this._ref);
+
+  Future<void> _checkAndInitiateApproval({
+    required String docId,
+    required String docType,
+    required String companyId,
+    required UserProfile userProfile,
+  }) async {
+    if (userProfile.role.toLowerCase() == 'member') {
+      try {
+        await _ref.read(collaborationRepositoryProvider).initiateApprovalWorkflow(
+          documentId: docId,
+          documentType: docType,
+          workflowType: 'serial',
+          userId: userProfile.uid,
+          userName: userProfile.displayName ?? userProfile.email ?? 'Anonymous',
+          userEmail: userProfile.email ?? '',
+          companyId: companyId,
+        );
+      } catch (e) {
+        debugPrint('[QuotationRepo] Failed to initiate approval workflow: $e');
+      }
+    }
+  }
 
   Future<String> createQuotation(Quotation quotation) async {
+    final userProfile = _ref.read(userProfileProvider);
+    final isMember = userProfile?.role.toLowerCase() == 'member';
+
     final docRef = _firestore.collection('quotations').doc();
     final data = {
       ...quotation.toJson(),
       'items': quotation.items.map((i) => i.toJson()).toList(),
       'id': docRef.id,
+      'requiresApproval': isMember ? true : false,
+      'approvalStatus': isMember ? 'pending' : 'none',
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     };
     await docRef.set(data);
+
+    if (isMember && userProfile != null) {
+      await _checkAndInitiateApproval(
+        docId: docRef.id,
+        docType: 'quotation',
+        companyId: quotation.companyId,
+        userProfile: userProfile,
+      );
+    }
+
     return docRef.id;
   }
 
   Future<void> updateQuotation(String id, Map<String, dynamic> data) async {
-    await _firestore.collection('quotations').doc(id).update({
+    final userProfile = _ref.read(userProfileProvider);
+    final isMember = userProfile?.role.toLowerCase() == 'member';
+
+    final updateData = {
       ...data,
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    };
+
+    if (isMember) {
+      updateData['requiresApproval'] = true;
+      updateData['approvalStatus'] = 'pending';
+    }
+
+    await _firestore.collection('quotations').doc(id).update(updateData);
+
+    if (isMember && userProfile != null) {
+      final snap = await _firestore.collection('quotations').doc(id).get();
+      final companyId = snap.data()?['companyId'] as String? ?? userProfile.companyId;
+      await _checkAndInitiateApproval(
+        docId: id,
+        docType: 'quotation',
+        companyId: companyId,
+        userProfile: userProfile,
+      );
+    }
   }
 
   Future<void> deleteQuotation(String id) async {
@@ -182,5 +243,5 @@ class QuotationRepository {
 // Repository provider
 final quotationRepositoryProvider = Provider<QuotationRepository>((ref) {
   final firestore = ref.watch(firestoreProvider);
-  return QuotationRepository(firestore);
+  return QuotationRepository(firestore, ref);
 });

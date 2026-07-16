@@ -59,13 +59,18 @@ class ProfileMenuScreen extends ConsumerWidget {
                     CircleAvatar(
                       radius: 32,
                       backgroundColor: colorScheme.primaryContainer,
-                      child: Text(
-                        initials,
-                        style: textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
-                        ),
-                      ),
+                      backgroundImage: userProfile?.photoURL != null && userProfile!.photoURL!.isNotEmpty
+                          ? NetworkImage(userProfile.photoURL!)
+                          : null,
+                      child: userProfile?.photoURL == null || userProfile!.photoURL!.isEmpty
+                          ? Text(
+                              initials,
+                              style: textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.primary,
+                              ),
+                            )
+                          : null,
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -113,7 +118,7 @@ class ProfileMenuScreen extends ConsumerWidget {
                           color: colorScheme.onSurfaceVariant),
                       onPressed: () {
                         context.pop();
-                        context.push('/settings');
+                        context.push('/profile/edit');
                       },
                     ),
                   ],

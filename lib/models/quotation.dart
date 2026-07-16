@@ -47,6 +47,8 @@ class Quotation with _$Quotation {
     String? mondaySyncStatus,
     String? mondaySyncError,
     @TimestampConverter() DateTime? mondayLastSyncAt,
+    bool? requiresApproval,
+    String? approvalStatus, // 'none' | 'pending' | 'approved' | 'rejected'
   }) = _Quotation;
 
   factory Quotation.fromJson(Map<String, dynamic> json) =>

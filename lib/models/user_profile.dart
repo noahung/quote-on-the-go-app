@@ -12,6 +12,8 @@ class UserProfile with _$UserProfile {
     @Default(false) bool emailVerified,
     @TimestampConverter() required DateTime createdAt,
     String? displayName,
+    String? username,
+    String? photoURL,
     String? fcmToken,
     required String companyId,
     required String role,

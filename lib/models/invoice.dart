@@ -53,6 +53,8 @@ class Invoice with _$Invoice {
     String? mondaySyncStatus,
     String? mondaySyncError,
     @TimestampConverter() DateTime? mondayLastSyncAt,
+    bool? requiresApproval,
+    String? approvalStatus, // 'none' | 'pending' | 'approved' | 'rejected'
   }) = _Invoice;
 
   factory Invoice.fromJson(Map<String, dynamic> json) =>

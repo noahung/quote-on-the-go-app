@@ -25,69 +25,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _isSubscriptionLoading = false;
 
-  Future<void> _manageSubscription(BuildContext context) async {
-    final company = ref.read(companyProvider);
-    final user = FirebaseAuth.instance.currentUser;
-    if (company == null || user == null) return;
-
-    setState(() => _isSubscriptionLoading = true);
-
-    try {
-      final bool isPremium = company.tier == 'premium' &&
-          (company.subscriptionStatus == 'active' ||
-              company.subscriptionStatus == 'referral_trial');
-
-      String? redirectUrl;
-
-      if (isPremium) {
-        if (company.stripeCustomerId == null) {
-          throw Exception(
-              'Stripe customer ID not found. Please contact support.');
-        }
-        final response = await http.post(
-          Uri.parse(
-              '$_webAppBaseUrl/api/stripe/create-customer-portal-session'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'stripeCustomerId': company.stripeCustomerId}),
-        );
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        if (response.statusCode != 200) {
-          throw Exception(data['error'] ?? 'Failed to open customer portal.');
-        }
-        redirectUrl = data['url'] as String?;
-      } else {
-        final response = await http.post(
-          Uri.parse('$_webAppBaseUrl/api/stripe/create-checkout-session'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'companyId': company.id,
-            'userEmail': user.email,
-          }),
-        );
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        if (response.statusCode != 200) {
-          throw Exception(
-              data['error'] ?? 'Failed to create checkout session.');
-        }
-        redirectUrl = data['url'] as String?;
-      }
-
-      if (redirectUrl != null) {
-        final uri = Uri.parse(redirectUrl);
-        if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-          throw Exception('Could not open browser.');
-        }
-      } else {
-        throw Exception('No redirect URL returned from server.');
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ref.read(feedbackControllerProvider).error(context, 'Error: $e');
-      }
-    } finally {
-      if (mounted) setState(() => _isSubscriptionLoading = false);
-    }
-  }
 
   Future<void> _showChangePasswordDialog(BuildContext context) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -252,32 +189,66 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Column(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: colorScheme.primary.withValues(alpha: 0.6),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: CircleAvatar(
-                      radius: 40,
-                      backgroundColor: avatarColor,
-                      child: Text(
-                        userProfile?.displayName != null &&
-                                userProfile!.displayName!.isNotEmpty
-                            ? userProfile.displayName![0].toUpperCase()
-                            : userProfile?.email != null &&
-                                    userProfile!.email!.isNotEmpty
-                                ? userProfile.email![0].toUpperCase()
-                                : '?',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: avatarTextColor,
+                  GestureDetector(
+                    onTap: () => context.push('/profile/edit'),
+                    child: Stack(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: colorScheme.primary.withValues(alpha: 0.6),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            radius: 40,
+                            backgroundColor: avatarColor,
+                            backgroundImage: userProfile?.photoURL != null &&
+                                    userProfile!.photoURL!.isNotEmpty
+                                ? NetworkImage(userProfile.photoURL!)
+                                : null,
+                            child: userProfile?.photoURL == null ||
+                                    userProfile!.photoURL!.isEmpty
+                                ? Text(
+                                    userProfile?.displayName != null &&
+                                            userProfile!.displayName!.isNotEmpty
+                                        ? userProfile.displayName![0].toUpperCase()
+                                        : userProfile?.email != null &&
+                                                userProfile!.email!.isNotEmpty
+                                            ? userProfile.email![0].toUpperCase()
+                                            : '?',
+                                    style: TextStyle(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.bold,
+                                      color: avatarTextColor,
+                                    ),
+                                  )
+                                : null,
+                          ),
                         ),
-                      ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: colorScheme.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isDark ? Colors.grey.shade900 : Colors.white,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -301,46 +272,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ],
                   if (company != null) ...[
                     const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        gradient: company.tier == 'premium'
-                            ? LinearGradient(
-                                colors: [
-                                  colorScheme.primary,
-                                  Color.lerp(colorScheme.primary,
-                                      Colors.orangeAccent, 0.4)!,
-                                ],
-                              )
-                            : null,
-                        color: company.tier != 'premium'
-                            ? colorScheme.onSurface.withValues(alpha: 0.08)
-                            : null,
-                        borderRadius: BorderRadius.circular(999),
-                        boxShadow: company.tier == 'premium'
-                            ? [
-                                BoxShadow(
-                                  color: colorScheme.primary
-                                      .withValues(alpha: 0.24),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Text(
-                        company.tier.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: company.tier == 'premium'
-                              ? colorScheme.onPrimary
-                              : colorScheme.onSurface.withValues(alpha: 0.65),
-                          letterSpacing: 1.5,
+                    (() {
+                      final isPremiumTier = company.tier == 'premium' || company.tier == 'individual' || company.tier == 'organisation';
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          gradient: isPremiumTier
+                              ? LinearGradient(
+                                  colors: [
+                                    colorScheme.primary,
+                                    Color.lerp(colorScheme.primary,
+                                        Colors.orangeAccent, 0.4)!,
+                                  ],
+                                )
+                              : null,
+                          color: !isPremiumTier
+                              ? colorScheme.onSurface.withValues(alpha: 0.08)
+                              : null,
+                          borderRadius: BorderRadius.circular(999),
+                          boxShadow: isPremiumTier
+                              ? [
+                                  BoxShadow(
+                                    color: colorScheme.primary
+                                        .withValues(alpha: 0.24),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ]
+                              : null,
                         ),
-                      ),
-                    ),
+                        child: Text(
+                          company.tier.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: isPremiumTier
+                                ? colorScheme.onPrimary
+                                : colorScheme.onSurface.withValues(alpha: 0.65),
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                      );
+                    })(),
                   ],
                 ],
               ),
@@ -352,6 +326,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
+                  ListTile(
+                    leading: Icon(LucideIcons.user, color: colorScheme.primary),
+                    title: const Text('Edit Profile',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text(
+                      userProfile?.displayName != null && userProfile!.displayName!.isNotEmpty
+                          ? userProfile.displayName!
+                          : 'Manage display name, username & avatar',
+                      style: TextStyle(
+                          color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                    ),
+                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
+                    onTap: () => context.push('/profile/edit'),
+                  ),
+                  _buildSubtleDivider(isDark),
                   ListTile(
                     leading: Icon(LucideIcons.building2, color: colorScheme.primary),
                     title: const Text('Company Branding',
@@ -716,21 +705,30 @@ class _SubscriptionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isPremium = tier == 'premium';
+    final isPremium = tier == 'premium' || tier == 'individual' || tier == 'organisation';
     final isActive = isPremium &&
         (subscriptionStatus == 'active' ||
             subscriptionStatus == 'referral_trial');
     final isReferralTrial = subscriptionStatus == 'referral_trial';
 
+    String planName = 'Free';
+    if (tier == 'organisation') {
+      planName = 'Organisation';
+    } else if (tier == 'individual') {
+      planName = 'Individual';
+    } else if (tier == 'premium') {
+      planName = 'Pro';
+    }
+
     String subtitle;
     if (isReferralTrial && trialEndsAt != null) {
       final end =
           '${trialEndsAt!.day}/${trialEndsAt!.month}/${trialEndsAt!.year}';
-      subtitle = 'Pro Trial — ends $end';
+      subtitle = '$planName Trial — ends $end';
     } else if (isActive) {
-      subtitle = 'Pro Plan — Active';
+      subtitle = '$planName Plan — Active';
     } else if (isPremium) {
-      subtitle = 'Pro Plan (${subscriptionStatus ?? 'inactive'})';
+      subtitle = '$planName Plan (${subscriptionStatus ?? 'inactive'})';
     } else {
       subtitle = 'Free Plan — Tap to upgrade to Pro (£29/mo)';
     }

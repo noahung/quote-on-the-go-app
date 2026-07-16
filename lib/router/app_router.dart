@@ -11,6 +11,7 @@ import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/auth/reset_password_screen.dart';
 import '../screens/profile/profile_menu_screen.dart';
+import '../screens/profile/edit_profile_screen.dart';
 import '../screens/notifications/notifications_screen.dart';
 import '../screens/team/team_management_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
@@ -432,6 +433,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfileMenuScreen(),
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        builder: (context, state) => const EditProfileScreen(),
       ),
       GoRoute(
         path: '/notifications',

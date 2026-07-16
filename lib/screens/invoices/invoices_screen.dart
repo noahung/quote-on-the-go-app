@@ -87,7 +87,8 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
     final invoicesAsync = ref.watch(invoicesStreamProvider);
     final recurringAsync = ref.watch(recurringInvoicesStreamProvider);
     final company = ref.watch(companyProvider);
-    final isPremium = company?.tier == 'premium';
+    final tier = company?.tier;
+    final isPremium = tier == 'premium' || tier == 'individual' || tier == 'organisation';
     final activeCount = invoicesAsync.valueOrNull
             ?.where((i) => i.status != 'Paid' && i.status != 'Void')
             .length ??

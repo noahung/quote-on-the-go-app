@@ -327,7 +327,8 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
     final userProfile = ref.watch(userProfileProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final isPremium = company?.tier == 'premium';
+    final tier = company?.tier;
+    final isPremium = tier == 'premium' || tier == 'individual' || tier == 'organisation';
     final role = userProfile?.role.toLowerCase();
     final canManage = role == 'owner' || role == 'admin';
 

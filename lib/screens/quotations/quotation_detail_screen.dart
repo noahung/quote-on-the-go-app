@@ -494,7 +494,10 @@ class QuotationDetailScreen extends ConsumerWidget {
     final quotation = ref.watch(quotationProvider(quotationId));
     final lockAsync = ref.watch(documentLockProvider((documentId: quotationId, documentType: 'quotation')));
     final lockInfo = lockAsync.valueOrNull;
-    final currentUserId = ref.watch(userProfileProvider)?.uid;
+    final userProfile = ref.watch(userProfileProvider);
+    final currentUserId = userProfile?.uid;
+    final canDelete = userProfile?.role == 'owner' || userProfile?.role == 'admin';
+    final isPendingApproval = quotation?.requiresApproval == true && quotation?.approvalStatus == 'pending';
 
     if (quotation == null) {
       return const MeshBackground(
@@ -561,12 +564,20 @@ class QuotationDetailScreen extends ConsumerWidget {
                             extra: quotation);
                       }
                     } else if (value == 'send') {
+                      if (isPendingApproval) {
+                        ref.read(feedbackControllerProvider).error(context, 'This document must be approved first.');
+                        return;
+                      }
                       await _showSendOptions(context, ref, quotation);
                     } else if (value == 'copy_link') {
                       _copyPortalLink(context, ref, quotation);
                     } else if (value == 'share_pdf') {
                       _sharePdf(context, quotation);
                     } else if (value == 'mark_sent') {
+                      if (isPendingApproval) {
+                        ref.read(feedbackControllerProvider).error(context, 'This document must be approved first.');
+                        return;
+                      }
                       await _markAsSent(context, ref, quotation.id);
                     } else if (value == 'duplicate') {
                       await _duplicateQuotation(context, ref, quotation);
@@ -663,19 +674,38 @@ class QuotationDetailScreen extends ConsumerWidget {
                         ),
                       ]),
                     ),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Row(children: [
-                        Icon(Icons.delete_outline, color: semanticColors.error),
-                        const SizedBox(width: 8),
-                        Text('Delete',
-                            style: TextStyle(color: semanticColors.error))
-                      ]),
-                    ),
+                    if (canDelete)
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Row(children: [
+                          Icon(Icons.delete_outline, color: semanticColors.error),
+                          const SizedBox(width: 8),
+                          Text('Delete',
+                              style: TextStyle(color: semanticColors.error))
+                        ]),
+                      ),
                   ],
                 ),
               ],
             ),
+            if (isPendingApproval)
+              Container(
+                width: double.infinity,
+                color: Colors.orange.shade800,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: const Row(
+                  children: [
+                    Icon(Icons.lock_clock, color: Colors.white),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Approval Pending: This document requires approval from an Admin or Owner before it can be sent or converted.',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             if (lockInfo != null && lockInfo.isLocked && lockInfo.lockedBy != currentUserId)
               Container(
                 width: double.infinity,

@@ -433,6 +433,117 @@ class TeamManagementScreen extends ConsumerWidget {
                         return;
                       }
 
+                      final company = ref.read(companyProvider);
+                      final tier = company?.tier;
+                      bool shouldSend = true;
+
+                      if (tier == 'organisation') {
+                        final members = ref.read(teamMembersProvider).valueOrNull ?? [];
+                        final pending = ref.read(pendingInvitationsProvider).valueOrNull ?? [];
+                        final totalSeats = members.length + pending.length;
+                        final currentExtraSeats = (totalSeats - 1).clamp(0, 999999);
+                        final newExtraSeats = currentExtraSeats + 1;
+                        const double baseCost = 29.00;
+                        const double perSeatCost = 4.99;
+                        final double newTotalCost = baseCost + (newExtraSeats * perSeatCost);
+
+                        if (context.mounted) {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (dialogCtx) => AlertDialog(
+                              title: const Text('Adding a team member'),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  RichText(
+                                    text: TextSpan(
+                                      style: Theme.of(dialogCtx).textTheme.bodyMedium,
+                                      children: [
+                                        const TextSpan(text: 'Inviting '),
+                                        TextSpan(
+                                          text: email,
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                        const TextSpan(text: ' as a '),
+                                        TextSpan(
+                                          text: selectedRole,
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                        const TextSpan(text: ' will add '),
+                                        const TextSpan(
+                                          text: '£4.99/month',
+                                          style: TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                        const TextSpan(text: ' to your subscription.'),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(dialogCtx).brightness == Brightness.dark
+                                          ? Colors.white.withValues(alpha: 0.05)
+                                          : Colors.grey.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Theme.of(dialogCtx).brightness == Brightness.dark
+                                            ? Colors.white12
+                                            : Colors.black12,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            const Text('Base plan (1 seat incl.)', style: TextStyle(fontSize: 13)),
+                                            Text('£${baseCost.toStringAsFixed(2)}', style: const TextStyle(fontSize: 13)),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text('Extra seats ($newExtraSeats × £${perSeatCost.toStringAsFixed(2)})', style: const TextStyle(fontSize: 13)),
+                                            Text('£${(newExtraSeats * perSeatCost).toStringAsFixed(2)}', style: const TextStyle(fontSize: 13)),
+                                          ],
+                                        ),
+                                        const Padding(
+                                          padding: EdgeInsets.symmetric(vertical: 8),
+                                          child: Divider(height: 1),
+                                        ),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            const Text('New monthly total', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                            Text('£${newTotalCost.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(dialogCtx, false),
+                                  child: const Text('Cancel'),
+                                ),
+                                FilledButton(
+                                  onPressed: () => Navigator.pop(dialogCtx, true),
+                                  child: const Text('Confirm & Send Invitation'),
+                                ),
+                              ],
+                            ),
+                          );
+                          shouldSend = confirmed == true;
+                        }
+                      }
+
+                      if (!shouldSend) return;
+
                       try {
                         const apiUrl =
                             'https://app.quoteonthego.co.uk/api/invite-team-member';

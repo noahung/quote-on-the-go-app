@@ -15,6 +15,7 @@ class UnifiedActivityItem {
   final String badgeColor;
   final bool isResolved;
   final bool isPrivate;
+  final String? authorPhotoURL;
 
   UnifiedActivityItem({
     required this.id,
@@ -27,6 +28,7 @@ class UnifiedActivityItem {
     required this.badgeColor,
     required this.isResolved,
     required this.isPrivate,
+    this.authorPhotoURL,
   });
 }
 
@@ -52,6 +54,7 @@ class InternalComment {
   final List<String> mentions;
   final bool isPrivate;
   final String companyId;
+  final String? authorPhotoURL;
 
   InternalComment({
     required this.id,
@@ -66,6 +69,7 @@ class InternalComment {
     required this.mentions,
     required this.isPrivate,
     required this.companyId,
+    this.authorPhotoURL,
   });
 
   factory InternalComment.fromMap(Map<String, dynamic> map, String docId) {
@@ -93,6 +97,7 @@ class InternalComment {
       mentions: List<String>.from(map['mentions'] ?? []),
       isPrivate: map['isPrivate'] as bool? ?? true,
       companyId: map['companyId'] as String? ?? '',
+      authorPhotoURL: authorMap['photoURL'] as String? ?? authorMap['photoUrl'] as String?,
     );
   }
 }
@@ -449,12 +454,14 @@ final unifiedActivityStreamProvider = StreamProvider.family<List<UnifiedActivity
         badgeColor: comment.isPrivate ? 'blue' : 'green',
         isResolved: comment.isResolved,
         isPrivate: comment.isPrivate,
+        authorPhotoURL: comment.authorPhotoURL,
       ));
     }
 
     for (final item in currentTimeline) {
       final name = item.actor['userName'] as String? ?? item.actor['displayName'] as String? ?? 'System';
       final initials = _getInitials(name);
+      final photoURL = item.actor['photoURL'] as String? ?? item.actor['photoUrl'] as String?;
       merged.add(UnifiedActivityItem(
         id: item.id,
         type: 'timeline',
@@ -466,6 +473,7 @@ final unifiedActivityStreamProvider = StreamProvider.family<List<UnifiedActivity
         badgeColor: 'grey',
         isResolved: false,
         isPrivate: false,
+        authorPhotoURL: photoURL,
       ));
     }
 

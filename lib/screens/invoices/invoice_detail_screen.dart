@@ -445,7 +445,10 @@ class InvoiceDetailScreen extends ConsumerWidget {
     final invoice = ref.watch(invoiceProvider(invoiceId));
     final lockAsync = ref.watch(documentLockProvider((documentId: invoiceId, documentType: 'invoice')));
     final lockInfo = lockAsync.valueOrNull;
-    final currentUserId = ref.watch(userProfileProvider)?.uid;
+    final userProfile = ref.watch(userProfileProvider);
+    final currentUserId = userProfile?.uid;
+    final canDelete = userProfile?.role == 'owner' || userProfile?.role == 'admin';
+    final isPendingApproval = invoice?.requiresApproval == true && invoice?.approvalStatus == 'pending';
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -515,12 +518,28 @@ class InvoiceDetailScreen extends ConsumerWidget {
                             extra: invoice);
                       }
                     } else if (value == 'send') {
+                      if (isPendingApproval) {
+                        ref.read(feedbackControllerProvider).error(context, 'This document must be approved first.');
+                        return;
+                      }
                       await _showSendOptions(context, ref, invoice);
                     } else if (value == 'mark_paid') {
+                      if (isPendingApproval) {
+                        ref.read(feedbackControllerProvider).error(context, 'This document must be approved first.');
+                        return;
+                      }
                       await _markPaid(context, ref, invoice.id);
                     } else if (value == 'mark_sent') {
+                      if (isPendingApproval) {
+                        ref.read(feedbackControllerProvider).error(context, 'This document must be approved first.');
+                        return;
+                      }
                       await _markAsSent(context, ref, invoice.id);
                     } else if (value == 'send_reminder') {
+                      if (isPendingApproval) {
+                        ref.read(feedbackControllerProvider).error(context, 'This document must be approved first.');
+                        return;
+                      }
                       await _sendReminder(context, ref, invoice);
                     } else if (value == 'copy_link') {
                       _copyPortalLink(context, ref, invoice);
@@ -619,19 +638,38 @@ class InvoiceDetailScreen extends ConsumerWidget {
                         const Text('Save as Template'),
                       ]),
                     ),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Row(children: [
-                        Icon(Icons.delete_outline, color: semanticColors.error),
-                        const SizedBox(width: 8),
-                        Text('Delete',
-                            style: TextStyle(color: semanticColors.error))
-                      ]),
-                    ),
+                    if (canDelete)
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Row(children: [
+                          Icon(Icons.delete_outline, color: semanticColors.error),
+                          const SizedBox(width: 8),
+                          Text('Delete',
+                              style: TextStyle(color: semanticColors.error))
+                        ]),
+                      ),
                   ],
                 ),
               ],
             ),
+            if (isPendingApproval)
+              Container(
+                width: double.infinity,
+                color: Colors.orange.shade800,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: const Row(
+                  children: [
+                    Icon(Icons.lock_clock, color: Colors.white),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Approval Pending: This document requires approval from an Admin or Owner before it can be sent or paid.',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             if (lockInfo != null && lockInfo.isLocked && lockInfo.lockedBy != currentUserId)
               Container(
                 width: double.infinity,

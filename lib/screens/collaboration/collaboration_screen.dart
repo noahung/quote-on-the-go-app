@@ -581,14 +581,19 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
                         CircleAvatar(
                           backgroundColor: avatarBgColor,
                           radius: 18,
-                          child: Text(
-                            item.initials,
-                            style: TextStyle(
-                              color: avatarTextColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
+                          backgroundImage: item.authorPhotoURL != null && item.authorPhotoURL!.isNotEmpty
+                              ? NetworkImage(item.authorPhotoURL!)
+                              : null,
+                          child: item.authorPhotoURL == null || item.authorPhotoURL!.isEmpty
+                              ? Text(
+                                  item.initials,
+                                  style: TextStyle(
+                                    color: avatarTextColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                )
+                              : null,
                         ),
                         const SizedBox(width: 12),
                         Expanded(

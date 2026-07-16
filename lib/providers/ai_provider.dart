@@ -14,7 +14,8 @@ final aiServiceProvider = Provider<AIService>((ref) => AIService());
 @Riverpod(keepAlive: true)
 bool isPremium(IsPremiumRef ref) {
   final company = ref.watch(companyProvider);
-  return company?.tier == 'premium';
+  final tier = company?.tier;
+  return tier == 'premium' || tier == 'individual' || tier == 'organisation';
 }
 
 // AI Generation State
