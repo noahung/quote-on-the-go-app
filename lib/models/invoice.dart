@@ -39,6 +39,8 @@ class Invoice with _$Invoice {
     String? stripePaymentIntentId,
     String? stripePaymentStatus,
     String? brevoMessageId,
+    String? pdfTemplateId,
+    String? pdfThemeColor,
     // Document discounts & status
     double? discount,
     String? discountType, // 'percentage' | 'fixed'

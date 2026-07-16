@@ -18,6 +18,7 @@ import '../../components/custom_date_time_picker.dart';
 import '../../utils/feedback_controller.dart';
 import '../../models/feedback_type.dart';
 import '../../models/models.dart';
+import '../../services/pdf_service.dart';
 import '../client_responses/client_activity_card.dart';
 
 const _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
@@ -545,6 +546,17 @@ class InvoiceDetailScreen extends ConsumerWidget {
                       _copyPortalLink(context, ref, invoice);
                     } else if (value == 'share_pdf') {
                       _sharePdf(context, invoice);
+                    } else if (value == 'view_pdf') {
+                      await PdfService.viewInvoicePdfInBrowser(invoice.id);
+                    } else if (value == 'share_pdf_file') {
+                      try {
+                        await PdfService.shareInvoicePdf(invoice.id,
+                            invoiceNumber: invoice.invoiceNumber);
+                      } catch (e) {
+                        if (context.mounted) {
+                          ref.read(feedbackControllerProvider).error(context, 'Error sharing PDF: $e');
+                        }
+                      }
                     } else if (value == 'duplicate') {
                       await _duplicateInvoice(context, ref, invoice);
                     } else if (value == 'save_template') {
@@ -614,12 +626,28 @@ class InvoiceDetailScreen extends ConsumerWidget {
                         const Text('Copy Portal Link'),
                       ]),
                     ),
-                    PopupMenuItem(
+                     PopupMenuItem(
                       value: 'share_pdf',
                       child: Row(children: [
                         Icon(Icons.share_outlined, color: semanticColors.info),
                         const SizedBox(width: 8),
-                        const Text('Share PDF Link'),
+                        const Text('Share PDF Link')
+                      ]),
+                    ),
+                    PopupMenuItem(
+                      value: 'view_pdf',
+                      child: Row(children: [
+                        Icon(Icons.picture_as_pdf_outlined, color: semanticColors.info),
+                        const SizedBox(width: 8),
+                        const Text('View PDF Document')
+                      ]),
+                    ),
+                    PopupMenuItem(
+                      value: 'share_pdf_file',
+                      child: Row(children: [
+                        Icon(Icons.file_present_outlined, color: semanticColors.info),
+                        const SizedBox(width: 8),
+                        const Text('Share PDF File')
                       ]),
                     ),
                     PopupMenuItem(

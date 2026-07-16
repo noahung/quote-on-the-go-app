@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../components/glass_card.dart';
 import '../../components/mesh_background.dart';
+import '../../components/pdf_preview_panel.dart';
 import '../../models/company.dart';
 import '../../providers/providers.dart';
 import 'package:go_router/go_router.dart';
@@ -46,6 +47,10 @@ class _CompanyBrandingScreenState extends ConsumerState<CompanyBrandingScreen> {
   File? _newLogoFile;
   String? _existingLogoUrl;
   bool _removeLogo = false;
+
+  // PDF state
+  String? _selectedTemplateId;
+  String? _selectedThemeColor;
 
   @override
   void initState() {
@@ -92,6 +97,8 @@ class _CompanyBrandingScreenState extends ConsumerState<CompanyBrandingScreen> {
     _taxRateCtrl.text =
         company.defaultTaxRate != null ? '${company.defaultTaxRate}' : '';
     _existingLogoUrl = company.logoUrl;
+    _selectedTemplateId = company.defaultPdfTemplateId ?? 'modern-orange';
+    _selectedThemeColor = company.defaultPdfThemeColor ?? '';
     final bank = (company.bankAccounts?.isNotEmpty == true)
         ? company.bankAccounts!.first
         : null;
@@ -220,6 +227,8 @@ class _CompanyBrandingScreenState extends ConsumerState<CompanyBrandingScreen> {
         'logoUrl': logoUrl,
         if (taxRate != null) 'defaultTaxRate': taxRate,
         if (bankAccounts.isNotEmpty) 'bankAccounts': bankAccounts,
+        'defaultPdfTemplateId': _selectedTemplateId ?? 'modern-orange',
+        'defaultPdfThemeColor': _selectedThemeColor ?? '',
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
@@ -246,6 +255,30 @@ class _CompanyBrandingScreenState extends ConsumerState<CompanyBrandingScreen> {
     }
   }
 
+  void _showPremiumDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.star, color: Colors.amber),
+            SizedBox(width: 8),
+            Text('Premium Feature'),
+          ],
+        ),
+        content: const Text(
+          'Customising PDF layouts and accent colours is a Pro feature. Please upgrade your subscription on our web platform to unlock these styling features.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -253,6 +286,9 @@ class _CompanyBrandingScreenState extends ConsumerState<CompanyBrandingScreen> {
     final userProfile = ref.watch(userProfileProvider);
     final role = userProfile?.role.toLowerCase();
     final canEdit = role == 'owner' || role == 'admin';
+    final isPremiumUser = company?.tier == 'premium' ||
+        company?.tier == 'individual' ||
+        company?.tier == 'organisation';
 
     if (company != null) {
       _company = company;
@@ -485,6 +521,274 @@ class _CompanyBrandingScreenState extends ConsumerState<CompanyBrandingScreen> {
                               decimal: true),
                         ),
                       ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // ── PDF Styling ──────────────────────────────────────
+                    _SectionCard(
+                      title: 'PDF Document Theme & Styling',
+                      icon: LucideIcons.palette,
+                      children: [
+                        Text(
+                          'Select a default template layout and custom accent colour for all generated quotations and invoices.',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: colorScheme.onSurfaceVariant),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Template Layout'.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ...[
+                          {
+                            'id': 'modern-orange',
+                            'name': 'Modern Orange',
+                            'desc': 'Orange highlights, clean spacing',
+                            'isPremium': false,
+                          },
+                          {
+                            'id': 'teal-header',
+                            'name': 'Clean Teal',
+                            'desc': 'Teal header, shaded sidebar card',
+                            'isPremium': true,
+                          },
+                          {
+                            'id': 'classic-minimal',
+                            'name': 'Classic Minimal',
+                            'desc': 'Classic serif typography, grid outline',
+                            'isPremium': true,
+                          },
+                          {
+                            'id': 'sleek-charcoal',
+                            'name': 'Sleek Charcoal',
+                            'desc': 'Deep charcoal header, corporate look',
+                            'isPremium': true,
+                          },
+                          {
+                            'id': 'emerald-professional',
+                            'name': 'Emerald Pro',
+                            'desc': 'Emerald accents, geometric sidebar',
+                            'isPremium': true,
+                          },
+                          {
+                            'id': 'royal-elegant',
+                            'name': 'Royal Elegant',
+                            'desc': 'Royal navy & gold, double thin borders',
+                            'isPremium': true,
+                          },
+                        ].map((tpl) {
+                          final String id = tpl['id'] as String;
+                          final String name = tpl['name'] as String;
+                          final String desc = tpl['desc'] as String;
+                          final bool isPremiumTemplate = tpl['isPremium'] as bool;
+                          final isSelected = _selectedTemplateId == id;
+                          final isLocked = isPremiumTemplate && !isPremiumUser;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: InkWell(
+                              onTap: !canEdit ? null : () {
+                                if (isLocked) {
+                                  _showPremiumDialog(context);
+                                } else {
+                                  setState(() {
+                                    _selectedTemplateId = id;
+                                  });
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? colorScheme.primary
+                                        : colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                    width: isSelected ? 2 : 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: isSelected
+                                      ? colorScheme.primaryContainer.withValues(alpha: 0.1)
+                                      : Colors.transparent,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                name,
+                                                style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 14),
+                                              ),
+                                              if (isPremiumTemplate) ...[
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                      horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.amber.withValues(alpha: 0.2),
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                  child: const Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Icon(Icons.star,
+                                                          size: 10,
+                                                          color: Colors.amber),
+                                                      SizedBox(width: 2),
+                                                      Text(
+                                                        'PRO',
+                                                        style: TextStyle(
+                                                            fontSize: 8,
+                                                            fontWeight: FontWeight.bold,
+                                                            color: Colors.amber),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            desc,
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                color: colorScheme.onSurfaceVariant),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (isSelected)
+                                      Icon(Icons.check_circle,
+                                          color: colorScheme.primary)
+                                    else if (isLocked)
+                                      Icon(Icons.lock_outline,
+                                          size: 18, color: colorScheme.onSurfaceVariant),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Accent Colour'.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            {'name': 'Default', 'color': null, 'hex': ''},
+                            {'name': 'Charcoal', 'color': const Color(0xff27272a), 'hex': '#27272a'},
+                            {'name': 'Indigo', 'color': const Color(0xff4f46e5), 'hex': '#4f46e5'},
+                            {'name': 'Blue', 'color': const Color(0xff2563eb), 'hex': '#2563eb'},
+                            {'name': 'Teal', 'color': const Color(0xff0d9488), 'hex': '#0d9488'},
+                            {'name': 'Emerald', 'color': const Color(0xff059669), 'hex': '#059669'},
+                            {'name': 'Amber', 'color': const Color(0xffd97706), 'hex': '#d97706'},
+                            {'name': 'Rose', 'color': const Color(0xffe11d48), 'hex': '#e11d48'},
+                          ].map((colorItem) {
+                            final String name = colorItem['name'] as String;
+                            final Color? color = colorItem['color'] as Color?;
+                            final String hex = colorItem['hex'] as String;
+                            final isSelected = _selectedThemeColor == hex;
+                            final isLocked = hex.isNotEmpty && !isPremiumUser;
+
+                            return InkWell(
+                              onTap: !canEdit ? null : () {
+                                if (isLocked) {
+                                  _showPremiumDialog(context);
+                                } else {
+                                  setState(() {
+                                    _selectedThemeColor = hex;
+                                  });
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? colorScheme.primary
+                                        : colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                    width: isSelected ? 2 : 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  color: isSelected
+                                      ? colorScheme.primaryContainer.withValues(alpha: 0.1)
+                                      : Colors.transparent,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (color != null)
+                                      Container(
+                                        width: 12,
+                                        height: 12,
+                                        decoration: BoxDecoration(
+                                          color: color,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      )
+                                    else
+                                      Container(
+                                        width: 12,
+                                        height: 12,
+                                        decoration: const BoxDecoration(
+                                          gradient: SweepGradient(
+                                            colors: [Colors.orange, Colors.teal, Colors.indigo, Colors.orange],
+                                          ),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    const SizedBox(width: 6),
+                                    Text(name, style: const TextStyle(fontSize: 12)),
+                                    if (isLocked) ...[
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.lock_outline, size: 10),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    PdfPreviewPanel(
+                      templateId: _selectedTemplateId ?? 'modern-orange',
+                      themeColor: _selectedThemeColor ?? '',
+                      companyName: _nameCtrl.text,
+                      companyAddress: _addressCtrl.text,
+                      logoUrl: _newLogoFile != null ? null : _existingLogoUrl,
+                      email: _emailCtrl.text,
+                      phone: _phoneCtrl.text,
+                      website: _websiteCtrl.text,
                     ),
 
                     const SizedBox(height: 16),

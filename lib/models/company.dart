@@ -32,6 +32,8 @@ class Company with _$Company {
     List<BankAccount>? bankAccounts,
     double? defaultTaxRate,
     double? defaultHourlyRate,
+    String? defaultPdfTemplateId,
+    String? defaultPdfThemeColor,
     required String tier,
     String? subscriptionStatus,
     String? referredBy,
@@ -102,6 +104,8 @@ class CompanyProfile with _$CompanyProfile {
     String? logoUrl,
     List<BankAccount>? bankAccounts,
     double? defaultTaxRate,
+    String? defaultPdfTemplateId,
+    String? defaultPdfThemeColor,
   }) = _CompanyProfile;
 
   factory CompanyProfile.fromJson(Map<String, dynamic> json) =>

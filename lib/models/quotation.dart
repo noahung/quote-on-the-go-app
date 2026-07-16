@@ -35,6 +35,8 @@ class Quotation with _$Quotation {
     @Default(false) bool isArchived,
     @TimestampConverter() DateTime? scheduledSendAt,
     String? brevoMessageId,
+    String? pdfTemplateId,
+    String? pdfThemeColor,
     // Document discounts
     double? discount,
     String? discountType, // 'percentage' | 'fixed'
