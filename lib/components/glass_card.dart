@@ -1,4 +1,3 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 /// A premium, glassmorphic frosted card container.
@@ -27,12 +26,17 @@ class GlassCard extends StatelessWidget {
     final brightness = Theme.of(context).brightness;
     final isDark = brightness == Brightness.dark;
 
-    final effectiveBorderRadius = borderRadius ?? BorderRadius.circular(24);
-    final effectiveBorder = border; // No borders by default, matching Gemini's borderless aesthetic
+    final effectiveBorderRadius = borderRadius ?? BorderRadius.circular(16);
+    final effectiveBorder = border ??
+        Border.all(
+          color: isDark ? const Color(0xFF26262E) : const Color(0xFFE2E8F0),
+          width: 1.0,
+        );
 
     final backgroundColor = isDark
-        ? const Color(0xFF18181C).withValues(alpha: 0.4)
-        : const Color(0xFFF0F4F9).withValues(alpha: 0.65);
+        ? const Color(0xFF16161A)
+        : const Color(0xFFFFFFFF);
+
     Widget cardContent = Container(
       width: width,
       height: height,
@@ -40,6 +44,15 @@ class GlassCard extends StatelessWidget {
         color: backgroundColor,
         borderRadius: effectiveBorderRadius,
         border: effectiveBorder,
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.30)
+                : Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: ClipRRect(
         borderRadius: effectiveBorderRadius,
@@ -64,10 +77,7 @@ class GlassCard extends StatelessWidget {
 
     return ClipRRect(
       borderRadius: effectiveBorderRadius,
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: cardContent,
-      ),
+      child: cardContent,
     );
   }
 }

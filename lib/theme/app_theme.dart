@@ -91,11 +91,10 @@ class AppTheme {
       cardTheme: CardThemeData(
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide.none,
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
         ),
-        color: Colors.white.withValues(
-            alpha: 0.65), // Transparent base for glass backdrop filter
+        color: Colors.white, // Solid opaque white background
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -116,33 +115,36 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.black.withValues(alpha: 0.03),
-        border: UnderlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
+        fillColor: const Color(0xFFF8FAFC),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
         ),
-        enabledBorder: UnderlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
         ),
-        focusedBorder: UnderlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: _brandOrange, width: 1.5),
         ),
-        errorBorder: UnderlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1),
         ),
-        focusedErrorBorder: UnderlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       ),
       chipTheme: ChipThemeData(
-        shape: const StadiumBorder(),
-        backgroundColor: Colors.white.withValues(alpha: 0.7),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+        ),
+        backgroundColor: Colors.white,
         side: BorderSide.none,
         labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
       ),
@@ -176,10 +178,10 @@ class AppTheme {
       popupMenuTheme: PopupMenuThemeData(
         elevation: 3,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide.none,
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
         ),
-        color: const Color(0xFFF0F4F9),
+        color: Colors.white,
         textStyle: GoogleFonts.dmSans(
           color: colorScheme.onSurface,
           fontSize: 14,
@@ -188,14 +190,14 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFF1E293B),
         contentTextStyle: GoogleFonts.dmSans(
-          color: const Color(0xFF1F1F1F),
+          color: Colors.white,
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
         ),
         elevation: 4,
       ),
@@ -261,11 +263,10 @@ class AppTheme {
       cardTheme: CardThemeData(
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide.none,
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFF26262E), width: 1),
         ),
-        color: Colors.black
-            .withValues(alpha: 0.35), // Dark semi-transparent container base
+        color: const Color(0xFF16161A), // Solid dark container base
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -286,33 +287,36 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.05),
-        border: UnderlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
+        fillColor: const Color(0xFF131316),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFF26262E), width: 1),
         ),
-        enabledBorder: UnderlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFF26262E), width: 1),
         ),
-        focusedBorder: UnderlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFF4781F), width: 1.5),
         ),
-        errorBorder: UnderlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFFFB4AB), width: 1),
         ),
-        focusedErrorBorder: UnderlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFFFB4AB), width: 1.5),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       ),
       chipTheme: ChipThemeData(
-        shape: const StadiumBorder(),
-        backgroundColor: Colors.white.withValues(alpha: 0.05),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFF26262E), width: 1),
+        ),
+        backgroundColor: const Color(0xFF16161A),
         side: BorderSide.none,
         labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
       ),
@@ -346,10 +350,10 @@ class AppTheme {
       popupMenuTheme: PopupMenuThemeData(
         elevation: 3,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide.none,
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFF26262E), width: 1),
         ),
-        color: colorScheme.surfaceContainerHigh,
+        color: const Color(0xFF1C1C22),
         textStyle: GoogleFonts.dmSans(
           color: colorScheme.onSurface,
           fontSize: 14,
@@ -365,7 +369,7 @@ class AppTheme {
           fontWeight: FontWeight.w500,
         ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
         ),
         elevation: 4,
       ),
