@@ -56,6 +56,7 @@ import '../screens/client_responses/client_responses_screen.dart';
 import '../screens/pricing/smart_pricing_screen.dart';
 import '../screens/auth/onboarding_screen.dart';
 import '../screens/auth/email_verification_screen.dart';
+import '../screens/auth/account_pending_deletion_screen.dart';
 import '../screens/shared/in_app_web_view_screen.dart';
 import '../screens/shared/pdf_preview_screen.dart';
 import '../screens/auth/splash_screen.dart';
@@ -114,6 +115,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         final isEmailVerified = firebaseUser.emailVerified;
         final userProfile = await authService.getUserProfile(firebaseUser.uid);
         final hasProfile = userProfile != null;
+
+        // Check for pending deletion status
+        final isPendingDeletion = userProfile?.accountStatus == 'pending_deletion';
+        final isPendingDeletionPage = location == '/account-pending-deletion';
+
+        if (isPendingDeletion && !isPendingDeletionPage) {
+          return '/account-pending-deletion';
+        }
+        if (!isPendingDeletion && isPendingDeletionPage) {
+          return '/';
+        }
 
         // Unverified email-based users must verify before proceeding
         if (!isEmailVerified && !hasProfile && !isVerifyingEmail) {
@@ -457,6 +469,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/verify-email',
         builder: (context, state) => const EmailVerificationScreen(),
+      ),
+      GoRoute(
+        path: '/account-pending-deletion',
+        builder: (context, state) => const AccountPendingDeletionScreen(),
       ),
     ],
   );

@@ -117,4 +117,80 @@ class AuthService {
         .snapshots()
         .map((doc) => doc.exists ? Company.fromFirestore(doc) : null);
   }
+
+  Future<void> requestAccountDeletion({
+    required String uid,
+    String? reason,
+    bool deleteCompanyData = false,
+  }) async {
+    final userDoc =
+        await _firebaseService.firestore.collection('users').doc(uid).get();
+    if (!userDoc.exists) return;
+
+    final userData = userDoc.data()!;
+    final companyId = userData['companyId'] as String?;
+    final role = userData['role'] as String?;
+
+    final scheduledDate =
+        DateTime.now().add(const Duration(days: 30)).toIso8601String();
+
+    await _firebaseService.firestore.collection('users').doc(uid).update({
+      'accountStatus': 'pending_deletion',
+      'deletionRequestedAt': FieldValue.serverTimestamp(),
+      'deletionScheduledAt': scheduledDate,
+      'deletionReason': reason ?? 'No reason provided',
+    });
+
+    if (role == 'owner' && companyId != null && deleteCompanyData) {
+      await _firebaseService.firestore
+          .collection('companies')
+          .doc(companyId)
+          .update({
+        'accountStatus': 'pending_deletion',
+        'deletionRequestedAt': FieldValue.serverTimestamp(),
+        'deletionScheduledAt': scheduledDate,
+        'deletionRequestedBy': uid,
+        'deletionReason': reason ?? 'Owner requested workspace deletion',
+      });
+    }
+
+    await signOut();
+  }
+
+  Future<void> cancelAccountDeletion(String uid) async {
+    final userDoc =
+        await _firebaseService.firestore.collection('users').doc(uid).get();
+    if (!userDoc.exists) return;
+
+    final userData = userDoc.data()!;
+    final companyId = userData['companyId'] as String?;
+    final role = userData['role'] as String?;
+
+    await _firebaseService.firestore.collection('users').doc(uid).update({
+      'accountStatus': FieldValue.delete(),
+      'deletionRequestedAt': FieldValue.delete(),
+      'deletionScheduledAt': FieldValue.delete(),
+      'deletionReason': FieldValue.delete(),
+    });
+
+    if (role == 'owner' && companyId != null) {
+      final compDoc = await _firebaseService.firestore
+          .collection('companies')
+          .doc(companyId)
+          .get();
+      if (compDoc.exists &&
+          compDoc.data()?['accountStatus'] == 'pending_deletion') {
+        await _firebaseService.firestore
+            .collection('companies')
+            .doc(companyId)
+            .update({
+          'accountStatus': FieldValue.delete(),
+          'deletionRequestedAt': FieldValue.delete(),
+          'deletionScheduledAt': FieldValue.delete(),
+          'deletionRequestedBy': FieldValue.delete(),
+          'deletionReason': FieldValue.delete(),
+        });
+      }
+    }
+  }
 }

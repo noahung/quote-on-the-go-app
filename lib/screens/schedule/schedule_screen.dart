@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../models/calendar_event.dart';
 import '../../providers/providers.dart';
-import '../../providers/drawer_controller_provider.dart';
 import '../../components/curved_header.dart';
 
 class ScheduleScreen extends ConsumerStatefulWidget {
@@ -140,51 +139,68 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.chevron_left, size: 20),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      onPressed: _prevMonth,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      DateFormat('MMMM yyyy').format(_selectedDay),
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: -0.5,
+                                Expanded(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.chevron_left, size: 20),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                        onPressed: _prevMonth,
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    IconButton(
-                                      icon: const Icon(Icons.chevron_right, size: 20),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      onPressed: _nextMonth,
-                                    ),
-                                  ],
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          DateFormat('MMMM yyyy').format(_selectedDay),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                          style: const TextStyle(
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: -0.5,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      IconButton(
+                                        icon: const Icon(Icons.chevron_right, size: 20),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                        onPressed: _nextMonth,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                                 Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
                                       icon: Icon(_isMonthlyView ? LucideIcons.calendarDays : LucideIcons.calendarDays),
                                       tooltip: _isMonthlyView ? 'Show Week View' : 'Show Month View',
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                                       onPressed: () => setState(() => _isMonthlyView = !_isMonthlyView),
                                     ),
-                                    TextButton(
-                                      onPressed: () {
+                                    const SizedBox(width: 4),
+                                    GestureDetector(
+                                      onTap: () {
                                         final now = DateTime.now();
                                         setState(() {
                                           _selectedDay = DateTime(now.year, now.month, now.day);
                                         });
                                       },
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: const Color(0xFFF4781F),
-                                        textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                                      child: const Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                                        child: Text(
+                                          'Today',
+                                          style: TextStyle(
+                                            color: Color(0xFFF4781F),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
                                       ),
-                                      child: const Text('Today'),
                                     ),
                                   ],
                                 ),

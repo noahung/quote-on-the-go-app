@@ -15,7 +15,10 @@ final aiServiceProvider = Provider<AIService>((ref) => AIService());
 bool isPremium(IsPremiumRef ref) {
   final company = ref.watch(companyProvider);
   final tier = company?.tier;
-  return tier == 'premium' || tier == 'individual' || tier == 'organisation';
+  final status = company?.subscriptionStatus;
+  final validTier = tier == 'premium' || tier == 'individual' || tier == 'organisation';
+  final validStatus = status == 'active' || status == 'referral_trial';
+  return validTier && validStatus;
 }
 
 // AI Generation State

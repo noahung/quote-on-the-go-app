@@ -1,19 +1,11 @@
-import 'dart:convert';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
 import '../../providers/providers.dart';
 import '../../theme/semantic_colors.dart';
 import '../../components/mesh_background.dart';
 import '../../components/glass_card.dart';
-import '../../utils/feedback_controller.dart';
-import '../../models/feedback_type.dart';
-
-const String _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -23,85 +15,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _isSubscriptionLoading = false;
-
-
-  Future<void> _showChangePasswordDialog(BuildContext context) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final isGoogleUser =
-        user.providerData.any((p) => p.providerId == 'google.com');
-    if (isGoogleUser) {
-      if (context.mounted) {
-        ref.read(feedbackControllerProvider).warning(context, 'Password change is not available for Google sign-in accounts.');
-      }
-      return;
-    }
-
-    if (user.email != null) {
-      try {
-        await FirebaseAuth.instance.sendPasswordResetEmail(email: user.email!);
-        if (context.mounted) {
-          ref.read(feedbackControllerProvider).success(context, 'Password reset email sent to ${user.email}');
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ref.read(feedbackControllerProvider).error(context, 'Error: $e');
-        }
-      }
-    }
-  }
-
-  Future<void> _showEditProfileDialog(
-      BuildContext context, WidgetRef ref) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final nameController = TextEditingController(text: user.displayName ?? '');
-
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Profile'),
-        content: TextField(
-          controller: nameController,
-          decoration: const InputDecoration(
-            labelText: 'Display Name',
-            prefixIcon: Icon(LucideIcons.user),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, nameController.text.trim()),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-
-    if (result != null && result.isNotEmpty) {
-      try {
-        await user.updateDisplayName(result);
-        if (context.mounted) {
-          await ref.read(feedbackControllerProvider).showCelebration(
-            context: context,
-            type: CelebrationType.sparkle,
-            title: 'Profile Updated',
-            subtitle: 'Your changes have been saved',
-          );
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ref.read(feedbackControllerProvider).error(context, 'Error: $e');
-        }
-      }
-    }
-  }
+  final bool _isSubscriptionLoading = false;
 
   Color _getAvatarColor(String name, bool isDark) {
     final int hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
@@ -469,13 +383,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             // INTEGRATIONS Section (Owner/Admin only)
             if (userProfile?.role.toLowerCase() == 'owner' ||
                 userProfile?.role.toLowerCase() == 'admin') ...[
-              const _SectionHeader(title: 'Integrations'),
+              _SectionHeader(
+                title: 'Integrations',
+                isProFeature: !(company?.tier == 'premium' ||
+                    company?.tier == 'individual' ||
+                    company?.tier == 'organisation'),
+              ),
               GlassCard(
                 padding: EdgeInsets.zero,
                 child: Column(
                   children: [
                     ListTile(
-                      leading: Icon(LucideIcons.refreshCw, color: colorScheme.primary),
+                      leading: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Image.asset(
+                          'assets/images/quickbooks-logo.png',
+                          fit: BoxFit.contain,
+                          errorBuilder: (ctx, err, stack) =>
+                              Icon(LucideIcons.wallet, color: colorScheme.primary),
+                        ),
+                      ),
                       title: const Text('QuickBooks',
                           style: TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(
@@ -498,22 +426,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     _buildSubtleDivider(isDark),
                     ListTile(
-                      leading:
-                          Icon(LucideIcons.calendar, color: colorScheme.primary),
-                      title: const Text('Google Calendar',
+                      leading: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Image.asset(
+                          'assets/images/xero-logo.png',
+                          fit: BoxFit.contain,
+                          errorBuilder: (ctx, err, stack) =>
+                              Icon(LucideIcons.fileSpreadsheet, color: colorScheme.primary),
+                        ),
+                      ),
+                      title: const Text('Xero',
                           style: TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(
-                        company?.googleCalendarEnabled == true
+                        company?.xeroEnabled == true
                             ? 'Connected'
                             : 'Not connected',
                         style: TextStyle(
                             color: colorScheme.onSurface.withValues(alpha: 0.6)),
                       ),
                       trailing: Icon(
-                        company?.googleCalendarEnabled == true
+                        company?.xeroEnabled == true
                             ? LucideIcons.checkCircle
                             : LucideIcons.chevronRight,
-                        color: company?.googleCalendarEnabled == true
+                        color: company?.xeroEnabled == true
                             ? semanticColors.success
                             : colorScheme.onSurface.withValues(alpha: 0.3),
                         size: 20,
@@ -522,8 +458,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     _buildSubtleDivider(isDark),
                     ListTile(
-                      leading:
-                          Icon(LucideIcons.table2, color: colorScheme.primary),
+                      leading: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Image.asset(
+                          'assets/images/monday-logo.png',
+                          fit: BoxFit.contain,
+                          errorBuilder: (ctx, err, stack) =>
+                              Icon(LucideIcons.table2, color: colorScheme.primary),
+                        ),
+                      ),
                       title: const Text('Monday.com',
                           style: TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(
@@ -538,6 +482,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ? LucideIcons.checkCircle
                             : LucideIcons.chevronRight,
                         color: company?.mondayEnabled == true
+                            ? semanticColors.success
+                            : colorScheme.onSurface.withValues(alpha: 0.3),
+                        size: 20,
+                      ),
+                      onTap: () => context.push('/integrations'),
+                    ),
+                    _buildSubtleDivider(isDark),
+                    ListTile(
+                      leading: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Image.asset(
+                          'assets/images/google-calendar-logo.png',
+                          fit: BoxFit.contain,
+                          errorBuilder: (ctx, err, stack) =>
+                              Icon(LucideIcons.calendar, color: colorScheme.primary),
+                        ),
+                      ),
+                      title: const Text('Google Calendar',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text(
+                        company?.googleCalendarEnabled == true
+                            ? 'Connected'
+                            : 'Not connected',
+                        style: TextStyle(
+                            color: colorScheme.onSurface.withValues(alpha: 0.6)),
+                      ),
+                      trailing: Icon(
+                        company?.googleCalendarEnabled == true
+                            ? LucideIcons.checkCircle
+                            : LucideIcons.chevronRight,
+                        color: company?.googleCalendarEnabled == true
                             ? semanticColors.success
                             : colorScheme.onSurface.withValues(alpha: 0.3),
                         size: 20,
@@ -767,21 +743,45 @@ class _SubscriptionTile extends StatelessWidget {
 class _SectionHeader extends StatelessWidget {
   final String title;
   final Color? color;
+  final bool isProFeature;
 
-  const _SectionHeader({required this.title, this.color});
+  const _SectionHeader({required this.title, this.color, this.isProFeature = false});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
-      child: Text(
-        title.toUpperCase(),
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: color ?? Theme.of(context).colorScheme.primary,
-          letterSpacing: 1.5,
-        ),
+      child: Row(
+        children: [
+          Text(
+            title.toUpperCase(),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color ?? Theme.of(context).colorScheme.primary,
+              letterSpacing: 1.5,
+            ),
+          ),
+          if (isProFeature) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const Text(
+                'PRO',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.amber,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

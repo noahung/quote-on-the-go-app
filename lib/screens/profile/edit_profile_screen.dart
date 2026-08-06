@@ -10,6 +10,7 @@ import '../../components/mesh_background.dart';
 import '../../components/glass_card.dart';
 import '../../providers/providers.dart';
 import '../../utils/feedback_controller.dart';
+import '../../widgets/account_deletion_card.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 const String _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
@@ -342,6 +343,21 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             ),
                     ),
                   ),
+
+                  const SizedBox(height: 32),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  Text(
+                    'DANGER ZONE',
+                    style: textTheme.labelSmall?.copyWith(
+                      color: colorScheme.error,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const AccountDeletionCard(),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),

@@ -104,7 +104,42 @@ class _QuotationsScreenState extends ConsumerState<QuotationsScreen>
               ),
               IconButton(
                 icon: const Icon(LucideIcons.plus),
-                onPressed: () => context.push('/quotations/new'),
+                onPressed: () {
+                  final company = ref.read(companyProvider);
+                  final tier = company?.tier;
+                  final status = company?.subscriptionStatus;
+                  final isPremium = (tier == 'premium' || tier == 'individual' || tier == 'organisation') &&
+                      (status == 'active' || status == 'referral_trial');
+                  final quotes = quotationsAsync.valueOrNull ?? [];
+                  final activeQuotes = quotes.where((q) => q.status == 'Draft' || q.status == 'Sent').length;
+                  if (!isPremium && activeQuotes >= 10) {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        icon: const Icon(LucideIcons.shieldAlert, color: Colors.orange, size: 48),
+                        title: const Text('Quotations Limit Reached'),
+                        content: const Text(
+                          'Starter plan includes up to 10 active quotations.\n\nUpgrade to Individual or Organisation plan for unlimited quotes and invoices.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              context.push('/billing');
+                            },
+                            child: const Text('Upgrade Plan'),
+                          ),
+                        ],
+                      ),
+                    );
+                    return;
+                  }
+                  context.push('/quotations/new');
+                },
               ),
             ],
           ),

@@ -55,6 +55,10 @@ class Invoice with _$Invoice {
     String? mondaySyncStatus,
     String? mondaySyncError,
     @TimestampConverter() DateTime? mondayLastSyncAt,
+    // Xero Integration
+    String? xeroInvoiceId,
+    String? xeroSyncStatus,
+    @TimestampConverter() DateTime? xeroLastSyncAt,
     bool? requiresApproval,
     String? approvalStatus, // 'none' | 'pending' | 'approved' | 'rejected'
   }) = _Invoice;

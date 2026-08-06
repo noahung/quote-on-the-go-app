@@ -31,6 +31,9 @@ class Customer with _$Customer {
     String? mondayItemId,
     String? mondayBoardId,
     @TimestampConverter() DateTime? mondayLastSyncAt,
+    // Xero Integration
+    String? xeroContactId,
+    @TimestampConverter() DateTime? xeroLastSyncAt,
   }) = _Customer;
 
   factory Customer.fromJson(Map<String, dynamic> json) =>

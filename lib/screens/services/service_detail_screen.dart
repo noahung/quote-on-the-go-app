@@ -174,6 +174,13 @@ class _ServiceDetailView extends ConsumerWidget {
                             synced: service.mondayItemId != null,
                             lastSync: service.mondayLastSyncAt,
                           ),
+                          const Divider(height: 20),
+                          _IntegrationRow(
+                            icon: LucideIcons.fileSpreadsheet,
+                            label: 'Xero',
+                            synced: service.xeroItemId != null,
+                            lastSync: service.xeroLastSyncAt,
+                          ),
                         ],
                       ),
                     ),

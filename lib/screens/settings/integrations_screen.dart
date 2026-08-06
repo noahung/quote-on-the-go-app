@@ -17,8 +17,134 @@ class IntegrationsScreen extends ConsumerStatefulWidget {
 
 class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
   bool _qbLoading = false;
+  bool _xeroLoading = false;
   bool _mondayLoading = false;
   bool _gcalLoading = false;
+
+  bool _checkPremiumOrPrompt(BuildContext context) {
+    final company = ref.read(companyProvider);
+    final tier = company?.tier;
+    final status = company?.subscriptionStatus;
+    final isPremium = (tier == 'premium' || tier == 'individual' || tier == 'organisation') &&
+        (status == 'active' || status == 'referral_trial');
+    if (!isPremium) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          icon: const Icon(LucideIcons.crown, color: Colors.amber, size: 48),
+          title: const Text('Pro Feature'),
+          content: const Text(
+            'External app integrations (Xero, QuickBooks, Monday.com) are available on Individual and Organisation plans.\n\nUpgrade your plan to unlock seamless automated sync.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Maybe Later'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                context.push('/billing');
+              },
+              child: const Text('Upgrade Plan'),
+            ),
+          ],
+        ),
+      );
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> _connectXero(BuildContext context) async {
+    if (!_checkPremiumOrPrompt(context)) return;
+    final company = ref.read(companyProvider);
+    if (company == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _xeroLoading = true);
+    try {
+      final service = ref.read(integrationServiceProvider);
+      final authUrl = await service.connectXero(companyId: company.id);
+      if (!mounted) return;
+      await _launchUrl(this.context, authUrl);
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Failed to connect Xero: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _xeroLoading = false);
+    }
+  }
+
+  Future<void> _disconnectXero(BuildContext context) async {
+    final company = ref.read(companyProvider);
+    if (company == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Disconnect Xero?'),
+        content: const Text('This will revoke access. Your existing data will not be deleted.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Disconnect'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _xeroLoading = true);
+    try {
+      final service = ref.read(integrationServiceProvider);
+      await service.disconnectXero(companyId: company.id);
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Xero disconnected'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Failed to disconnect Xero: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _xeroLoading = false);
+    }
+  }
+
+  Future<void> _syncXero(BuildContext context, {String action = 'full'}) async {
+    final company = ref.read(companyProvider);
+    if (company == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _xeroLoading = true);
+    try {
+      final service = ref.read(integrationServiceProvider);
+      await service.syncXero(companyId: company.id, action: action);
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Xero sync triggered successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Xero sync failed: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _xeroLoading = false);
+    }
+  }
 
   Future<void> _launchUrl(BuildContext context, String url) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -33,6 +159,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
   }
 
   Future<void> _connectQuickBooks(BuildContext context) async {
+    if (!_checkPremiumOrPrompt(context)) return;
     final company = ref.read(companyProvider);
     if (company == null) return;
     final messenger = ScaffoldMessenger.of(context);
@@ -95,6 +222,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
   }
 
   Future<void> _connectMonday(BuildContext context) async {
+    if (!_checkPremiumOrPrompt(context)) return;
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _mondayLoading = true);
     try {
@@ -267,6 +395,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
   }
 
   Future<void> _connectGoogleCalendar(BuildContext context) async {
+    if (!_checkPremiumOrPrompt(context)) return;
     final messenger = ScaffoldMessenger.of(context);
     final service = ref.read(integrationServiceProvider);
     final url = service.getGoogleCalendarConnectUrl();
@@ -333,10 +462,12 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
     final canManage = role == 'owner' || role == 'admin';
 
     final quickbooksConnected = company?.quickbooksEnabled == true;
+    final xeroConnected = company?.xeroEnabled == true;
     final mondayConnected = company?.mondayEnabled == true;
     final googleCalendarConnected = company?.googleCalendarEnabled == true;
 
     final quickbooksLastSync = company?.quickbooksLastSyncAt;
+    final xeroLastSync = company?.xeroLastSyncAt;
     final mondayLastSync = company?.mondayLastSyncAt;
 
     return MeshBackground(
@@ -378,6 +509,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
               description: 'Sync customers, invoices, and services with QuickBooks Online.',
               icon: LucideIcons.wallet,
               iconColor: const Color(0xFF2CA01C),
+              imageAssetPath: 'assets/images/quickbooks-logo.png',
               isConnected: quickbooksConnected,
               isPremium: isPremium,
               lastSyncAt: quickbooksLastSync,
@@ -409,10 +541,52 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
             const SizedBox(height: 16),
 
             _IntegrationCard(
+              title: 'Xero Integration',
+              description: 'Import contacts, sales invoices, and inventory items bidirectionally with Xero accounting.',
+              icon: LucideIcons.fileSpreadsheet,
+              iconColor: const Color(0xFF13B5EA),
+              imageAssetPath: 'assets/images/xero-logo.png',
+              isConnected: xeroConnected,
+              isPremium: isPremium,
+              lastSyncAt: xeroLastSync,
+              canManage: canManage,
+              isDark: isDark,
+              colorScheme: colorScheme,
+              semanticColors: semanticColors,
+              isLoading: _xeroLoading,
+              onConnect: () => _connectXero(context),
+              onDisconnect: () => _disconnectXero(context),
+              actions: [
+                _IntegrationAction(
+                  label: 'Sync All',
+                  icon: LucideIcons.refreshCw,
+                  onTap: () => _syncXero(context, action: 'full'),
+                ),
+                _IntegrationAction(
+                  label: 'Import Customers',
+                  icon: LucideIcons.download,
+                  onTap: () => _syncXero(context, action: 'customers'),
+                ),
+                _IntegrationAction(
+                  label: 'Import Invoices',
+                  icon: LucideIcons.receipt,
+                  onTap: () => _syncXero(context, action: 'invoices'),
+                ),
+                _IntegrationAction(
+                  label: 'Import Services',
+                  icon: LucideIcons.package,
+                  onTap: () => _syncXero(context, action: 'services'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            _IntegrationCard(
               title: 'Monday.com',
               description: 'Sync quotations, invoices, and customers with Monday.com boards.',
               icon: LucideIcons.table2,
               iconColor: const Color(0xFFFF3D57),
+              imageAssetPath: 'assets/images/monday-logo.png',
               isConnected: mondayConnected,
               isPremium: isPremium,
               lastSyncAt: mondayLastSync,
@@ -443,6 +617,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
               description: 'Sync your scheduled jobs with Google Calendar.',
               icon: LucideIcons.calendar,
               iconColor: const Color(0xFF4285F4),
+              imageAssetPath: 'assets/images/google-calendar-logo.png',
               isConnected: googleCalendarConnected,
               isPremium: isPremium,
               canManage: canManage,
@@ -533,6 +708,7 @@ class _IntegrationCard extends StatelessWidget {
   final String description;
   final IconData icon;
   final Color iconColor;
+  final String? imageAssetPath;
   final bool isConnected;
   final bool isPremium;
   final DateTime? lastSyncAt;
@@ -551,6 +727,7 @@ class _IntegrationCard extends StatelessWidget {
     required this.description,
     required this.icon,
     required this.iconColor,
+    this.imageAssetPath,
     required this.isConnected,
     required this.isPremium,
     required this.canManage,
@@ -578,12 +755,25 @@ class _IntegrationCard extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  width: 44,
+                  height: 44,
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.12),
+                    color: imageAssetPath != null
+                        ? (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04))
+                        : iconColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: iconColor, size: 24),
+                  child: imageAssetPath != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.asset(
+                            imageAssetPath!,
+                            fit: BoxFit.contain,
+                            errorBuilder: (ctx, err, stack) => Icon(icon, color: iconColor, size: 24),
+                          ),
+                        )
+                      : Icon(icon, color: iconColor, size: 24),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

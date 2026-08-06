@@ -114,6 +114,45 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
               IconButton(
                 icon: const Icon(LucideIcons.plus),
                 onPressed: () {
+                  final company = ref.read(companyProvider);
+                  final tier = company?.tier;
+                  final status = company?.subscriptionStatus;
+                  final isPremium = (tier == 'premium' || tier == 'individual' || tier == 'organisation') &&
+                      (status == 'active' || status == 'referral_trial');
+                  final invoices = invoicesAsync.valueOrNull ?? [];
+                  final now = DateTime.now();
+                  final monthlyInvoices = invoices.where((inv) {
+                    final created = inv.createdAt;
+                    return created != null && created.year == now.year && created.month == now.month;
+                  }).length;
+
+                  if (!isPremium && _currentMainTab == 'invoices' && monthlyInvoices >= 5) {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        icon: const Icon(LucideIcons.shieldAlert, color: Colors.orange, size: 48),
+                        title: const Text('Monthly Invoice Limit Reached'),
+                        content: const Text(
+                          'Starter plan includes up to 5 active invoices per month.\n\nUpgrade to Individual or Organisation plan for unlimited invoices.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              context.push('/billing');
+                            },
+                            child: const Text('Upgrade Plan'),
+                          ),
+                        ],
+                      ),
+                    );
+                    return;
+                  }
+
                   if (_currentMainTab == 'invoices') {
                     context.push('/invoices/new');
                   } else {

@@ -21,6 +21,9 @@ class Service with _$Service {
     String? mondayItemId,
     String? mondayBoardId,
     @TimestampConverter() DateTime? mondayLastSyncAt,
+    // Xero Integration
+    String? xeroItemId,
+    @TimestampConverter() DateTime? xeroLastSyncAt,
   }) = _Service;
 
   factory Service.fromJson(Map<String, dynamic> json) =>

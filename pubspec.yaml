@@ -89,6 +89,11 @@ flutter:
   assets:
     - .env
     - assets/images/
+    - assets/images/quickbooks-logo.png
+    - assets/images/xero-logo.png
+    - assets/images/monday-logo.png
+    - assets/images/google-calendar-logo.png
+    - assets/images/icalendar-logo.png
 
   # fonts:
   #   - family: Schyler

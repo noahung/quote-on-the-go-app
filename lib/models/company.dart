@@ -65,6 +65,14 @@ class Company with _$Company {
     String? mondayQuotationsBoardId,
     String? mondayInvoicesBoardId,
     String? mondayCustomersBoardId,
+    // Xero Integration
+    String? xeroTenantId,
+    String? xeroAccessToken,
+    String? xeroRefreshToken,
+    @TimestampConverter() DateTime? xeroTokenExpiresAt,
+    bool? xeroEnabled,
+    @TimestampConverter() DateTime? xeroConnectedAt,
+    @TimestampConverter() DateTime? xeroLastSyncAt,
   }) = _Company;
 
   factory Company.fromJson(Map<String, dynamic> json) =>

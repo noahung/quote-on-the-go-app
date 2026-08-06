@@ -190,7 +190,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                   child: TabBar(
                     controller: _tabController,
                     indicatorColor: const Color(0xFFF4781F),
-                    labelColor: const Color(0xFFF4781F),
+                    labelColor: Colors.white,
                     unselectedLabelColor: isDark ? Colors.white54 : Colors.black54,
                     isScrollable: true,
                     tabAlignment: TabAlignment.start,

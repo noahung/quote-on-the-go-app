@@ -144,4 +144,59 @@ class IntegrationService {
   String getGoogleCalendarConnectUrl() {
     return '$_baseUrl/settings/integrations';
   }
+
+  Future<String> connectXero({required String companyId}) async {
+    final response = await http
+        .post(
+          Uri.parse('$_baseUrl/api/xero/connect'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'companyId': companyId, 'platform': 'mobile'}),
+        )
+        .timeout(const Duration(seconds: 30));
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode != 200) {
+      throw Exception(data['error'] ?? 'Failed to connect Xero');
+    }
+    return data['authUrl'] as String;
+  }
+
+  Future<void> disconnectXero({required String companyId}) async {
+    final response = await http
+        .post(
+          Uri.parse('$_baseUrl/api/xero/disconnect'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'companyId': companyId}),
+        )
+        .timeout(const Duration(seconds: 30));
+
+    if (response.statusCode != 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      throw Exception(data['error'] ?? 'Failed to disconnect Xero');
+    }
+  }
+
+  Future<Map<String, dynamic>> syncXero({
+    required String companyId,
+    String action = 'full',
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    final response = await http
+        .post(
+          Uri.parse('$_baseUrl/api/xero/sync'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'companyId': companyId,
+            'action': action,
+            'userId': user?.uid ?? '',
+          }),
+        )
+        .timeout(const Duration(seconds: 60));
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode != 200) {
+      throw Exception(data['error'] ?? 'Failed to sync with Xero');
+    }
+    return data;
+  }
 }

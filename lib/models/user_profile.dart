@@ -18,6 +18,10 @@ class UserProfile with _$UserProfile {
     required String companyId,
     required String role,
     bool? welcomeEmailSent,
+    String? accountStatus,
+    String? deletionRequestedAt,
+    String? deletionScheduledAt,
+    String? deletionReason,
   }) = _UserProfile;
 
   factory UserProfile.fromJson(Map<String, dynamic> json) =>
