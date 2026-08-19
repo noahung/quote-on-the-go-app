@@ -12,6 +12,7 @@ import '../../components/glass_card.dart';
 import '../../components/mesh_background.dart';
 import '../../components/pill_button.dart';
 import '../../utils/feedback_controller.dart';
+import '../../utils/navigation_fallbacks.dart';
 import '../../models/feedback_type.dart';
 
 
@@ -268,7 +269,7 @@ class _AddEditRecurringInvoiceScreenState
         });
         if (mounted) {
           ref.read(feedbackControllerProvider).success(context, 'Recurring setup updated');
-          context.pop();
+          popOrGo(context, '/invoices?tab=recurring');
         }
       } else {
         final setup = RecurringInvoice(
@@ -303,7 +304,7 @@ class _AddEditRecurringInvoiceScreenState
             type: CelebrationType.checkmark,
             title: 'Setup Created',
             subtitle: 'Your recurring invoice setup has been saved successfully',
-            onDone: () => context.pop(),
+            onDone: () => popOrGo(context, '/invoices?tab=recurring'),
           );
         }
       }
@@ -366,7 +367,7 @@ class _AddEditRecurringInvoiceScreenState
           children: [
             IconButton(
               icon: const Icon(LucideIcons.chevronLeft, size: 20),
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => popOrGo(context, '/invoices?tab=recurring'),
             ),
             Text(
               _isEditing ? 'Edit Recurring Setup' : 'Create Recurring Setup',

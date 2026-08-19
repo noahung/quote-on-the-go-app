@@ -13,5 +13,6 @@ export 'recurring_invoice.dart' hide TimestampConverter;
 export 'document_template.dart' hide TimestampConverter;
 export 'job_note.dart';
 export 'job_media.dart';
-export 'interaction_log.dart' hide _TimestampConverter;
-export 'checklist_template.dart' hide _TemplateTimestampConverter;
+export 'interaction_log.dart';
+export 'checklist_template.dart';
+export 'custom_email_template.dart';

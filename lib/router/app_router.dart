@@ -87,7 +87,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     initialLocation: '/splash',
-    debugLogDiagnostics: true,
+    debugLogDiagnostics: false,
     refreshListenable: refreshListenable,
     redirect: (context, state) async {
       // Use FirebaseAuth directly — the Riverpod provider chain may not
@@ -213,6 +213,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/pricing',
             builder: (context, state) => const SmartPricingScreen(),
+          ),
+          GoRoute(
+            path: '/settings',
+            builder: (context, state) => const SettingsScreen(),
           ),
         ],
       ),
@@ -363,10 +367,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           final id = state.pathParameters['id']!;
           return CollaborationScreen(documentType: type, documentId: id);
         },
-      ),
-      GoRoute(
-        path: '/settings',
-        builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
         path: '/settings/reminders',

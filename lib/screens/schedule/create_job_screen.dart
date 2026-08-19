@@ -12,6 +12,7 @@ import '../../components/mesh_background.dart';
 import '../../components/glass_card.dart';
 import '../../components/custom_date_time_picker.dart';
 import '../../utils/feedback_controller.dart';
+import '../../utils/navigation_fallbacks.dart';
 import '../../models/feedback_type.dart';
 
 const List<String> _jobStatuses = [
@@ -213,7 +214,7 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Job updated')),
           );
-          context.pop();
+          popOrGo(context, '/schedule');
         }
       } else {
         await repository.createEvent(event);
@@ -223,7 +224,7 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
             type: CelebrationType.checkmark,
             title: 'Job Created',
             subtitle: 'Your job has been scheduled successfully',
-            onDone: () => context.pop(),
+            onDone: () => popOrGo(context, '/schedule'),
           );
         }
       }
@@ -267,11 +268,7 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
           leading: IconButton(
             icon: const Icon(Icons.close),
             onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/schedule');
-              }
+              popOrGo(context, '/schedule');
             },
           ),
           title: Text(

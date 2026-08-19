@@ -32,6 +32,7 @@ import 'create_job_screen.dart';
 import '../quotations/create_quotation_screen.dart';
 import '../invoices/create_invoice_screen.dart';
 import '../team/team_management_screen.dart' show teamMembersProvider;
+import '../../widgets/job_profitability_card.dart';
 
 // Provider for a single calendar event by ID
 final jobDetailProvider =
@@ -824,23 +825,51 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
             ),
           ),
         ],
-        if (hasSignature) ...[
+        if (hasSignature || status == 'Completed') ...[
           Container(
             margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFE8F5E9),
+              color: const Color(0xFF10B981).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(LucideIcons.checkCircle, color: Color(0xFF2E7D32), size: 20),
-                SizedBox(width: 10),
-                Text('Client signature captured',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: Color(0xFF2E7D32))),
+                const Icon(LucideIcons.checkCircle2, color: Color(0xFF10B981), size: 20),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Job Completed & Signed',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: Color(0xFF10B981))),
+                      Text('Ready to generate and issue final invoice',
+                          style: TextStyle(fontSize: 11, color: Color(0xFF10B981))),
+                    ],
+                  ),
+                ),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CreateInvoiceScreen(fromJobId: widget.job.id),
+                      ),
+                    );
+                  },
+                  icon: const Icon(LucideIcons.briefcase, size: 13),
+                  label: const Text('Invoice', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                ),
               ],
             ),
           ),
@@ -903,7 +932,14 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
             ),
           ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
+
+        // ── Live Job Profitability Card ─────────────────────────
+        JobProfitabilityCard(
+          job: widget.job,
+          companyId: ref.watch(companyIdProvider) ?? '',
+        ),
+        const SizedBox(height: 16),
 
         // Job Schedule Card
         GlassCard(

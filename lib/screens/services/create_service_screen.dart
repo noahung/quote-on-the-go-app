@@ -7,6 +7,7 @@ import '../../models/service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/service_provider.dart';
 import '../../utils/feedback_controller.dart';
+import '../../utils/navigation_fallbacks.dart';
 import '../../models/feedback_type.dart';
 
 class CreateServiceScreen extends ConsumerStatefulWidget {
@@ -65,7 +66,7 @@ class _CreateServiceScreenState extends ConsumerState<CreateServiceScreen> {
           type: CelebrationType.checkmark,
           title: 'Service Created',
           subtitle: 'New service added to your catalog',
-          onDone: () => context.pop(),
+          onDone: () => popOrGo(context, '/services'),
         );
       }
     } catch (e) {
@@ -101,11 +102,7 @@ class _CreateServiceScreenState extends ConsumerState<CreateServiceScreen> {
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.white),
                 onPressed: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go('/services');
-                  }
+                  popOrGo(context, '/services');
                 },
               ),
             ],

@@ -14,12 +14,13 @@ import '../../theme/semantic_colors.dart';
 import '../../components/curved_header.dart';
 import '../../components/mesh_background.dart';
 import '../../components/glass_card.dart';
-import '../../components/custom_date_time_picker.dart';
 import '../../utils/feedback_controller.dart';
 import '../../models/feedback_type.dart';
 import '../../models/models.dart';
 import '../../services/pdf_service.dart';
 import '../client_responses/client_activity_card.dart';
+
+import '../../components/custom_email_send_bottom_sheet.dart';
 
 const _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
 
@@ -28,16 +29,18 @@ class InvoiceDetailScreen extends ConsumerWidget {
 
   const InvoiceDetailScreen({super.key, required this.invoiceId});
 
-  Color _getStatusColor(String status, SemanticColors semanticColors) {
+  Color _getStatusColor(String status, SemanticColors colors) {
     switch (status) {
       case 'Paid':
-        return semanticColors.success;
-      case 'Sent':
-        return semanticColors.info;
+        return colors.success;
       case 'Overdue':
-        return semanticColors.error;
+        return colors.error;
+      case 'Sent':
+        return colors.info;
       case 'Draft':
-        return semanticColors.warning;
+        return colors.warning;
+      case 'Partial':
+        return colors.accentPrimary;
       default:
         return Colors.grey;
     }
@@ -53,15 +56,19 @@ class InvoiceDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _sendByEmail(
-      BuildContext context, WidgetRef ref, invoice, {DateTime? sendAt}) async {
+      BuildContext context, WidgetRef ref, invoice,
+      {DateTime? sendAt, Map<String, dynamic>? emailOptions}) async {
     try {
-      final body = {
+      final body = <String, dynamic>{
         'invoiceId': invoice.id,
         'customerEmail': invoice.customerEmail,
         'customerName': invoice.customerName,
       };
       if (sendAt != null) {
         body['sendAt'] = sendAt.toUtc().toIso8601String();
+      }
+      if (emailOptions != null) {
+        body.addAll(emailOptions);
       }
 
       final response = await http.post(
@@ -123,76 +130,35 @@ class InvoiceDetailScreen extends ConsumerWidget {
 
   Future<void> _showSendOptions(
       BuildContext context, WidgetRef ref, invoice) async {
-    final colorScheme = Theme.of(context).colorScheme;
+    final companyId = ref.read(companyIdProvider) ?? '';
+    final company = ref.read(companyProvider);
+    final isPremium = company?.tier == 'premium' ||
+        company?.tier == 'individual' ||
+        company?.tier == 'organisation';
+
+    final currencyFormat = NumberFormat.currency(symbol: '£');
+    final totalFormatted = currencyFormat.format(invoice.total);
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(ctx).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Send Invoice',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Select how you want to send this invoice to ${invoice.customerName}.',
-              style: TextStyle(
-                fontSize: 14,
-                color: colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ListTile(
-              leading: Icon(Icons.send, color: colorScheme.primary),
-              title: const Text('Send Immediately', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('Deliver the email to the customer right now'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _sendByEmail(context, ref, invoice);
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: Icon(Icons.calendar_month, color: colorScheme.primary),
-              title: const Text('Schedule for Later', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('Select a date and time to deliver the email'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final scheduledDateTime = await showModalBottomSheet<DateTime>(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (ctx) => CustomDateTimePickerSheet(
-                    initialDateTime: DateTime.now().add(const Duration(minutes: 5)),
-                    title: 'Schedule for Later',
-                  ),
-                );
-                if (scheduledDateTime != null && context.mounted) {
-                  if (scheduledDateTime.isBefore(DateTime.now())) {
-                    ref.read(feedbackControllerProvider).error(context, 'Scheduled time must be in the future.');
-                    return;
-                  }
-                  _sendByEmail(context, ref, invoice, sendAt: scheduledDateTime);
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
+      builder: (ctx) => CustomEmailSendBottomSheet(
+        docType: 'invoice',
+        docNumber: invoice.invoiceNumber,
+        customerName: invoice.customerName,
+        customerEmail: invoice.customerEmail,
+        totalAmount: totalFormatted,
+        companyId: companyId,
+        isPremiumUser: isPremium,
+        onSendNow: (payload) {
+          Navigator.pop(ctx);
+          _sendByEmail(context, ref, invoice, emailOptions: payload);
+        },
+        onScheduleSend: (sendAt, payload) {
+          Navigator.pop(ctx);
+          _sendByEmail(context, ref, invoice, sendAt: sendAt, emailOptions: payload);
+        },
       ),
     );
   }

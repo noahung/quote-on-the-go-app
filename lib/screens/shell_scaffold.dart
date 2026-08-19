@@ -178,7 +178,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
     final isEffectivelyFreeTier = company?.tier == 'free' || company?.tier == null;
 
     // Update current index based on location
-    // Bottom Nav: 0=Dashboard, 1=Schedule, 2=Customers, 3=Profile (Settings)
+    // Bottom Nav: 0=Dashboard, 1=Schedule, 2=Customers, 3=Settings
     if (location == '/') {
       _currentIndex = 0;
     } else if (location.startsWith('/schedule')) {
@@ -332,9 +332,9 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
                           _buildTabItem(
                             context,
                             index: 3,
-                            icon: LucideIcons.user,
-                            activeIcon: LucideIcons.user,
-                            label: 'Profile',
+                            icon: LucideIcons.settings,
+                            activeIcon: LucideIcons.settings,
+                            label: 'Settings',
                           ),
                         ],
                       ),

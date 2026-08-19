@@ -4,22 +4,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../components/glass_card.dart';
 import '../../components/mesh_background.dart';
 import '../../components/pill_button.dart';
 import '../../utils/feedback_controller.dart';
+import '../../utils/navigation_fallbacks.dart';
 import '../../models/feedback_type.dart';
 
 class CreateInvoiceScreen extends ConsumerStatefulWidget {
   final Invoice? existingInvoice;
   final Customer? prefilledCustomer;
+  final String? fromJobId;
+  final String? fromQuotationId;
 
   const CreateInvoiceScreen({
     super.key,
     this.existingInvoice,
     this.prefilledCustomer,
+    this.fromJobId,
+    this.fromQuotationId,
   });
 
   @override
@@ -79,17 +85,110 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
       _notesController.text = inv.notes ?? '';
       _taxRate = inv.taxRate ?? 0.0;
       _taxRateController.text = _taxRate.toStringAsFixed(1);
-      // Handle both ISO 8601 and yyyy-MM-dd formats
       _date = _normalizeDate(inv.date);
       _dueDate = _normalizeDate(inv.dueDate);
     } else if (widget.prefilledCustomer != null) {
       final c = widget.prefilledCustomer!;
-      // Don't set _selectedCustomer — it may not be in the dropdown list
-      // and would cause a value mismatch assertion. Just prefill the text fields.
       _customerNameController.text = c.name;
       _customerEmailController.text = c.email;
       _customerPhoneController.text = c.phone ?? '';
       _customerAddressController.text = c.address ?? '';
+    } else if (widget.fromQuotationId != null || widget.fromJobId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadPrefillData();
+      });
+    }
+  }
+
+  Future<void> _loadPrefillData() async {
+    final firestore = FirebaseFirestore.instance;
+
+    // Load from Quotation
+    if (widget.fromQuotationId != null) {
+      try {
+        final doc = await firestore.collection('quotations').doc(widget.fromQuotationId).get();
+        if (doc.exists && mounted) {
+          final quote = Quotation.fromFirestore(doc);
+          setState(() {
+            _titleController.text = quote.title ?? 'Invoice for ${quote.quotationNumber}';
+            _customerNameController.text = quote.customerName;
+            _customerEmailController.text = quote.customerEmail;
+            _customerPhoneController.text = quote.customerPhone ?? '';
+            _customerAddressController.text = quote.customerAddress ?? '';
+            _lineItems.addAll(quote.items);
+            _taxRate = quote.taxRate ?? 0.0;
+            _taxRateController.text = _taxRate.toStringAsFixed(1);
+            _notesController.text = 'Converted from Quotation ${quote.quotationNumber}.\n${quote.notes ?? ''}'.trim();
+          });
+        }
+      } catch (e) {
+        debugPrint('Error loading quotation: $e');
+      }
+    }
+
+    // Load from Job
+    if (widget.fromJobId != null) {
+      try {
+        final jobDoc = await firestore.collection('events').doc(widget.fromJobId).get();
+        if (jobDoc.exists && mounted) {
+          final job = CalendarEvent.fromFirestore(jobDoc);
+          setState(() {
+            _titleController.text = 'Final Invoice - ${job.title}';
+            _customerNameController.text = job.customerName ?? '';
+            _customerAddressController.text = job.customerAddress ?? '';
+          });
+
+          // Fetch Customer email/phone if customerId exists
+          if (job.customerId != null && job.customerId!.isNotEmpty) {
+            final custDoc = await firestore.collection('customers').doc(job.customerId).get();
+            if (custDoc.exists && mounted) {
+              final custData = custDoc.data() as Map<String, dynamic>;
+              setState(() {
+                _customerEmailController.text = custData['email'] ?? '';
+                _customerPhoneController.text = custData['phone'] ?? '';
+              });
+            }
+          }
+
+          // Fetch originating quotation items
+          final quoteSnap = await firestore.collection('quotations')
+              .where('jobId', isEqualTo: widget.fromJobId)
+              .get();
+          if (quoteSnap.docs.isNotEmpty && mounted) {
+            final q = Quotation.fromFirestore(quoteSnap.docs.first);
+            setState(() {
+              _lineItems.addAll(q.items);
+              if (_notesController.text.isEmpty) {
+                _notesController.text = 'Job: ${job.title}\nRef: Quote ${q.quotationNumber}';
+              }
+            });
+          }
+
+          // Fetch tracked job materials
+          final matSnap = await firestore.collection('job_materials')
+              .where('jobId', isEqualTo: widget.fromJobId)
+              .get();
+          if (matSnap.docs.isNotEmpty && mounted) {
+            for (final doc in matSnap.docs) {
+              final m = doc.data();
+              final desc = m['description'] as String? ?? 'Material Item';
+              final qty = (m['quantity'] as num?)?.toDouble() ?? 1.0;
+              final unitCost = (m['unitCost'] as num?)?.toDouble() ?? 0.0;
+              setState(() {
+                _lineItems.add(LineItem(
+                  id: const Uuid().v4(),
+                  description: '[Material] $desc',
+                  quantity: qty,
+                  unitPrice: unitCost,
+                  total: qty * unitCost,
+                ));
+              });
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Error loading job for invoice: $e');
+      }
     }
   }
 
@@ -159,7 +258,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
         });
         if (mounted) {
           ref.read(feedbackControllerProvider).success(context, 'Invoice updated successfully');
-          context.pop();
+          popOrGo(context, '/invoices');
         }
       } else {
         final invoice = Invoice(
@@ -315,7 +414,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
           children: [
             IconButton(
               icon: const Icon(LucideIcons.chevronLeft, size: 20),
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => popOrGo(context, '/invoices'),
             ),
             Text(
               _isEditing ? 'Edit Invoice' : 'Create New Invoice',

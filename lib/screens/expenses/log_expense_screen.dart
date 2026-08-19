@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../components/glass_card.dart';
@@ -26,7 +27,8 @@ const List<String> _kCategories = [
 ];
 
 class LogExpenseScreen extends ConsumerStatefulWidget {
-  const LogExpenseScreen({super.key});
+  final String? prefilledJobId;
+  const LogExpenseScreen({super.key, this.prefilledJobId});
 
   @override
   ConsumerState<LogExpenseScreen> createState() => _LogExpenseScreenState();
@@ -40,7 +42,14 @@ class _LogExpenseScreenState extends ConsumerState<LogExpenseScreen> {
 
   String _selectedCategory = _kCategories.first;
   DateTime _selectedDate = DateTime.now();
+  String? _selectedJobId;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedJobId = widget.prefilledJobId;
+  }
 
   @override
   void dispose() {
@@ -83,6 +92,7 @@ class _LogExpenseScreenState extends ConsumerState<LogExpenseScreen> {
             : _descriptionController.text.trim(),
         status: 'pending',
         currency: 'GBP',
+        jobId: _selectedJobId,
         createdBy: currentUser?.uid,
       );
 
@@ -232,6 +242,49 @@ class _LogExpenseScreenState extends ConsumerState<LogExpenseScreen> {
                     .toList(),
                 onChanged: (v) =>
                     setState(() => _selectedCategory = v ?? _kCategories.first),
+              ),
+              const SizedBox(height: 12),
+
+              // Link to Job (Optional)
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('events')
+                    .where('companyId', isEqualTo: ref.watch(companyIdProvider) ?? '')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  final docs = snapshot.data?.docs ?? [];
+                  return DropdownButtonFormField<String?>(
+                    initialValue: _selectedJobId,
+                    borderRadius: BorderRadius.circular(20),
+                    dropdownColor: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF1E1E2C)
+                        : const Color(0xFFF0F4F9),
+                    decoration: const InputDecoration(
+                      labelText: 'Link to Project / Job',
+                      hintText: 'General Overhead (None)',
+                      prefixIcon: Icon(LucideIcons.hammer),
+                    ),
+                    items: [
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('General Business Overhead (Unassigned)'),
+                      ),
+                      ...docs.map((doc) {
+                        final d = doc.data() as Map<String, dynamic>;
+                        final title = d['title'] as String? ?? 'Untitled Job';
+                        final cust = d['customerName'] as String? ?? '';
+                        return DropdownMenuItem<String?>(
+                          value: doc.id,
+                          child: Text(
+                            cust.isNotEmpty ? '$title ($cust)' : title,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }),
+                    ],
+                    onChanged: (val) => setState(() => _selectedJobId = val),
+                  );
+                },
               ),
               const SizedBox(height: 12),
 

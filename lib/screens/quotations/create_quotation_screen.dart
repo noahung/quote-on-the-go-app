@@ -10,6 +10,7 @@ import '../../components/mesh_background.dart';
 import '../../components/glass_card.dart';
 import '../../components/pill_button.dart';
 import '../../utils/feedback_controller.dart';
+import '../../utils/navigation_fallbacks.dart';
 import '../../models/feedback_type.dart';
 
 class CreateQuotationScreen extends ConsumerStatefulWidget {
@@ -145,7 +146,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
         });
         if (mounted) {
           ref.read(feedbackControllerProvider).success(context, 'Quotation updated successfully');
-          context.pop();
+          popOrGo(context, '/quotations');
         }
       } else {
         final quotation = Quotation(
@@ -301,7 +302,7 @@ class _CreateQuotationScreenState extends ConsumerState<CreateQuotationScreen> {
           children: [
             IconButton(
               icon: const Icon(LucideIcons.chevronLeft, size: 20),
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => popOrGo(context, '/quotations'),
             ),
             Text(
               _isEditing ? 'Edit Quotation' : 'Create New Quote',

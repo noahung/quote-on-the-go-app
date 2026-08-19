@@ -14,11 +14,12 @@ import '../../theme/semantic_colors.dart';
 import '../../components/curved_header.dart';
 import '../../components/mesh_background.dart';
 import '../../components/glass_card.dart';
-import '../../components/custom_date_time_picker.dart';
 import '../../utils/feedback_controller.dart';
 import '../../models/feedback_type.dart';
 import '../../services/pdf_service.dart';
 import '../client_responses/client_activity_card.dart';
+import '../../components/custom_email_send_bottom_sheet.dart';
+import '../invoices/create_invoice_screen.dart';
 
 const _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
 
@@ -52,15 +53,19 @@ class QuotationDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _sendByEmail(
-      BuildContext context, WidgetRef ref, quotation, {DateTime? sendAt}) async {
+      BuildContext context, WidgetRef ref, quotation,
+      {DateTime? sendAt, Map<String, dynamic>? emailOptions}) async {
     try {
-      final body = {
+      final body = <String, dynamic>{
         'quotationId': quotation.id,
         'customerEmail': quotation.customerEmail,
         'customerName': quotation.customerName,
       };
       if (sendAt != null) {
         body['sendAt'] = sendAt.toUtc().toIso8601String();
+      }
+      if (emailOptions != null) {
+        body.addAll(emailOptions);
       }
 
       final response = await http.post(
@@ -96,76 +101,35 @@ class QuotationDetailScreen extends ConsumerWidget {
 
   Future<void> _showSendOptions(
       BuildContext context, WidgetRef ref, quotation) async {
-    final colorScheme = Theme.of(context).colorScheme;
+    final companyId = ref.read(companyIdProvider) ?? '';
+    final company = ref.read(companyProvider);
+    final isPremium = company?.tier == 'premium' ||
+        company?.tier == 'individual' ||
+        company?.tier == 'organisation';
+
+    final currencyFormat = NumberFormat.currency(symbol: '£');
+    final totalFormatted = currencyFormat.format(quotation.total);
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(ctx).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Send Quotation',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Select how you want to send this quotation to ${quotation.customerName}.',
-              style: TextStyle(
-                fontSize: 14,
-                color: colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ListTile(
-              leading: Icon(Icons.send, color: colorScheme.primary),
-              title: const Text('Send Immediately', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('Deliver the email to the customer right now'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _sendByEmail(context, ref, quotation);
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: Icon(Icons.calendar_month, color: colorScheme.primary),
-              title: const Text('Schedule for Later', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('Select a date and time to deliver the email'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final scheduledDateTime = await showModalBottomSheet<DateTime>(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (ctx) => CustomDateTimePickerSheet(
-                    initialDateTime: DateTime.now().add(const Duration(minutes: 5)),
-                    title: 'Schedule for Later',
-                  ),
-                );
-                if (scheduledDateTime != null && context.mounted) {
-                  if (scheduledDateTime.isBefore(DateTime.now())) {
-                    ref.read(feedbackControllerProvider).error(context, 'Scheduled time must be in the future.');
-                    return;
-                  }
-                  _sendByEmail(context, ref, quotation, sendAt: scheduledDateTime);
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
+      builder: (ctx) => CustomEmailSendBottomSheet(
+        docType: 'quotation',
+        docNumber: quotation.quotationNumber,
+        customerName: quotation.customerName,
+        customerEmail: quotation.customerEmail,
+        totalAmount: totalFormatted,
+        companyId: companyId,
+        isPremiumUser: isPremium,
+        onSendNow: (payload) {
+          Navigator.pop(ctx);
+          _sendByEmail(context, ref, quotation, emailOptions: payload);
+        },
+        onScheduleSend: (sendAt, payload) {
+          Navigator.pop(ctx);
+          _sendByEmail(context, ref, quotation, sendAt: sendAt, emailOptions: payload);
+        },
       ),
     );
   }
@@ -821,6 +785,85 @@ class QuotationDetailScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
+
+                    if (quotation.status == 'Accepted') ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(LucideIcons.checkCircle2, color: Color(0xFF10B981), size: 18),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Quotation Accepted! Next Step:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                    color: Color(0xFF10B981),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Book a service job in the schedule or convert straight to an invoice:',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      side: BorderSide(color: colorScheme.primary),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                    onPressed: () {
+                                      context.push('/schedule/new?fromQuotation=${quotation.id}');
+                                    },
+                                    icon: const Icon(LucideIcons.calendar, size: 14),
+                                    label: const Text('Book Job', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: FilledButton.icon(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: colorScheme.primary,
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => CreateInvoiceScreen(fromQuotationId: quotation.id),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(LucideIcons.briefcase, size: 14),
+                                    label: const Text('Create Invoice', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
                     const SizedBox(height: 24),
 
                     // Client Card
