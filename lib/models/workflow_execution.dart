@@ -22,6 +22,7 @@ class ExecutionLogEntry with _$ExecutionLogEntry {
 
 @freezed
 class WorkflowExecution with _$WorkflowExecution {
+  @JsonSerializable(explicitToJson: true)
   const factory WorkflowExecution({
     required String id,
     required String workflowTemplateId,
@@ -100,6 +101,6 @@ class TimestampConverter implements JsonConverter<DateTime?, dynamic> {
   @override
   dynamic toJson(DateTime? object) {
     if (object == null) return null;
-    return Timestamp.fromDate(object);
+    return object.toUtc().toIso8601String();
   }
 }

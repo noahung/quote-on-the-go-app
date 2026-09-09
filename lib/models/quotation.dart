@@ -15,6 +15,7 @@ class Quotation with _$Quotation {
     required String quotationNumber,
     required String customerName,
     required String customerEmail,
+    String? customerId,
     String? customerPhone,
     String? customerAddress,
     required String date,

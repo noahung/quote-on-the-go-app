@@ -1,3 +1,4 @@
+import 'auth_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/job_note.dart';
@@ -8,11 +9,13 @@ part 'job_note_provider.g.dart';
 class JobNoteRepository {
   final FirebaseFirestore _firestore;
 
-  JobNoteRepository(this._firestore);
+  final String companyId;
+  JobNoteRepository(this._firestore, this.companyId);
 
   Stream<List<JobNote>> watchNotes(String jobId) {
     return _firestore
         .collection('jobNotes')
+        .where('companyId', isEqualTo: companyId)
         .where('jobId', isEqualTo: jobId)
         .orderBy('createdAt', descending: true)
         .snapshots()
@@ -43,7 +46,7 @@ class JobNoteRepository {
 
 final jobNoteRepositoryProvider = Provider<JobNoteRepository>((ref) {
   final firestore = ref.watch(firestoreProvider);
-  return JobNoteRepository(firestore);
+  return JobNoteRepository(firestore, ref.watch(companyIdProvider) ?? '');
 });
 
 @riverpod

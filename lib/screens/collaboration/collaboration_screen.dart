@@ -1,3 +1,4 @@
+import '../shared/document_snapshot_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -458,9 +459,8 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
                                 onPressed: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Viewing version snapshot - coming soon')),
-                                  );
+                                  Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) =>
+                                    DocumentSnapshotView(snapshot: version.snapshot, version: version.versionNumber)));
                                 },
                               )
                             ],
@@ -957,6 +957,8 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
             ),
             const SizedBox(height: 16),
             ...workflow.steps.map((step) {
+              final user = ref.watch(userProfileProvider);
+              final canDecide = step.approverUserId != null ? step.approverUserId == user?.uid : (step.approverRole == user?.role || (step.approverRole == 'admin' && user?.role == 'owner'));
               final isCurrent = step.stepNumber == workflow.currentStep && workflow.status == 'pending';
               return Card(
                 elevation: 0,
@@ -993,7 +995,7 @@ class _CollaborationScreenState extends ConsumerState<CollaborationScreen> with 
                           style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.black54),
                         ),
                       ],
-                      if (isCurrent && step.status == 'pending') ...[
+                      if (canDecide && isCurrent && step.status == 'pending') ...[
                         const SizedBox(height: 12),
                         Row(
                           children: [

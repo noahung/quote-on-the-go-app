@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../utils/document_totals.dart';
+import '../../components/document_discount_field.dart';
+import '../../services/api_client.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,7 +16,6 @@ import '../../components/mesh_background.dart';
 import '../../components/pill_button.dart';
 import '../../utils/feedback_controller.dart';
 import '../../utils/navigation_fallbacks.dart';
-import '../../models/feedback_type.dart';
 
 class CreateInvoiceScreen extends ConsumerStatefulWidget {
   final Invoice? existingInvoice;
@@ -51,6 +54,14 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
   final _notesController = TextEditingController();
   final _taxRateController = TextEditingController(text: '0.0');
   double _taxRate = 0.0;
+  double _discount = 0;
+  String _discountType = 'percentage';
+  String? _pdfTemplateId;
+  String? _pdfThemeColor;
+  String? _customerId;
+  String? _jobId;
+  String? _quotationId;
+
 
   // Dates
   String _date = DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -74,8 +85,24 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
   @override
   void initState() {
     super.initState();
+    final company = ref.read(companyProvider);
+    _taxRate = company?.defaultTaxRate ?? 5;
+    _taxRateController.text = _taxRate.toString();
+    _pdfTemplateId = company?.defaultPdfTemplateId;
+    _pdfThemeColor = company?.defaultPdfThemeColor;
+    _jobId = widget.fromJobId;
+    _quotationId = widget.fromQuotationId;
+
     final inv = widget.existingInvoice;
     if (inv != null) {
+      _discount = inv.discount ?? 0;
+      _discountType = inv.discountType ?? 'percentage';
+      _pdfTemplateId = inv.pdfTemplateId ?? _pdfTemplateId;
+      _pdfThemeColor = inv.pdfThemeColor ?? _pdfThemeColor;
+      _customerId = inv.customerId;
+      _jobId = inv.jobId;
+      _quotationId = inv.quotationId;
+
       _titleController.text = inv.title ?? '';
       _customerNameController.text = inv.customerName;
       _customerEmailController.text = inv.customerEmail;
@@ -89,6 +116,8 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
       _dueDate = _normalizeDate(inv.dueDate);
     } else if (widget.prefilledCustomer != null) {
       final c = widget.prefilledCustomer!;
+      _selectedCustomer = c;
+      _customerId = c.id;
       _customerNameController.text = c.name;
       _customerEmailController.text = c.email;
       _customerPhoneController.text = c.phone ?? '';
@@ -110,6 +139,12 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
         if (doc.exists && mounted) {
           final quote = Quotation.fromFirestore(doc);
           setState(() {
+            _discount = quote.discount ?? 0;
+            _discountType = quote.discountType ?? 'percentage';
+            _customerId = quote.customerId;
+            _jobId = quote.jobId ?? _jobId;
+            _pdfTemplateId = quote.pdfTemplateId ?? _pdfTemplateId;
+            _pdfThemeColor = quote.pdfThemeColor ?? _pdfThemeColor;
             _titleController.text = quote.title ?? 'Invoice for ${quote.quotationNumber}';
             _customerNameController.text = quote.customerName;
             _customerEmailController.text = quote.customerEmail;
@@ -133,6 +168,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
         if (jobDoc.exists && mounted) {
           final job = CalendarEvent.fromFirestore(jobDoc);
           setState(() {
+            _customerId = job.customerId;
             _titleController.text = 'Final Invoice - ${job.title}';
             _customerNameController.text = job.customerName ?? '';
             _customerAddressController.text = job.customerAddress ?? '';
@@ -152,12 +188,18 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
 
           // Fetch originating quotation items
           final quoteSnap = await firestore.collection('quotations')
+              .where('companyId', isEqualTo: ref.read(companyIdProvider))
               .where('jobId', isEqualTo: widget.fromJobId)
               .get();
           if (quoteSnap.docs.isNotEmpty && mounted) {
             final q = Quotation.fromFirestore(quoteSnap.docs.first);
             setState(() {
               _lineItems.addAll(q.items);
+              _quotationId = q.id;
+              _discount = q.discount ?? 0;
+              _discountType = q.discountType ?? 'percentage';
+              _taxRate = q.taxRate ?? _taxRate;
+              _taxRateController.text = _taxRate.toString();
               if (_notesController.text.isEmpty) {
                 _notesController.text = 'Job: ${job.title}\nRef: Quote ${q.quotationNumber}';
               }
@@ -166,6 +208,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
 
           // Fetch tracked job materials
           final matSnap = await firestore.collection('job_materials')
+              .where('companyId', isEqualTo: ref.read(companyIdProvider))
               .where('jobId', isEqualTo: widget.fromJobId)
               .get();
           if (matSnap.docs.isNotEmpty && mounted) {
@@ -208,15 +251,19 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
     return _lineItems.fold(0.0, (sum, item) => sum + item.total);
   }
 
-  double get _taxAmount {
-    return _subtotal * (_taxRate / 100);
-  }
+  DocumentTotals get _totals => DocumentTotals.calculate(
+    subtotal: _subtotal.isFinite ? _subtotal : 0, taxRate: _taxRate.isFinite && _taxRate >= 0 ? _taxRate : 0,
+    discount: _discount.isFinite && _discount >= 0 ? _discount : 0,
+    discountType: _discountType);
+  double get _taxAmount => _totals.taxAmount;
+  double get _total => _totals.total;
 
-  double get _total {
-    return _subtotal + _taxAmount;
-  }
-
-  Future<void> _saveInvoice() async {
+  Future<void> _saveInvoice({bool preview = true}) async {
+    if (_isLoading || !_validateFields()) return;
+    if (preview && _lineItems.isEmpty) {
+      ref.read(feedbackControllerProvider).warning(context, 'Add at least one item before previewing.');
+      return;
+    }
     final companyId = ref.read(companyIdProvider);
     final userProfile = ref.read(userProfileProvider);
 
@@ -252,6 +299,15 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
           'taxRate': _taxRate,
           'taxAmount': _taxAmount,
           'total': _total,
+          'discount': _discount,
+          'discountType': _discountType,
+          'discountAmount': _totals.discountAmount,
+          'pdfTemplateId': _pdfTemplateId,
+          'pdfThemeColor': _pdfThemeColor,
+          'customerId': _customerId,
+          'jobId': _jobId,
+          'quotationId': _quotationId,
+
           'notes': _notesController.text.trim().isEmpty
               ? null
               : _notesController.text.trim(),
@@ -285,19 +341,23 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
           taxAmount: _taxAmount,
           total: _total,
           status: 'Draft',
+          discount: _discount,
+          discountType: _discountType,
+          discountAmount: _totals.discountAmount,
+          pdfTemplateId: _pdfTemplateId,
+          pdfThemeColor: _pdfThemeColor,
+          customerId: _customerId,
+          jobId: _jobId,
+          quotationId: _quotationId,
+
           notes: _notesController.text.trim().isEmpty
               ? null
               : _notesController.text.trim(),
         );
         final newId = await repository.createInvoice(invoice);
         if (mounted) {
-          await ref.read(feedbackControllerProvider).showCelebration(
-            context: context,
-            type: CelebrationType.checkmark,
-            title: 'Invoice Created',
-            subtitle: 'Your invoice has been saved successfully',
-            onDone: () => context.go('/pdf-preview/invoice/$newId'),
-          );
+          ref.read(feedbackControllerProvider).success(context, 'Invoice saved as draft.');
+          context.go(preview ? '/pdf-preview/invoice/$newId' : '/invoices/$newId');
         }
       }
     } catch (e) {
@@ -314,6 +374,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
   void _onCustomerSelected(Customer customer) {
     setState(() {
       _selectedCustomer = customer;
+      _customerId = customer.id;
       _customerNameController.text = customer.name;
       _customerEmailController.text = customer.email;
       _customerPhoneController.text = customer.phone ?? '';
@@ -431,53 +492,20 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
   }
 
   Widget _buildDocNumberRow(BuildContext context) {
-    final number = _isEditing
-        ? widget.existingInvoice!.invoiceNumber
-        : 'Auto-generated';
-    return Row(
-      children: [
-        Text(
-          'Invoice  ',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-        Text(
-          '#$number',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFFF4781F),
-          ),
-        ),
-        const Spacer(),
-        if (_isEditing)
-          GestureDetector(
-            onTap: () {
-              // TODO: copy portal link
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : Colors.black.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(LucideIcons.link, size: 14, color: Colors.grey),
-                  SizedBox(width: 4),
-                  Text('COPY LINK', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey, letterSpacing: 0.5)),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
+    final number = _isEditing ? widget.existingInvoice!.invoiceNumber : 'Auto-generated';
+    return Row(children: [
+      Expanded(child: Text('Invoice #$number', maxLines: 1,
+        overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleSmall)),
+      if (_isEditing) IconButton(
+        tooltip: 'Copy client portal link',
+        icon: const Icon(LucideIcons.link),
+        onPressed: () async {
+          await Clipboard.setData(ClipboardData(text:
+            '${ApiClient.baseUrl}/portal/invoices/${widget.existingInvoice!.id}'));
+          if (context.mounted) ref.read(feedbackControllerProvider).success(context, 'Client portal link copied.');
+        },
+      ),
+    ]);
   }
 
   Widget _buildTemplateSelectorCard() {
@@ -568,7 +596,11 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
       _lineItems.clear();
       _lineItems.addAll(template.items);
       _notesController.text = template.notes ?? '';
-      _taxRate = template.taxRate ?? 0.0;
+      _taxRate = template.taxRate ?? ref.read(companyProvider)?.defaultTaxRate ?? 5;
+      _discount = template.discount ?? 0;
+      _discountType = template.discountType ?? 'percentage';
+      _pdfTemplateId = template.pdfTemplateId ?? _pdfTemplateId;
+      _pdfThemeColor = template.pdfThemeColor ?? _pdfThemeColor;
       _taxRateController.text = _taxRate.toStringAsFixed(1);
     });
     ref.read(feedbackControllerProvider).success(context, 'Template applied: ${template.name}');
@@ -618,6 +650,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
                 } else {
                   setState(() {
                     _selectedCustomer = null;
+                    _customerId = null;
                     _customerNameController.clear();
                     _customerEmailController.clear();
                     _customerPhoneController.clear();
@@ -987,6 +1020,15 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
               Text(currencyFormat.format(_subtotal), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             ],
           ),
+          DocumentDiscountField(value: _discount, type: _discountType,
+            onValueChanged: (value) => setState(() => _discount = value),
+            onTypeChanged: (value) => setState(() => _discountType = value)),
+          if (_discount > 0) Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              const Text('Discount applied'),
+              Text('-${currencyFormat.format(_totals.discountAmount)}'),
+            ])),
           const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1052,12 +1094,22 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
   }
 
   bool _validateFields() {
+    String? error;
     if (_customerNameController.text.trim().isEmpty) {
-      ref.read(feedbackControllerProvider).warning(context, 'Customer Name is required');
-      return false;
+      error = 'Enter a customer name.';
+    } else if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(_customerEmailController.text.trim())) {
+      error = 'Enter a valid customer email address.';
+    } else if (_lineItems.any((item) => item.description.trim().isEmpty || !item.quantity.isFinite || item.quantity <= 0 || !item.unitPrice.isFinite || !item.total.isFinite)) {
+      error = 'Check each item has a description, a positive quantity and a valid price.';
+    } else if (!_taxRate.isFinite || _taxRate < 0 || !_discount.isFinite || _discount < 0) {
+      error = 'Tax and discount must be zero or greater.';
+    } else if (DateTime.tryParse(_dueDate) == null ||
+        DateTime.tryParse(_date) == null ||
+        DateTime.parse(_dueDate).isBefore(DateTime.parse(_date))) {
+      error = 'The due date must be on or after the document date.';
     }
-    if (_customerEmailController.text.trim().isEmpty) {
-      ref.read(feedbackControllerProvider).warning(context, 'Customer Email is required');
+    if (error != null) {
+      ref.read(feedbackControllerProvider).warning(context, error);
       return false;
     }
     return true;
@@ -1089,7 +1141,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
                           foregroundColor: const Color(0xFFF4781F),
                         ),
                         onPressed: () {
-                          if (_validateFields()) _saveInvoice();
+                          _saveInvoice(preview: false);
                         },
                         child: const Text('Save as Draft', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                       ),
@@ -1102,9 +1154,9 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
                         minimumSize: const Size.fromHeight(50),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                       ),
-                      icon: Icon(_isEditing ? LucideIcons.save : LucideIcons.send, color: Colors.white, size: 18),
+                      icon: Icon(_isEditing ? LucideIcons.save : LucideIcons.eye, color: Colors.white, size: 18),
                       label: Text(
-                        _isEditing ? 'Save Changes' : 'Send Invoice',
+                        _isEditing ? 'Save changes' : 'Preview',
                         style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
                       ),
                       onPressed: () {

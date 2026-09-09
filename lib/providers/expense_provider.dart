@@ -30,7 +30,7 @@ class ExpenseRepository {
   ExpenseRepository(this._firestore);
 
   Future<void> createExpense(Expense expense) async {
-    await _firestore.collection('expenses').add({
+    await _firestore.collection('expenses').doc(expense.id.isEmpty ? null : expense.id).set({
       ...expense.toJson()..remove('id'),
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),

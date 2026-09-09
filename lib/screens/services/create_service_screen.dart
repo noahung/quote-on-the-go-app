@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../components/curved_header.dart';
 import '../../components/mesh_background.dart';
 import '../../models/service.dart';
@@ -11,7 +10,13 @@ import '../../utils/navigation_fallbacks.dart';
 import '../../models/feedback_type.dart';
 
 class CreateServiceScreen extends ConsumerStatefulWidget {
-  const CreateServiceScreen({super.key});
+  final String? initialName, initialDescription;
+  final double? initialPrice;
+  const CreateServiceScreen(
+      {super.key,
+      this.initialName,
+      this.initialDescription,
+      this.initialPrice});
 
   @override
   ConsumerState<CreateServiceScreen> createState() =>
@@ -24,6 +29,14 @@ class _CreateServiceScreenState extends ConsumerState<CreateServiceScreen> {
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController.text = widget.initialName ?? '';
+    _descriptionController.text = widget.initialDescription ?? '';
+    _priceController.text = widget.initialPrice?.toStringAsFixed(2) ?? '';
+  }
 
   @override
   void dispose() {
@@ -62,12 +75,12 @@ class _CreateServiceScreenState extends ConsumerState<CreateServiceScreen> {
 
       if (mounted) {
         await ref.read(feedbackControllerProvider).showCelebration(
-          context: context,
-          type: CelebrationType.checkmark,
-          title: 'Service Created',
-          subtitle: 'New service added to your catalog',
-          onDone: () => popOrGo(context, '/services'),
-        );
+              context: context,
+              type: CelebrationType.checkmark,
+              title: 'Service Created',
+              subtitle: 'New service added to your catalog',
+              onDone: () => popOrGo(context, '/services'),
+            );
       }
     } catch (e) {
       if (mounted) {
@@ -93,122 +106,127 @@ class _CreateServiceScreenState extends ConsumerState<CreateServiceScreen> {
 
     return MeshBackground(
       child: Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Column(
-        children: [
-          CurvedHeader(
-            title: 'New Service',
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
-                onPressed: () {
-                  popOrGo(context, '/services');
-                },
-              ),
-            ],
-          ),
-          Expanded(
-            child: Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      hintText: 'Service name',
-                      prefixIcon: const Icon(Icons.construction_outlined),
-                      filled: true,
-                      fillColor: fieldFill,
-                      border: fieldBorder,
-                      enabledBorder: fieldBorder,
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFF4781F), width: 1.5),
+        backgroundColor: Colors.transparent,
+        body: Column(
+          children: [
+            CurvedHeader(
+              title: 'New Service',
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () {
+                    popOrGo(context, '/services');
+                  },
+                ),
+              ],
+            ),
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        hintText: 'Service name',
+                        prefixIcon: const Icon(Icons.construction_outlined),
+                        filled: true,
+                        fillColor: fieldFill,
+                        border: fieldBorder,
+                        enabledBorder: fieldBorder,
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                              color: Color(0xFFF4781F), width: 1.5),
+                        ),
+                      ),
+                      textCapitalization: TextCapitalization.words,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter a service name';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _priceController,
+                      decoration: InputDecoration(
+                        hintText: 'Price',
+                        prefixIcon: const Icon(Icons.currency_pound_outlined),
+                        filled: true,
+                        fillColor: fieldFill,
+                        border: fieldBorder,
+                        enabledBorder: fieldBorder,
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                              color: Color(0xFFF4781F), width: 1.5),
+                        ),
+                      ),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter a price';
+                        }
+                        final price = double.tryParse(value.trim());
+                        if (price == null || price < 0) {
+                          return 'Please enter a valid price';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _descriptionController,
+                      decoration: InputDecoration(
+                        hintText: 'Description (optional)',
+                        prefixIcon: const Padding(
+                          padding: EdgeInsets.only(bottom: 48),
+                          child: Icon(Icons.notes_outlined),
+                        ),
+                        filled: true,
+                        fillColor: fieldFill,
+                        border: fieldBorder,
+                        enabledBorder: fieldBorder,
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                              color: Color(0xFFF4781F), width: 1.5),
+                        ),
+                      ),
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 28),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: _isLoading ? null : _saveService,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFF4781F),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: const StadiumBorder(),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Text('Create Service',
+                                style: TextStyle(
+                                    fontSize: 15, fontWeight: FontWeight.w700)),
                       ),
                     ),
-                    textCapitalization: TextCapitalization.words,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter a service name';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _priceController,
-                    decoration: InputDecoration(
-                      hintText: 'Price',
-                      prefixIcon: const Icon(Icons.currency_pound_outlined),
-                      filled: true,
-                      fillColor: fieldFill,
-                      border: fieldBorder,
-                      enabledBorder: fieldBorder,
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFF4781F), width: 1.5),
-                      ),
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter a price';
-                      }
-                      final price = double.tryParse(value.trim());
-                      if (price == null || price < 0) {
-                        return 'Please enter a valid price';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _descriptionController,
-                    decoration: InputDecoration(
-                      hintText: 'Description (optional)',
-                      prefixIcon: const Padding(
-                        padding: EdgeInsets.only(bottom: 48),
-                        child: Icon(Icons.notes_outlined),
-                      ),
-                      filled: true,
-                      fillColor: fieldFill,
-                      border: fieldBorder,
-                      enabledBorder: fieldBorder,
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFF4781F), width: 1.5),
-                      ),
-                    ),
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 28),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: _isLoading ? null : _saveService,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFF4781F),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: const StadiumBorder(),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 22, height: 22,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2),
-                            )
-                          : const Text('Create Service',
-                              style: TextStyle(
-                                  fontSize: 15, fontWeight: FontWeight.w700)),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }

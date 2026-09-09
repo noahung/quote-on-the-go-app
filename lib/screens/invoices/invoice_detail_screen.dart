@@ -1,3 +1,4 @@
+import '../../services/api_client.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/providers.dart';
 import '../../providers/collaboration_provider.dart';
 import '../../theme/semantic_colors.dart';
@@ -22,7 +22,7 @@ import '../client_responses/client_activity_card.dart';
 
 import '../../components/custom_email_send_bottom_sheet.dart';
 
-const _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
+String get _webAppBaseUrl => ApiClient.baseUrl;
 
 class InvoiceDetailScreen extends ConsumerWidget {
   final String invoiceId;
@@ -73,7 +73,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
 
       final response = await http.post(
         Uri.parse('$_webAppBaseUrl/api/send-invoice'),
-        headers: {'Content-Type': 'application/json'},
+        headers: await ApiClient.headers(),
         body: jsonEncode(body),
       );
       if (context.mounted) {
@@ -182,7 +182,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
   Future<void> _sendReminder(
       BuildContext context, WidgetRef ref, invoice) async {
     try {
-      final reminderRepo = ReminderRepository(FirebaseFirestore.instance);
+      final reminderRepo = ref.read(reminderRepositoryProvider);
       await reminderRepo.sendManualReminderEmail(invoice.id, invoice.customerEmail);
       if (context.mounted) {
         ref.read(feedbackControllerProvider).success(context, 'Payment reminder sent!');

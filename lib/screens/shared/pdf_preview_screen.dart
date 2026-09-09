@@ -1,3 +1,4 @@
+import '../../services/api_client.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -11,7 +12,7 @@ import '../../providers/providers.dart';
 import '../../utils/feedback_controller.dart';
 import '../../models/feedback_type.dart';
 
-const _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
+String get _webAppBaseUrl => ApiClient.baseUrl;
 
 class PdfPreviewScreen extends ConsumerStatefulWidget {
   final String type; // 'invoice' or 'quotation'
@@ -67,7 +68,7 @@ class _PdfPreviewScreenState extends ConsumerState<PdfPreviewScreen> {
     });
 
     try {
-      final response = await http.get(Uri.parse(_pdfUrl));
+      final response = await http.get(Uri.parse(_pdfUrl), headers: await ApiClient.headers());
       if (response.statusCode == 200) {
         final bytes = response.bodyBytes;
         final base64String = base64Encode(bytes);
@@ -222,7 +223,7 @@ class _PdfPreviewScreenState extends ConsumerState<PdfPreviewScreen> {
       final endpoint = widget.type == 'invoice' ? 'send-invoice' : 'send-quotation';
       final response = await http.post(
         Uri.parse('$_webAppBaseUrl/api/$endpoint'),
-        headers: {'Content-Type': 'application/json'},
+        headers: await ApiClient.headers(),
         body: jsonEncode(body),
       );
 

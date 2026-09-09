@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,7 +12,6 @@ import '../../providers/providers.dart';
 import '../../components/glass_card.dart';
 import '../../components/mesh_background.dart';
 import '../../utils/feedback_controller.dart';
-import '../../models/feedback_type.dart';
 
 const List<String> _kCategories = [
   'Materials',
@@ -28,7 +30,10 @@ const List<String> _kCategories = [
 
 class LogExpenseScreen extends ConsumerStatefulWidget {
   final String? prefilledJobId;
-  const LogExpenseScreen({super.key, this.prefilledJobId});
+  final Map<String, dynamic>? receiptData;
+  final XFile? initialReceipt;
+  const LogExpenseScreen(
+      {super.key, this.prefilledJobId, this.receiptData, this.initialReceipt});
 
   @override
   ConsumerState<LogExpenseScreen> createState() => _LogExpenseScreenState();
@@ -44,11 +49,35 @@ class _LogExpenseScreenState extends ConsumerState<LogExpenseScreen> {
   DateTime _selectedDate = DateTime.now();
   String? _selectedJobId;
   bool _isLoading = false;
+  XFile? _receipt;
+  String? _receiptUrl;
+  String? _expenseId;
 
   @override
   void initState() {
     super.initState();
     _selectedJobId = widget.prefilledJobId;
+    _receipt = widget.initialReceipt;
+    final data = widget.receiptData;
+    if (data != null) {
+      _merchantController.text = data['merchant'] as String? ?? '';
+      final amount = data['amount'];
+      if (amount is num && amount.isFinite && amount >= 0)
+        _amountController.text = amount.toStringAsFixed(2);
+      _descriptionController.text = data['description'] as String? ?? '';
+      final date = DateTime.tryParse(data['date']?.toString() ?? '');
+      if (date != null && date.year >= 2020 && !date.isAfter(DateTime.now()))
+        _selectedDate = date;
+      final category = data['category']?.toString();
+      _selectedCategory = _kCategories.contains(category) ? category! : 'Other';
+      // This ledger uses GBP. Never silently relabel a foreign amount as pounds.
+      if (data['currency'] != null &&
+          data['currency'].toString().toUpperCase() != 'GBP') {
+        _amountController.clear();
+        _descriptionController.text =
+            '${_descriptionController.text}\nReceipt: ${data['amount']} ${data['currency']}. Enter the GBP amount.';
+      }
+    }
   }
 
   @override
@@ -69,7 +98,38 @@ class _LogExpenseScreenState extends ConsumerState<LogExpenseScreen> {
     if (picked != null) setState(() => _selectedDate = picked);
   }
 
+  Future<void> _pickReceipt() async {
+    final source = await showModalBottomSheet<ImageSource>(
+        context: context,
+        builder: (ctx) => SafeArea(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+              ListTile(
+                  leading: const Icon(Icons.camera_alt_outlined),
+                  title: const Text('Take receipt photo'),
+                  onTap: () => Navigator.pop(ctx, ImageSource.camera)),
+              ListTile(
+                  leading: const Icon(Icons.photo_library_outlined),
+                  title: const Text('Choose receipt photo'),
+                  onTap: () => Navigator.pop(ctx, ImageSource.gallery)),
+            ])));
+    if (source == null) return;
+    try {
+      final image = await ImagePicker()
+          .pickImage(source: source, maxWidth: 2000, imageQuality: 85);
+      if (image != null && mounted)
+        setState(() {
+          _receipt = image;
+          _receiptUrl = null;
+        });
+    } catch (_) {
+      if (mounted)
+        ref.read(feedbackControllerProvider).error(context,
+            'Could not open photos. Check camera or photo access in Settings.');
+    }
+  }
+
   Future<void> _submit() async {
+    if (_isLoading) return;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -80,8 +140,17 @@ class _LogExpenseScreenState extends ConsumerState<LogExpenseScreen> {
 
       if (companyId == null) throw Exception('No company found');
 
+      _expenseId ??= FirebaseFirestore.instance.collection('expenses').doc().id;
+      if (_receipt != null && _receiptUrl == null) {
+        final storage =
+            FirebaseStorage.instance.ref('receipts/$companyId/$_expenseId.jpg');
+        await storage.putFile(
+            File(_receipt!.path), SettableMetadata(contentType: 'image/jpeg'));
+        _receiptUrl = await storage.getDownloadURL();
+      }
       final expense = Expense(
-        id: '',
+        id: _expenseId!,
+        receiptUrl: _receiptUrl,
         companyId: companyId,
         merchant: _merchantController.text.trim(),
         category: _selectedCategory,
@@ -100,13 +169,8 @@ class _LogExpenseScreenState extends ConsumerState<LogExpenseScreen> {
       await repo.createExpense(expense);
 
       if (mounted) {
-        await ref.read(feedbackControllerProvider).showCelebration(
-          context: context,
-          type: CelebrationType.checkmark,
-          title: 'Expense Logged',
-          subtitle: 'Your expense has been recorded successfully',
-          onDone: () => context.pop(),
-        );
+        ref.read(feedbackControllerProvider).success(context, 'Expense saved.');
+        context.go('/expenses');
       }
     } catch (e) {
       if (mounted) {
@@ -249,16 +313,18 @@ class _LogExpenseScreenState extends ConsumerState<LogExpenseScreen> {
               StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('events')
-                    .where('companyId', isEqualTo: ref.watch(companyIdProvider) ?? '')
+                    .where('companyId',
+                        isEqualTo: ref.watch(companyIdProvider) ?? '')
                     .snapshots(),
                 builder: (context, snapshot) {
                   final docs = snapshot.data?.docs ?? [];
                   return DropdownButtonFormField<String?>(
                     initialValue: _selectedJobId,
                     borderRadius: BorderRadius.circular(20),
-                    dropdownColor: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF1E1E2C)
-                        : const Color(0xFFF0F4F9),
+                    dropdownColor:
+                        Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF1E1E2C)
+                            : const Color(0xFFF0F4F9),
                     decoration: const InputDecoration(
                       labelText: 'Link to Project / Job',
                       hintText: 'General Overhead (None)',
@@ -320,26 +386,27 @@ class _LogExpenseScreenState extends ConsumerState<LogExpenseScreen> {
               ),
               const SizedBox(height: 12),
 
-              // Receipt upload placeholder
+              // Receipt attachment
               GlassCard(
                 borderRadius: BorderRadius.circular(12),
                 padding: const EdgeInsets.all(20),
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Receipt upload — coming soon')),
-                  );
-                },
+                onTap: _isLoading ? null : _pickReceipt,
                 child: Column(
                   children: [
                     Icon(Icons.upload_file_outlined,
                         size: 36, color: colorScheme.onSurfaceVariant),
                     const SizedBox(height: 8),
-                    Text('Attach Receipt',
+                    Text(
+                        _receipt == null
+                            ? 'Attach receipt'
+                            : 'Receipt attached',
                         style: textTheme.titleSmall
                             ?.copyWith(color: colorScheme.onSurfaceVariant)),
                     const SizedBox(height: 4),
-                    Text('Tap to upload photo or PDF',
+                    Text(
+                        _receipt == null
+                            ? 'Take a photo or choose from your library'
+                            : 'Tap to replace the selected photo',
                         style: textTheme.bodySmall
                             ?.copyWith(color: colorScheme.outline)),
                   ],

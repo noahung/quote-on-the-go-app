@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+  <key>NSCameraUsageDescription</key>
+  <string>Take photos of receipts and work completed for your jobs.</string>
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>Attach receipt photos, job photos and your company logo.</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Record sound when capturing a job video.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

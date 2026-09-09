@@ -1,3 +1,4 @@
+import '../../services/api_client.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -545,11 +546,10 @@ class TeamManagementScreen extends ConsumerWidget {
                       if (!shouldSend) return;
 
                       try {
-                        const apiUrl =
-                            'https://app.quoteonthego.co.uk/api/invite-team-member';
+                        final apiUrl = '${ApiClient.baseUrl}/api/invite-team-member';
                         final response = await http.post(
                           Uri.parse(apiUrl),
-                          headers: {'Content-Type': 'application/json'},
+                          headers: await ApiClient.headers(),
                           body: jsonEncode({
                             'companyId': companyId,
                             'email': email,
@@ -563,7 +563,11 @@ class TeamManagementScreen extends ConsumerWidget {
                           final message = result['success'] == true
                               ? 'Invitation sent to $email'
                               : 'Error: ${result['error'] ?? 'Unknown error'}';
-                          ref.read(feedbackControllerProvider).success(context, message);
+                          if (result['success'] == true) {
+                            ref.read(feedbackControllerProvider).success(context, message);
+                          } else {
+                            ref.read(feedbackControllerProvider).error(context, message);
+                          }
                         }
                       } catch (e) {
                         if (context.mounted) {

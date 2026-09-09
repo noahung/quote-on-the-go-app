@@ -1,3 +1,4 @@
+import '../services/api_client.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/workflow.dart';
 import '../models/workflow_execution.dart';
@@ -68,41 +69,11 @@ class WorkflowExecutionRepository {
     String? targetCustomerName,
     required List<WorkflowStep> steps,
   }) async {
-    final now = DateTime.now().toUtc();
-    final firstStep = steps.isNotEmpty ? steps.first : null;
-    final currentStepId = firstStep != null ? 'step_${firstStep.order}' : '';
-    
-    DateTime nextExecutionAt = now;
-    if (firstStep != null) {
-      if (firstStep.delay != null) {
-        nextExecutionAt = calculateNextExecution(now, firstStep.delay!);
-      } else {
-        final waitDays = firstStep.waitDays ?? 0;
-        nextExecutionAt = now.add(Duration(days: waitDays));
-      }
-    }
-
-    final docRef = _firestore.collection('workflow_executions').doc();
-    final execution = WorkflowExecution(
-      id: docRef.id,
-      workflowTemplateId: templateId,
-      workflowName: workflowName,
-      targetDocumentId: targetDocumentId,
-      targetType: targetType,
-      targetDocumentNumber: targetDocumentNumber,
-      targetCustomerName: targetCustomerName,
-      currentStepId: currentStepId,
-      status: 'active',
-      startedAt: now,
-      nextExecutionAt: nextExecutionAt,
-      executionLog: [],
-      companyId: companyId,
-      createdAt: now,
-      updatedAt: now,
-    );
-
-    await docRef.set(execution.toJson());
-    return docRef.id;
+    final result = await ApiClient.post('/api/mobile/operations', {
+      'operation': 'workflows.start', 'templateId': templateId,
+      'targetDocumentId': targetDocumentId, 'targetType': targetType,
+    });
+    return result['executionId'] as String;
   }
 
   Future<void> stopExecution(String executionId) async {

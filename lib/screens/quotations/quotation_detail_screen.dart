@@ -1,3 +1,4 @@
+import '../../services/api_client.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -21,7 +22,7 @@ import '../client_responses/client_activity_card.dart';
 import '../../components/custom_email_send_bottom_sheet.dart';
 import '../invoices/create_invoice_screen.dart';
 
-const _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
+String get _webAppBaseUrl => ApiClient.baseUrl;
 
 class QuotationDetailScreen extends ConsumerWidget {
   final String quotationId;
@@ -70,7 +71,7 @@ class QuotationDetailScreen extends ConsumerWidget {
 
       final response = await http.post(
         Uri.parse('$_webAppBaseUrl/api/send-quotation'),
-        headers: {'Content-Type': 'application/json'},
+        headers: await ApiClient.headers(),
         body: jsonEncode(body),
       );
       if (context.mounted) {
@@ -188,6 +189,10 @@ class QuotationDetailScreen extends ConsumerWidget {
         status: 'Draft',
         notes: quotation.notes,
         jobId: quotation.jobId,
+        quotationId: quotation.id,
+        customerId: quotation.customerId,
+        discount: quotation.discount, discountType: quotation.discountType, discountAmount: quotation.discountAmount,
+        pdfTemplateId: quotation.pdfTemplateId, pdfThemeColor: quotation.pdfThemeColor,
       );
       final invoiceId = await invoiceRepository.createInvoice(invoice);
 
@@ -267,6 +272,7 @@ class QuotationDetailScreen extends ConsumerWidget {
         discount: quotation.discount,
         discountType: quotation.discountType,
         discountAmount: quotation.discountAmount,
+        customerId: quotation.customerId, pdfTemplateId: quotation.pdfTemplateId, pdfThemeColor: quotation.pdfThemeColor,
       );
       final newId = await ref.read(quotationRepositoryProvider).createQuotation(newQuote);
       if (context.mounted) {

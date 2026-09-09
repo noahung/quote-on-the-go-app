@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../models/calendar_event.dart';
 import '../../models/customer.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/customer_provider.dart';
 import '../../providers/schedule_provider.dart';
+import '../../providers/quotation_provider.dart';
 import '../../components/mesh_background.dart';
 import '../../components/glass_card.dart';
 import '../../components/custom_date_time_picker.dart';
@@ -25,7 +25,8 @@ const List<String> _jobStatuses = [
 
 class CreateJobScreen extends ConsumerStatefulWidget {
   final CalendarEvent? event;
-  const CreateJobScreen({super.key, this.event});
+  final String? fromQuotationId;
+  const CreateJobScreen({super.key, this.event, this.fromQuotationId});
 
   @override
   ConsumerState<CreateJobScreen> createState() => _CreateJobScreenState();
@@ -51,6 +52,8 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
   String _selectedStatus = 'Draft';
   Customer? _selectedCustomer;
   CalendarEvent? _editingEvent;
+  String? _sourceCustomerName;
+  String? _sourceCustomerId;
 
   final List<Map<String, String>> _colorOptions = const [
     {'label': 'Blue', 'value': '#4A8CA8'}, // Desaturated blue
@@ -64,6 +67,9 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.fromQuotationId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadQuotation());
+    }
     _editingEvent = widget.event;
     if (_editingEvent != null) {
       _titleController.text = _editingEvent!.title;
@@ -92,6 +98,30 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
     _addressController.dispose();
     _customerSearchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadQuotation() async {
+    setState(() => _isLoading = true);
+    try {
+      final doc = await ref.read(firestoreProvider).collection('quotations').doc(widget.fromQuotationId).get();
+      final data = doc.data();
+      if (data == null || data['companyId'] != ref.read(companyIdProvider)) {
+        throw Exception('Quotation is unavailable.');
+      }
+      if (!mounted) return;
+      setState(() {
+        _titleController.text = data['title'] as String? ?? 'Job for ${data['quotationNumber']}';
+        _descriptionController.text = data['notes'] as String? ?? '';
+        _addressController.text = data['customerAddress'] as String? ?? '';
+        _sourceCustomerName = data['customerName'] as String?;
+        _sourceCustomerId = data['customerId'] as String?;
+        _customerSearchController.text = _sourceCustomerName ?? '';
+      });
+    } catch (e) {
+      if (mounted) ref.read(feedbackControllerProvider).error(context, 'Could not load the quotation. $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   DateTime _combineDateAndTime(DateTime date, TimeOfDay time) {
@@ -201,8 +231,8 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
             : _descriptionController.text.trim(),
         color: _selectedColor,
         status: _selectedStatus,
-        customerId: _selectedCustomer?.id,
-        customerName: _selectedCustomer?.name,
+        customerId: _selectedCustomer?.id ?? _sourceCustomerId ?? _editingEvent?.customerId,
+        customerName: _selectedCustomer?.name ?? _sourceCustomerName ?? _editingEvent?.customerName,
         customerAddress: _addressController.text.trim().isEmpty
             ? null
             : _addressController.text.trim(),
@@ -217,7 +247,7 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
           popOrGo(context, '/schedule');
         }
       } else {
-        await repository.createEvent(event);
+        await repository.createEvent(event, quotationId: widget.fromQuotationId);
         if (mounted) {
           await ref.read(feedbackControllerProvider).showCelebration(
             context: context,

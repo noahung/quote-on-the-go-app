@@ -1,0 +1,250 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-09T07:01:49.349Z",
+  "title": "Design System: Quote on the Go",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "primary",
+        "canonical": "oklch(70.541% 0.17690 49.67)",
+        "tonalRamp": [
+          "oklch(15.00% 0.06307 49.67)",
+          "oklch(26.43% 0.10351 49.67)",
+          "oklch(37.86% 0.14394 49.67)",
+          "oklch(49.29% 0.17690 49.67)",
+          "oklch(60.71% 0.14899 49.67)",
+          "oklch(72.14% 0.10856 49.67)",
+          "oklch(83.57% 0.06812 49.67)",
+          "oklch(95.00% 0.02769 49.67)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "ink",
+        "canonical": "oklch(26.126% 0.01098 114.85)",
+        "tonalRamp": [
+          "oklch(15.00% 0.01098 114.85)",
+          "oklch(26.43% 0.01098 114.85)",
+          "oklch(37.86% 0.01098 114.85)",
+          "oklch(49.29% 0.01098 114.85)",
+          "oklch(60.71% 0.01098 114.85)",
+          "oklch(72.14% 0.01098 114.85)",
+          "oklch(83.57% 0.01098 114.85)",
+          "oklch(95.00% 0.01098 114.85)"
+        ]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "canvas",
+        "canonical": "oklch(97.978% 0.00856 84.57)",
+        "tonalRamp": [
+          "oklch(15.00% 0.00856 84.57)",
+          "oklch(26.43% 0.00856 84.57)",
+          "oklch(37.86% 0.00856 84.57)",
+          "oklch(49.29% 0.00856 84.57)",
+          "oklch(60.71% 0.00856 84.57)",
+          "oklch(72.14% 0.00856 84.57)",
+          "oklch(83.57% 0.00856 84.57)",
+          "oklch(95.00% 0.00856 84.57)"
+        ]
+      },
+      "cream": {
+        "role": "neutral",
+        "displayName": "cream",
+        "canonical": "oklch(94.017% 0.01937 90.55)",
+        "tonalRamp": [
+          "oklch(15.00% 0.01581 90.55)",
+          "oklch(26.43% 0.01937 90.55)",
+          "oklch(37.86% 0.01937 90.55)",
+          "oklch(49.29% 0.01937 90.55)",
+          "oklch(60.71% 0.01937 90.55)",
+          "oklch(72.14% 0.01937 90.55)",
+          "oklch(83.57% 0.01636 90.55)",
+          "oklch(95.00% 0.01194 90.55)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "muted",
+        "canonical": "oklch(51.098% 0.01387 106.88)",
+        "tonalRamp": [
+          "oklch(15.00% 0.01387 106.88)",
+          "oklch(26.43% 0.01387 106.88)",
+          "oklch(37.86% 0.01387 106.88)",
+          "oklch(49.29% 0.01387 106.88)",
+          "oklch(60.71% 0.01387 106.88)",
+          "oklch(72.14% 0.01387 106.88)",
+          "oklch(83.57% 0.01387 106.88)",
+          "oklch(95.00% 0.01139 106.88)"
+        ]
+      },
+      "outline": {
+        "role": "neutral",
+        "displayName": "outline",
+        "canonical": "oklch(61.036% 0.01916 103.36)",
+        "tonalRamp": [
+          "oklch(15.00% 0.01575 103.36)",
+          "oklch(26.43% 0.01916 103.36)",
+          "oklch(37.86% 0.01916 103.36)",
+          "oklch(49.29% 0.01916 103.36)",
+          "oklch(60.71% 0.01916 103.36)",
+          "oklch(72.14% 0.01916 103.36)",
+          "oklch(83.57% 0.01630 103.36)",
+          "oklch(95.00% 0.01192 103.36)"
+        ]
+      },
+      "divider": {
+        "role": "neutral",
+        "displayName": "divider",
+        "canonical": "oklch(87.033% 0.01845 89.37)",
+        "tonalRamp": [
+          "oklch(15.00% 0.01553 89.37)",
+          "oklch(26.43% 0.01845 89.37)",
+          "oklch(37.86% 0.01845 89.37)",
+          "oklch(49.29% 0.01845 89.37)",
+          "oklch(60.71% 0.01845 89.37)",
+          "oklch(72.14% 0.01845 89.37)",
+          "oklch(83.57% 0.01606 89.37)",
+          "oklch(95.00% 0.01184 89.37)"
+        ]
+      },
+      "dark-canvas": {
+        "role": "neutral",
+        "displayName": "dark canvas",
+        "canonical": "oklch(23.209% 0.00947 116.33)",
+        "tonalRamp": [
+          "oklch(15.00% 0.00947 116.33)",
+          "oklch(26.43% 0.00947 116.33)",
+          "oklch(37.86% 0.00947 116.33)",
+          "oklch(49.29% 0.00947 116.33)",
+          "oklch(60.71% 0.00947 116.33)",
+          "oklch(72.14% 0.00947 116.33)",
+          "oklch(83.57% 0.00947 116.33)",
+          "oklch(95.00% 0.00947 116.33)"
+        ]
+      },
+      "dark-panel": {
+        "role": "neutral",
+        "displayName": "dark panel",
+        "canonical": "oklch(29.235% 0.01438 118.70)",
+        "tonalRamp": [
+          "oklch(15.00% 0.01431 118.70)",
+          "oklch(26.43% 0.01438 118.70)",
+          "oklch(37.86% 0.01438 118.70)",
+          "oklch(49.29% 0.01438 118.70)",
+          "oklch(60.71% 0.01438 118.70)",
+          "oklch(72.14% 0.01438 118.70)",
+          "oklch(83.57% 0.01438 118.70)",
+          "oklch(95.00% 0.01144 118.70)"
+        ]
+      },
+      "dark-muted": {
+        "role": "neutral",
+        "displayName": "dark muted",
+        "canonical": "oklch(80.961% 0.01792 110.36)",
+        "tonalRamp": [
+          "oklch(15.00% 0.01538 110.36)",
+          "oklch(26.43% 0.01792 110.36)",
+          "oklch(37.86% 0.01792 110.36)",
+          "oklch(49.29% 0.01792 110.36)",
+          "oklch(60.71% 0.01792 110.36)",
+          "oklch(72.14% 0.01792 110.36)",
+          "oklch(83.57% 0.01589 110.36)",
+          "oklch(95.00% 0.01179 110.36)"
+        ]
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "interaction",
+        "value": "180ms ease-out",
+        "purpose": "Feedback only; respect reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "home-content",
+        "value": "640px"
+      },
+      {
+        "name": "web-form-columns",
+        "value": "960px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "One main action.",
+      "html": "<button class=\"ds-button\">Create quote</button>",
+      "css": ".ds-button{font-family:'DM Sans',sans-serif;background:#f4781f;color:#24251f;border:0;border-radius:999px;min-height:56px;padding:16px 24px;font-size:16px;font-weight:700;cursor:pointer;transition:filter 180ms ease-out}.ds-button:hover{filter:brightness(.95)}.ds-button:active{filter:brightness(.9)}.ds-button:disabled{opacity:.45;cursor:default}.ds-button:focus-visible,.ds-field:focus-visible,.ds-link:focus-visible{outline:2px solid #24251f;outline-offset:4px;}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "description": "Supporting action.",
+      "html": "<button class=\"ds-button\">Schedule a job</button>",
+      "css": ".ds-button{font-family:'DM Sans',sans-serif;background:#fbf8f2;color:#24251f;border:1px solid #858477;border-radius:999px;min-height:56px;padding:16px 24px;font-size:16px;font-weight:700;cursor:pointer}.ds-button:hover{background:#f0ebdd}.ds-button:active{background:#d9d4c7}.ds-button:focus-visible,.ds-field:focus-visible,.ds-link:focus-visible{outline:2px solid #24251f;outline-offset:4px;}"
+    },
+    {
+      "name": "Text field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Label remains visible while typing.",
+      "html": "<label class=\"ds-label\">Customer name<input class=\"ds-field\" autocomplete=\"name\" placeholder=\"Full name\"></label>",
+      "css": ".ds-label{font-family:'DM Sans',sans-serif;display:grid;gap:8px;color:#24251f;font-size:16px}.ds-field{font-family:'DM Sans',sans-serif;background:#f0ebdd;color:#24251f;border:1px solid #858477;border-radius:16px;padding:18px;font-size:16px;min-width:0}.ds-field:hover{border-color:#24251f}.ds-button:focus-visible,.ds-field:focus-visible,.ds-link:focus-visible{outline:2px solid #24251f;outline-offset:4px;}"
+    },
+    {
+      "name": "Business panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Related document destinations in one tonal group.",
+      "html": "<div class=\"ds-panel\"><a class=\"ds-link\" href=\"#quotes\"><strong>Quotes</strong><span>2 drafts · 1 awaiting a reply</span></a><a class=\"ds-link\" href=\"#invoices\"><strong>Invoices</strong><span>£360.00 outstanding</span></a></div>",
+      "css": ".ds-panel{font-family:'DM Sans',sans-serif;background:#f0ebdd;border-radius:24px;padding:0 20px}.ds-link{display:grid;gap:5px;color:#24251f;text-decoration:none;padding:20px 0;min-height:48px}.ds-link+ .ds-link{border-top:1px solid #d9d4c7}.ds-link strong{font-size:18px}.ds-link span{font-size:14px;color:#67675e}.ds-link:hover{background:#e9e3d5}.ds-button:focus-visible,.ds-field:focus-visible,.ds-link:focus-visible{outline:2px solid #24251f;outline-offset:4px;}"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "description": "Persistent labelled destinations.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Main\"><a class=\"ds-link\" aria-current=\"page\" href=\"#home\">Home</a><a class=\"ds-link\" href=\"#schedule\">Schedule</a><a class=\"ds-link\" href=\"#customers\">Customers</a><a class=\"ds-link\" href=\"#settings\">Settings</a></nav>",
+      "css": ".ds-nav{font-family:'DM Sans',sans-serif;display:flex;flex-wrap:wrap;gap:8px;background:#fbf8f2;padding:8px}.ds-link{display:flex;align-items:center;justify-content:center;min-height:48px;padding:4px 12px;color:#24251f;text-decoration:none;font-size:14px;border-radius:999px}.ds-link[aria-current]{background:#ffdec4;font-weight:700}.ds-link:hover{background:#f0ebdd}.ds-button:focus-visible,.ds-field:focus-visible,.ds-link:focus-visible{outline:2px solid #24251f;outline-offset:4px;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Ready for the next job",
+    "overview": "A UK trader checks the app in daylight between appointments, looking for the next useful action. The interface should feel dependable, friendly and warm. Use a restrained orange accent, generous space, clear headings and practical language. Retain the user's dark-mode preference for evening work.\n\nThe user approved orange with cream surfaces on 9 September 2026. The supplied Marshmallow screenshots inform the large personal greeting, simple tonal panels, generous rounded controls and clear grouping. Ragged Edge's [Marshmallow case study](https://raggededge.com/partnerships/marshmallow) describes an empathetic identity, confident voice and distinctive headline typography applied across app, web and communications. Our adaptation takes the hierarchy and clarity; it retains Quote on the Go's identity and does not reuse Marshmallow's proprietary typeface, mascots or artwork. The [official Android listing](https://play.google.com/store/apps/details?id=com.marshmallow.marshmallow) groups useful policy, document and support tasks; the corresponding business tasks here are documents, payments and jobs. These are design observations and product adaptations, not a claim that the two products should share features.",
+    "keyCharacteristics": [
+      "One clear primary action in each task area.",
+      "Flat panels for related information, open rows for individual actions.",
+      "Honest loading, failure and empty states, with recoverable actions.",
+      "Native Material 3 interaction semantics with the same visual system on Android and iOS.",
+      "Bounded content width (640 logical pixels) and wrapping text on narrow screens."
+    ],
+    "rules": [
+      {
+        "name": "The action-color rule",
+        "body": "Use orange to identify what the user can do, not to decorate every number or heading.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do make the next action obvious with one orange primary control.",
+      "Do use a 24px page gutter and 32px section spacing on home.",
+      "Do keep dates, amounts and workflow status honest and recoverable.",
+      "Do support keyboard, screen reader, dark mode and 200% text.",
+      "Do test empty, loading, error, long-name, overdue and multi-job states."
+    ],
+    "donts": [
+      "Don't recreate the messy dashboard with repeated metrics and multiple equally loud CTAs.",
+      "Don't add unnecessary visual noise and decoration; preserve PRODUCT.md's “Clean, minimal, and distraction-free” direction.",
+      "Don't use glassmorphism, decorative gradients, nested cards or colored side-stripe borders.",
+      "Don't replace clear labels with unexplained icons or tiny text.",
+      "Don't label an assumed profit margin as measured profit.",
+      "Don't copy Marshmallow's mascots or treat this spec as proof of complete web/mobile functional parity.\r"
+    ]
+  }
+}

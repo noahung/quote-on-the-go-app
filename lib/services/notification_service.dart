@@ -1,3 +1,5 @@
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -12,7 +14,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('[FCM] Background message: ${message.messageId}');
 }
 
-class NotificationService {
+class NotificationService extends ChangeNotifier {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
@@ -76,6 +78,13 @@ class NotificationService {
     _fcm.onTokenRefresh.listen(_saveToken);
   }
 
+  Future<String> _installationId() async {
+    final prefs = await SharedPreferences.getInstance();
+    var id = prefs.getString('notificationInstallationId');
+    if (id == null) { id = const Uuid().v4(); await prefs.setString('notificationInstallationId', id); }
+    return id;
+  }
+
   Future<void> _saveToken(String token) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -83,10 +92,10 @@ class NotificationService {
     try {
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
-          .update({
-        'fcmToken': token,
-        'fcmTokenUpdatedAt': FieldValue.serverTimestamp()
+          .doc(user.uid).collection('devices').doc(await _installationId())
+          .set({
+        'token': token, 'platform': defaultTargetPlatform.name,
+        'updatedAt': FieldValue.serverTimestamp()
       });
     } catch (e) {
       debugPrint('[FCM] Error saving token: $e');
@@ -114,7 +123,7 @@ class NotificationService {
         ),
         iOS: const DarwinNotificationDetails(),
       ),
-      payload: message.data['link'],
+      payload: message.data['link'] ?? message.data['click_action'],
     );
   }
 
@@ -122,19 +131,26 @@ class NotificationService {
     // Navigation handled by the router listening to FCM tap events
     final link = response.payload;
     if (link != null && link.isNotEmpty) {
-      _pendingRoute = link;
+      _queueRoute(link);
     }
   }
 
   void _onMessageOpenedApp(RemoteMessage message) {
-    final link = message.data['link'];
+    final link = message.data['link'] ?? message.data['click_action'];
     if (link != null && link.isNotEmpty) {
-      _pendingRoute = link;
+      _queueRoute(link);
     }
   }
 
   /// Route to navigate to when app is opened from a notification.
   String? _pendingRoute;
+
+  void _queueRoute(String link) {
+    final route = notificationRoute(link);
+    if (route == null) return;
+    _pendingRoute = route;
+    notifyListeners();
+  }
 
   String? consumePendingRoute() {
     final route = _pendingRoute;
@@ -155,8 +171,21 @@ class NotificationService {
     try {
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
-          .update({'fcmToken': FieldValue.delete()});
+          .doc(user.uid).collection('devices').doc(await _installationId()).delete();
+      final token = await _fcm.getToken();
+      final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final profile = await transaction.get(userRef);
+        if (token != null && profile.data()?['fcmToken'] == token) { transaction.update(userRef, {'fcmToken': FieldValue.delete()}); }
+      });
     } catch (_) {}
   }
+}
+
+String? notificationRoute(String link) {
+  final uri = Uri.tryParse(link);
+  if (uri == null || (uri.hasScheme && !['http', 'https', 'qotg'].contains(uri.scheme))) return null;
+  final allowed = ['quotations', 'invoices', 'schedule', 'customers', 'collaboration', 'notifications', 'client-responses'];
+  if (uri.pathSegments.isEmpty || !allowed.contains(uri.pathSegments.first)) return null;
+  return '/${uri.pathSegments.map(Uri.encodeComponent).join('/')}${uri.hasQuery ? '?${uri.query}' : ''}';
 }

@@ -82,7 +82,7 @@ export const generateLineItems = functions.https.onRequest(async (req, res) => {
     const companyDoc = await admin.firestore().collection('companies').doc(companyId).get();
     const companyData = companyDoc.data();
 
-    if (!companyData || companyData.tier !== 'premium') {
+    if (!companyData || !['premium', 'individual', 'organisation'].includes(companyData.tier) || !['active', 'referral_trial'].includes(companyData.subscriptionStatus) || (companyData.subscriptionStatus === 'referral_trial' && (!companyData.trialEndsAt || new Date(companyData.trialEndsAt.toDate?.() ?? companyData.trialEndsAt).getTime() <= Date.now()))) {
       throw new functions.https.HttpsError(
         'failed-precondition',
         'AI generation is only available for premium users.'
@@ -363,7 +363,7 @@ ${companyName}`;
       return { success: false, error: 'Failed to send email' };
     }
 
-    const responseData = await response.json();
+    const responseData = await response.json() as { messageId?: string };
     console.log(`Job status email sent to ${customerEmail} for job ${jobId}`);
 
     return { success: true, messageId: responseData.messageId };

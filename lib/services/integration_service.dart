@@ -1,7 +1,7 @@
+import 'api_client.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class IntegrationService {
@@ -22,8 +22,8 @@ class IntegrationService {
     final response = await http
         .post(
           Uri.parse('$_baseUrl/api/quickbooks/connect'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'companyId': companyId}),
+          headers: await ApiClient.headers(),
+          body: jsonEncode({'companyId': companyId, 'platform': 'mobile'}),
         )
         .timeout(const Duration(seconds: 30));
 
@@ -38,7 +38,7 @@ class IntegrationService {
     final response = await http
         .post(
           Uri.parse('$_baseUrl/api/quickbooks/disconnect'),
-          headers: {'Content-Type': 'application/json'},
+          headers: await ApiClient.headers(),
           body: jsonEncode({'companyId': companyId}),
         )
         .timeout(const Duration(seconds: 30));
@@ -133,12 +133,7 @@ class IntegrationService {
   }
 
   Future<void> disconnectGoogleCalendar({required String companyId}) async {
-    await FirebaseFirestore.instance.collection('companies').doc(companyId).update({
-      'googleCalendarRefreshToken': FieldValue.delete(),
-      'googleCalendarEnabled': false,
-      'googleCalendarConnectedAt': FieldValue.delete(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+    await ApiClient.post('/api/mobile/operations', {'operation': 'integrations.google.disconnect'});
   }
 
   String getGoogleCalendarConnectUrl() {
@@ -149,7 +144,7 @@ class IntegrationService {
     final response = await http
         .post(
           Uri.parse('$_baseUrl/api/xero/connect'),
-          headers: {'Content-Type': 'application/json'},
+          headers: await ApiClient.headers(),
           body: jsonEncode({'companyId': companyId, 'platform': 'mobile'}),
         )
         .timeout(const Duration(seconds: 30));
@@ -165,7 +160,7 @@ class IntegrationService {
     final response = await http
         .post(
           Uri.parse('$_baseUrl/api/xero/disconnect'),
-          headers: {'Content-Type': 'application/json'},
+          headers: await ApiClient.headers(),
           body: jsonEncode({'companyId': companyId}),
         )
         .timeout(const Duration(seconds: 30));
@@ -184,7 +179,7 @@ class IntegrationService {
     final response = await http
         .post(
           Uri.parse('$_baseUrl/api/xero/sync'),
-          headers: {'Content-Type': 'application/json'},
+          headers: await ApiClient.headers(),
           body: jsonEncode({
             'companyId': companyId,
             'action': action,

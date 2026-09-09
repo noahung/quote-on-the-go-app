@@ -1,3 +1,4 @@
+import 'auth_provider.dart';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -11,11 +12,13 @@ class JobMediaRepository {
   final FirebaseFirestore _firestore;
   final FirebaseStorage _storage;
 
-  JobMediaRepository(this._firestore, this._storage);
+  final String companyId;
+  JobMediaRepository(this._firestore, this._storage, this.companyId);
 
   Stream<List<JobMedia>> watchMedia(String jobId) {
     return _firestore
         .collection('jobMedia')
+        .where('companyId', isEqualTo: companyId)
         .where('jobId', isEqualTo: jobId)
         .orderBy('createdAt', descending: true)
         .snapshots()
@@ -86,7 +89,7 @@ class JobMediaRepository {
 
 final jobMediaRepositoryProvider = Provider<JobMediaRepository>((ref) {
   final firestore = ref.watch(firestoreProvider);
-  return JobMediaRepository(firestore, FirebaseStorage.instance);
+  return JobMediaRepository(firestore, FirebaseStorage.instance, ref.watch(companyIdProvider) ?? '');
 });
 
 @riverpod

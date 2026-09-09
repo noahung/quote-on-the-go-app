@@ -1,3 +1,4 @@
+import 'api_client.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
@@ -5,13 +6,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-const _webAppBaseUrl = 'https://app.quoteonthego.co.uk';
+String get _webAppBaseUrl => ApiClient.baseUrl;
 
 class PdfService {
   /// Fetches PDF bytes from the server for a quotation.
   static Future<Uint8List> fetchQuotationPdf(String quotationId) async {
     final url = Uri.parse('$_webAppBaseUrl/api/quotations/$quotationId/pdf');
-    final response = await http.get(url);
+    final response = await http.get(url, headers: await ApiClient.headers());
     if (response.statusCode == 200) {
       return response.bodyBytes;
     }

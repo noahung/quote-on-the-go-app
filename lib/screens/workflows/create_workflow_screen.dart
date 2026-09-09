@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -15,8 +16,9 @@ const List<String> _kTriggers = [
   'invoice_created',
   'invoice_sent',
   'invoice_paid',
-  'job_status_changed',
-  'customer_created',
+  'quotation_no_response',
+  'invoice_overdue',
+  'quote_expires_soon',
 ];
 
 const List<String> _kTriggerLabels = [
@@ -27,23 +29,25 @@ const List<String> _kTriggerLabels = [
   'Invoice Created',
   'Invoice Sent',
   'Invoice Paid',
-  'Job Status Changed',
-  'Customer Created',
+  'No reply after 3 days',
+  'Invoice Overdue',
+  'Quote expires within 3 days',
 ];
 
 const List<String> _kActions = [
   'send_email',
-  'send_sms',
+  'notification',
   'wait',
 ];
 
 const List<String> _kActionLabels = [
   'Send Email',
-  'Send SMS',
+  'Notify team',
   'Wait',
 ];
 
 class _WorkflowStep {
+  Map<String, dynamic> original = {};
   String actionType;
   String subject;
   String body;
@@ -89,22 +93,22 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
     if (t != null) {
       _nameController.text = t['title'] as String? ?? t['name'] as String? ?? '';
       _descriptionController.text = t['desc'] as String? ?? t['description'] as String? ?? '';
-      final type = t['type'] as String?;
-      if (type != null && _kTriggers.contains(type)) {
+      final type = (t['trigger']?['type'] ?? t['trigger']?['event'] ?? t['type']) as String?;
+      if (type != null) {
         _selectedTrigger = type;
       }
       _maxRetries = t['maxRetries'] as int?;
       _retryDelaySeconds = t['retryDelaySeconds'] as int?;
       _onFailureAction = t['onFailureAction'] as String?;
 
-      final rawConditions = t['conditions'] as List?;
+      final rawConditions = (t['trigger']?['conditions'] ?? t['conditions']) as List?;
       if (rawConditions != null) {
         for (final rc in rawConditions) {
           if (rc is Map) {
             _conditions.add(TriggerCondition(
               field: rc['field'] as String? ?? '',
               operator: rc['operator'] as String? ?? 'equals',
-              value: rc['value'] as String? ?? '',
+              value: rc['value']?.toString() ?? '',
             ));
           }
         }
@@ -114,9 +118,10 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
       if (rawSteps != null && rawSteps.isNotEmpty) {
         _steps = rawSteps.map((s) {
           final m = s as Map;
-          final step = _WorkflowStep(actionType: m['type'] as String? ?? 'send_email');
-          step.subject = m['subject'] as String? ?? '';
-          step.body = m['body'] as String? ?? '';
+          final step = _WorkflowStep(actionType: m['type'] == 'email' ? 'send_email' : m['type'] as String? ?? 'send_email');
+          step.original = Map<String, dynamic>.from(m);
+          step.subject = (m['emailTemplate']?['subject'] ?? m['subject']) as String? ?? '';
+          step.body = (m['emailTemplate']?['textContent'] ?? m['body']) as String? ?? '';
           if (m['delay'] is Map) {
             final delayMap = m['delay'] as Map;
             step.waitValue = delayMap['value'] as int? ?? 1;
@@ -150,6 +155,11 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
+    if (!_kTriggers.contains(_selectedTrigger)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Choose a supported document trigger before saving.')));
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
 
     final companyId = ref.read(companyIdProvider);
@@ -162,8 +172,11 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
       final stepsData = _steps.asMap().entries.map((entry) {
         final step = entry.value;
         return {
+          ...step.original,
+          'id': step.original['id'] ?? 'step_${entry.key}',
+          'name': step.actionType == 'send_email' ? 'Send email' : step.actionType == 'wait' ? 'Wait' : 'Notify team',
           'order': entry.key,
-          'type': step.actionType,
+          'type': step.actionType == 'send_email' ? 'email' : step.actionType,
           if (step.actionType == 'wait') ...{
             'delay': {
               'type': step.waitUnit,
@@ -173,6 +186,13 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
           } else ...{
             'subject': step.subject,
             'body': step.body,
+            if (step.actionType == 'send_email') 'emailTemplate': {
+              ...Map<String, dynamic>.from(step.original['emailTemplate'] as Map? ?? {}),
+              'subject': step.subject, 'textContent': step.body,
+              'htmlContent': const HtmlEscape().convert(step.body).replaceAll('\n', '<br>'),
+              'includeOriginalDocument': step.original['emailTemplate']?['includeOriginalDocument'] ?? false,
+            },
+            if (step.actionType == 'notification') ...{'title': step.subject, 'message': step.body},
           },
         };
       }).toList();
@@ -184,9 +204,11 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
         'description': _descriptionController.text.trim().isEmpty
             ? null
             : _descriptionController.text.trim(),
-        'type': _selectedTrigger,
+        'type': 'custom',
+        'triggerEvent': _selectedTrigger,
         'trigger': {
-          'event': _selectedTrigger,
+          'type': _selectedTrigger,
+          'conditions': _conditions.map((c) => c.toJson()).toList(),
         },
         'steps': stepsData,
         'isActive': _isActive,
@@ -297,13 +319,17 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
-                items: List.generate(
+                isExpanded: true,
+                items: [
+                  if (!_kTriggers.contains(_selectedTrigger)) DropdownMenuItem(value: _selectedTrigger, enabled: false,
+                    child: const Text('Choose a supported trigger')),
+                  ...List.generate(
                   _kTriggers.length,
                   (i) => DropdownMenuItem(
                     value: _kTriggers[i],
                     child: Text(_kTriggerLabels[i]),
                   ),
-                ),
+                )],
                 onChanged: (v) =>
                     setState(() => _selectedTrigger = v ?? _kTriggers.first),
               ),

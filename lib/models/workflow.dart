@@ -12,8 +12,9 @@ const List<String> kWorkflowTriggers = [
   'invoice_created',
   'invoice_sent',
   'invoice_paid',
-  'job_status_changed',
-  'customer_created',
+  'quotation_no_response',
+  'invoice_overdue',
+  'quote_expires_soon',
 ];
 
 const Map<String, String> kWorkflowTriggerLabels = {
@@ -53,7 +54,12 @@ class TriggerCondition with _$TriggerCondition {
 
 @freezed
 class WorkflowStep with _$WorkflowStep {
+  @JsonSerializable(explicitToJson: true)
   const factory WorkflowStep({
+    String? id,
+    String? name,
+    Map<String, dynamic>? emailTemplate,
+    Map<String, dynamic>? notificationConfig,
     required int order,
     required String type,
     String? subject,
@@ -68,11 +74,14 @@ class WorkflowStep with _$WorkflowStep {
 
 @freezed
 class WorkflowTemplate with _$WorkflowTemplate {
+  @JsonSerializable(explicitToJson: true)
   const factory WorkflowTemplate({
     required String id,
     required String name,
     String? description,
     required String type,
+    Map<String, dynamic>? trigger,
+    String? triggerEvent,
     required bool isActive,
     required String companyId,
     @Default([]) List<WorkflowStep> steps,
@@ -107,7 +116,7 @@ class WorkflowTemplate with _$WorkflowTemplate {
 
     if (data['conditions'] is List) {
       data['conditions'] = (data['conditions'] as List)
-          .map((c) => Map<String, dynamic>.from(c as Map))
+          .map((c) => {...Map<String, dynamic>.from(c as Map), 'value': c['value']?.toString() ?? ''})
           .toList();
     }
 

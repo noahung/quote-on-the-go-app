@@ -29,7 +29,7 @@ class ScheduleRepository {
 
   ScheduleRepository(this._firestore);
 
-  Future<String> createEvent(CalendarEvent event) async {
+  Future<String> createEvent(CalendarEvent event, {String? quotationId}) async {
     final data = {
       ...event.toJson()..remove('id'),
       'createdAt': FieldValue.serverTimestamp(),
@@ -42,7 +42,21 @@ class ScheduleRepository {
       data['customerAddress'] = event.customerAddress;
     }
     if (event.status != null) data['status'] = event.status;
-    final doc = await _firestore.collection('events').add(data);
+    final doc = _firestore.collection('events').doc();
+    await _firestore.runTransaction((transaction) async {
+      if (quotationId != null) {
+        final quotation = _firestore.collection('quotations').doc(quotationId);
+        final existing = await transaction.get(quotation);
+        if (!existing.exists || existing.data()?['companyId'] != event.companyId) {
+          throw StateError('Quotation is unavailable.');
+        }
+        if (existing.data()?['jobId'] != null && existing.data()?['jobId'] != '') {
+          throw StateError('This quotation already has a job. Open the linked job instead.');
+        }
+        transaction.update(quotation, {'jobId': doc.id, 'updatedAt': FieldValue.serverTimestamp()});
+      }
+      transaction.set(doc, data);
+    });
     return doc.id;
   }
 

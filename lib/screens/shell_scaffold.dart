@@ -1,11 +1,8 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/providers.dart';
-import '../components/mesh_background.dart';
-import '../theme/semantic_colors.dart';
 import '../models/company.dart';
 
 class ShellScaffold extends ConsumerStatefulWidget {
@@ -21,384 +18,66 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
   int _currentIndex = 0;
 
   void _showQuickActionsBottomSheet(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: false,
-      builder: (context) {
-        return BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: SafeArea(
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E1E24) : Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(32),
-                  topRight: Radius.circular(32),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 20,
-                    spreadRadius: 5,
-                  )
-                ],
-              ),
-              padding: const EdgeInsets.only(top: 12, bottom: 32, left: 24, right: 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Pull handle
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white24 : Colors.black12,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Create New',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'What would you like to create?',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isDark ? Colors.white60 : Colors.black54,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  // Action Cards - Now only 2 options
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildActionCard(
-                          context,
-                          title: 'Create Quote',
-                          desc: 'Draft new offer',
-                          icon: LucideIcons.fileText,
-                          color: const Color(0xFFF4781F),
-                          onTap: () {
-                            Navigator.pop(context);
-                            context.push('/quotations/new');
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildActionCard(
-                          context,
-                          title: 'Create Invoice',
-                          desc: 'Log new billing',
-                          icon: LucideIcons.receipt,
-                          color: Colors.green,
-                          onTap: () {
-                            Navigator.pop(context);
-                            context.push('/invoices/new');
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildActionCard(
-    BuildContext context, {
-    required String title,
-    required String desc,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.02),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
-          ),
-        ),
-        child: SizedBox(
-          height: 90,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 20),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                desc,
-                style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    showModalBottomSheet<void>(
+        context: context,
+        builder: (sheetContext) => SafeArea(
+            child: Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  ListTile(
+                      leading: const Icon(LucideIcons.fileText),
+                      title: const Text('Create quote'),
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        context.push('/quotations/new');
+                      }),
+                  ListTile(
+                      leading: const Icon(LucideIcons.receipt),
+                      title: const Text('Create invoice'),
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        context.push('/invoices/new');
+                      }),
+                ]))));
   }
 
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     final company = ref.watch(companyProvider);
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-    final isEffectivelyFreeTier = company?.tier == 'free' || company?.tier == null;
-
-    // Update current index based on location
-    // Bottom Nav: 0=Dashboard, 1=Schedule, 2=Customers, 3=Settings
-    if (location == '/') {
-      _currentIndex = 0;
-    } else if (location.startsWith('/schedule')) {
-      _currentIndex = 1;
-    } else if (location.startsWith('/customers')) {
-      _currentIndex = 2;
-    } else if (location.startsWith('/settings')) {
-      _currentIndex = 3;
-    } else {
-      _currentIndex = -1; // No tab selected for subroutes/other routes
-    }
-
-    final drawerKey = ref.watch(drawerControllerProvider);
-
-    return MeshBackground(
-      child: Scaffold(
-        key: drawerKey,
-        backgroundColor: Colors.transparent, // Transparent to show global MeshBackground
-        drawer: _buildNavigationDrawer(context, company),
-        body: widget.child,
-        floatingActionButton: Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFF4781F).withValues(alpha: 0.3),
-                blurRadius: 12,
-                spreadRadius: 2,
-                offset: const Offset(0, 4),
-              )
-            ],
-          ),
-          child: FloatingActionButton(
-            backgroundColor: const Color(0xFFF4781F),
-            shape: const CircleBorder(),
-            elevation: 0,
-            onPressed: () => _showQuickActionsBottomSheet(context),
-            child: const Icon(LucideIcons.plus, color: Colors.white, size: 28),
-          ),
-        ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-        bottomNavigationBar: ClipRRect(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.black.withValues(alpha: 0.35)
-                    : Colors.white.withValues(alpha: 0.45),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                ),
-                border: Border(
-                  top: BorderSide(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white.withValues(alpha: 0.08)
-                        : Colors.black.withValues(alpha: 0.05),
-                    width: 1,
-                  ),
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isEffectivelyFreeTier)
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white.withValues(alpha: 0.06)
-                                : Colors.black.withValues(alpha: 0.04),
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      child: SafeArea(
-                        top: false,
-                        child: Row(
-                          children: [
-                            Icon(
-                              LucideIcons.star,
-                              size: 18,
-                              color: semanticColors.warning,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Free Plan - Upgrade for unlimited access',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () => context.push('/settings'),
-                              style: TextButton.styleFrom(
-                                foregroundColor: semanticColors.warning,
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                shape: const StadiumBorder(),
-                                backgroundColor: semanticColors.warning.withValues(alpha: 0.12),
-                              ),
-                              child: const Text(
-                                'Upgrade',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  SafeArea(
-                    top: false,
-                    child: SizedBox(
-                      height: 64,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildTabItem(
-                            context,
-                            index: 0,
-                            icon: LucideIcons.layoutDashboard,
-                            activeIcon: LucideIcons.layoutDashboard,
-                            label: 'Dashboard',
-                          ),
-                          _buildTabItem(
-                            context,
-                            index: 1,
-                            icon: LucideIcons.calendar,
-                            activeIcon: LucideIcons.calendar,
-                            label: 'Schedule',
-                          ),
-                          const SizedBox(width: 48), // Center spacing for FAB
-                          _buildTabItem(
-                            context,
-                            index: 2,
-                            icon: LucideIcons.users,
-                            activeIcon: LucideIcons.users,
-                            label: 'Customers',
-                          ),
-                          _buildTabItem(
-                            context,
-                            index: 3,
-                            icon: LucideIcons.settings,
-                            activeIcon: LucideIcons.settings,
-                            label: 'Settings',
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabItem(
-    BuildContext context, {
-    required int index,
-    required IconData icon,
-    required IconData activeIcon,
-    required String label,
-  }) {
-    final isSelected = _currentIndex == index;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final activeColor = const Color(0xFFF4781F);
-    final inactiveColor = isDark ? Colors.white38 : Colors.black38;
-
-    return Expanded(
-      child: InkWell(
-        onTap: () {
-          switch (index) {
-            case 0:
-              context.go('/');
-              break;
-            case 1:
-              context.go('/schedule');
-              break;
-            case 2:
-              context.go('/customers');
-              break;
-            case 3:
-              context.go('/settings');
-              break;
-          }
-        },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isSelected ? activeIcon : icon,
-              color: isSelected ? activeColor : inactiveColor,
-              size: 24,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? activeColor : inactiveColor,
-              ),
-            ),
-          ],
-        ),
-      ),
+    _currentIndex = location.startsWith('/schedule')
+        ? 1
+        : location.startsWith('/customers')
+            ? 2
+            : location.startsWith('/settings')
+                ? 3
+                : 0;
+    return Scaffold(
+      key: ref.watch(drawerControllerProvider),
+      drawer: _buildNavigationDrawer(context, company),
+      body: widget.child,
+      floatingActionButton: location == '/'
+          ? null
+          : FloatingActionButton(
+              tooltip: 'Create document',
+              onPressed: () => _showQuickActionsBottomSheet(context),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              elevation: 0,
+              child: const Icon(LucideIcons.plus)),
+      bottomNavigationBar: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (index) => context
+              .go(const ['/', '/schedule', '/customers', '/settings'][index]),
+          destinations: const [
+            NavigationDestination(icon: Icon(LucideIcons.house), label: 'Home'),
+            NavigationDestination(
+                icon: Icon(LucideIcons.calendar), label: 'Schedule'),
+            NavigationDestination(
+                icon: Icon(LucideIcons.users), label: 'Customers'),
+            NavigationDestination(
+                icon: Icon(LucideIcons.settings), label: 'Settings'),
+          ]),
     );
   }
 

@@ -1,3 +1,5 @@
+import 'auth_provider.dart';
+import '../services/api_client.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
@@ -404,6 +406,7 @@ final collaborationCommentsProvider = StreamProvider.family<List<InternalComment
   final firestore = ref.watch(firestoreProvider);
   return firestore
       .collection('internal_comments')
+      .where('companyId', isEqualTo: ref.watch(companyIdProvider) ?? '')
       .where('documentId', isEqualTo: arg.documentId)
       .where('documentType', isEqualTo: arg.documentType)
       .snapshots()
@@ -420,6 +423,7 @@ final collaborationVersionsProvider = StreamProvider.family<List<DocumentVersion
   final firestore = ref.watch(firestoreProvider);
   return firestore
       .collection('document_versions')
+      .where('companyId', isEqualTo: ref.watch(companyIdProvider) ?? '')
       .where('documentId', isEqualTo: arg.documentId)
       .where('documentType', isEqualTo: arg.documentType)
       .snapshots()
@@ -596,7 +600,9 @@ final documentLockProvider = StreamProvider.family<DocumentLockInfo, ({String do
 class CollaborationRepository {
   final FirebaseFirestore _firestore;
 
-  CollaborationRepository(this._firestore);
+  final String companyId;
+
+  CollaborationRepository(this._firestore, this.companyId);
 
   Future<void> lockDocument({
     required String documentId,
@@ -613,6 +619,7 @@ class CollaborationRepository {
       'documentId': documentId,
       'documentType': documentType,
       'lockedBy': userId,
+      'companyId': companyId,
       'lockedAt': FieldValue.serverTimestamp(),
     });
   }
@@ -671,6 +678,7 @@ class CollaborationRepository {
   }) async {
     final query = await _firestore
         .collection('document_versions')
+        .where('companyId', isEqualTo: companyId)
         .where('documentId', isEqualTo: documentId)
         .where('documentType', isEqualTo: documentType)
         .orderBy('versionNumber', descending: true)
@@ -785,69 +793,10 @@ class CollaborationRepository {
     required String userEmail,
     required String companyId,
   }) async {
-    final rulesQuery = await _firestore
-        .collection('approval_rules')
-        .where('companyId', isEqualTo: companyId)
-        .where('isActive', isEqualTo: true)
-        .where('documentType', whereIn: [documentType, 'both'])
-        .get();
-
-    final rules = rulesQuery.docs.map((doc) => ApprovalRule.fromMap(doc.data(), doc.id)).toList();
-    var rule = _findApplicableRule(rules, documentId, documentType);
-
-    rule ??= ApprovalRule(
-        id: 'default_fallback_rule',
-        name: 'Default Team Review',
-        description: 'Requires approval from any Admin or Owner',
-        isActive: true,
-        documentType: 'both',
-        approvalSteps: [
-          ApprovalStep(stepNumber: 1, approverRole: 'admin', isRequired: true, allowParallel: false),
-        ],
-        companyId: companyId,
-      );
-
-    final workflowRef = _firestore.collection('approval_workflows').doc();
-    final steps = rule.approvalSteps.asMap().entries.map((entry) {
-      final template = entry.value;
-      return ApprovalWorkflowStep(
-        stepNumber: entry.key + 1,
-        approverRole: template.approverRole,
-        approverUserId: template.approverUserId,
-        status: 'pending',
-        isRequired: template.isRequired,
-      );
-    }).toList();
-
-    await workflowRef.set({
-      'id': workflowRef.id,
-      'documentId': documentId,
-      'documentType': documentType,
-      'workflowType': workflowType,
-      'currentStep': 1,
-      'totalSteps': rule.approvalSteps.length,
-      'status': 'pending',
-      'steps': steps.map((s) => s.toMap()).toList(),
-      'initiatedBy': {
-        'userId': userId,
-        'userName': userName,
-        'userEmail': userEmail,
-      },
-      'initiatedAt': FieldValue.serverTimestamp(),
-      'companyId': companyId,
+    final result = await ApiClient.post('/api/mobile/operations', {
+      'operation': 'approval.start', 'documentId': documentId, 'documentType': documentType,
     });
-
-    await _logActivity(
-      documentId: documentId,
-      documentType: documentType,
-      activityType: 'created',
-      description: 'Approval workflow initiated',
-      actor: {'userId': userId, 'userName': userName, 'userEmail': userEmail},
-      metadata: {},
-      companyId: companyId,
-    );
-
-    return workflowRef.id;
+    return result['workflowId'] as String;
   }
 
   Future<void> processApprovalDecision({
@@ -859,64 +808,10 @@ class CollaborationRepository {
     required String userName,
     required String userEmail,
   }) async {
-    final workflowDoc = await _firestore.collection('approval_workflows').doc(workflowId).get();
-    if (!workflowDoc.exists) throw Exception('Workflow not found');
-    final workflowData = workflowDoc.data()!;
-
-    final rawSteps = (workflowData['steps'] as List?) ?? [];
-    final steps = rawSteps.map((s) => ApprovalWorkflowStep.fromMap(s as Map<String, dynamic>)).toList();
-    final stepIndex = steps.indexWhere((s) => s.stepNumber == stepNumber);
-    if (stepIndex == -1) throw Exception('Approval step not found');
-
-    steps[stepIndex] = steps[stepIndex].copyWith(
-      status: decision,
-      approvedBy: {'userId': userId, 'userName': userName, 'userEmail': userEmail},
-      approvedAt: DateTime.now(),
-      comments: comments,
-    );
-
-    String newStatus = 'pending';
-    if (decision == 'rejected') {
-      newStatus = 'rejected';
-    } else {
-      final requiredSteps = steps.where((s) => s.isRequired).toList();
-      if (requiredSteps.every((s) => s.status == 'approved')) {
-        newStatus = 'approved';
-      }
-    }
-
-    int currentStep = stepNumber;
-    if (decision == 'approved' && newStatus == 'pending') {
-      final nextStep = steps.firstWhereOrNull((s) => s.stepNumber == stepNumber + 1);
-      if (nextStep != null) {
-        steps[steps.indexOf(nextStep)] = nextStep.copyWith(status: 'pending');
-        currentStep = stepNumber + 1;
-      }
-    }
-
-    final updateData = {
-      'steps': steps.map((s) => s.toMap()).toList(),
-      'currentStep': currentStep,
-      'status': newStatus,
-    };
-
-    if (newStatus != 'pending') {
-      updateData['completedAt'] = FieldValue.serverTimestamp();
-    }
-
-    await _firestore.collection('approval_workflows').doc(workflowId).update(updateData);
-
-    await _logActivity(
-      documentId: workflowData['documentId'] as String,
-      documentType: workflowData['documentType'] as String,
-      activityType: newStatus == 'approved' ? 'approved' : (decision == 'rejected' ? 'status_changed' : 'approved'),
-      description: newStatus == 'approved'
-          ? 'Approval workflow completed and approved'
-          : (newStatus == 'rejected' ? 'Approval workflow rejected' : 'Approved step $stepNumber in approval workflow'),
-      actor: {'userId': userId, 'userName': userName, 'userEmail': userEmail},
-      metadata: {},
-      companyId: workflowData['companyId'] as String,
-    );
+    await ApiClient.post('/api/mobile/operations', {
+      'operation': 'approval.decide', 'workflowId': workflowId, 'stepNumber': stepNumber,
+      'decision': decision, 'comments': comments,
+    });
   }
 
   Future<ApprovalWorkflow?> getActiveApprovalWorkflow({
@@ -925,6 +820,7 @@ class CollaborationRepository {
   }) async {
     final snapshot = await _firestore
         .collection('approval_workflows')
+        .where('companyId', isEqualTo: companyId)
         .where('documentId', isEqualTo: documentId)
         .where('documentType', isEqualTo: documentType)
         .orderBy('initiatedAt', descending: true)
@@ -941,6 +837,7 @@ class CollaborationRepository {
   }) {
     return _firestore
         .collection('approval_workflows')
+        .where('companyId', isEqualTo: companyId)
         .where('documentId', isEqualTo: documentId)
         .where('documentType', isEqualTo: documentType)
         .orderBy('initiatedAt', descending: true)
@@ -958,6 +855,7 @@ class CollaborationRepository {
   }) {
     return _firestore
         .collection('activity_timeline')
+        .where('companyId', isEqualTo: companyId)
         .where('documentId', isEqualTo: documentId)
         .where('documentType', isEqualTo: documentType)
         .orderBy('timestamp', descending: true)
@@ -994,9 +892,6 @@ class CollaborationRepository {
     }
   }
 
-  ApprovalRule? _findApplicableRule(List<ApprovalRule> rules, String documentId, String documentType) {
-    return rules.firstWhereOrNull((rule) => rule.documentType == documentType || rule.documentType == 'both');
-  }
 }
 
 final documentTimelineProvider = StreamProvider.family<List<ActivityTimelineItem>, ({String documentId, String documentType})>((ref, arg) {
@@ -1011,14 +906,5 @@ final activeApprovalWorkflowProvider = StreamProvider.family<ApprovalWorkflow?, 
 
 final collaborationRepositoryProvider = Provider<CollaborationRepository>((ref) {
   final firestore = ref.watch(firestoreProvider);
-  return CollaborationRepository(firestore);
+  return CollaborationRepository(firestore, ref.watch(companyIdProvider) ?? '');
 });
-
-extension _FirstWhereOrNull<T> on Iterable<T> {
-  T? firstWhereOrNull(bool Function(T) test) {
-    for (final element in this) {
-      if (test(element)) return element;
-    }
-    return null;
-  }
-}

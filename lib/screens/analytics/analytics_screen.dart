@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'document_trends.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -57,14 +60,14 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
 
     // Filter to selected date range
     final quotations = allQuotations.where((q) =>
-        (q.createdAt ?? DateTime(2000)).isAfter(cutoff)).toList();
+        (DateTime.tryParse(q.date) ?? DateTime(2000)).isAfter(cutoff)).toList();
     final invoices = allInvoices.where((i) =>
-        (i.createdAt ?? DateTime(2000)).isAfter(cutoff)).toList();
+        (DateTime.tryParse(i.date) ?? DateTime(2000)).isAfter(cutoff)).toList();
 
     // ── Metric computations ──────────────────────────────────────────────────
     final paidInvoices  = invoices.where((i) => i.status == 'Paid').toList();
     final totalRevenue  = paidInvoices.fold(0.0, (s, i) => s + i.total);
-    final totalCost     = paidInvoices.fold(0.0, (s, i) => s + i.subtotal * 0.4); // est 40% cost
+    final totalCost     = totalRevenue * 0.7; // Same explicitly estimated cost assumption as web analytics
     final avgMargin     = totalRevenue > 0
         ? ((totalRevenue - totalCost) / totalRevenue * 100).clamp(0, 100)
         : 0.0;
@@ -104,7 +107,11 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // Date Range Selection Row
+                ExpansionTile(title: const Text('Six-month trends'), children: [
+  MonthlyRevenueChart(invoices: allInvoices), const SizedBox(height: 16),
+  QuoteActivityChart(quotations: allQuotations), const SizedBox(height: 24),
+]),
+// Date Range Selection Row
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -143,9 +150,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                     children: [
                       _buildMetricCard(
                         context,
-                        title: 'Avg. Profit Margin',
+                        title: 'Estimated margin',
                         value: '${avgMargin.toStringAsFixed(1)}%',
-                        subtitle: 'Revenue: ${currency.format(totalRevenue)}',
+                        subtitle: 'Assumes costs are 70% of revenue',
                         icon: LucideIcons.trendingUp,
                         iconColor: semanticColors.success,
                         bgColor: const Color(0xFFF4781F),
@@ -321,8 +328,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     // Group by month for trend
     final now = DateTime.now();
     final prevMonth = DateTime(now.year, now.month - 1);
-    final prevPaid = paid.where((i) => (i.createdAt ?? DateTime(2000)).month == prevMonth.month && (i.createdAt ?? DateTime(2000)).year == prevMonth.year).fold(0.0, (s, i) => s + (i.total as num).toDouble());
-    final thisPaid = paid.where((i) => (i.createdAt ?? DateTime(2000)).month == now.month && (i.createdAt ?? DateTime(2000)).year == now.year).fold(0.0, (s, i) => s + (i.total as num).toDouble());
+    final prevPaid = paid.where((i) => (DateTime.tryParse(i.date) ?? DateTime(2000)).month == prevMonth.month && (DateTime.tryParse(i.date) ?? DateTime(2000)).year == prevMonth.year).fold(0.0, (s, i) => s + (i.total as num).toDouble());
+    final thisPaid = paid.where((i) => (DateTime.tryParse(i.date) ?? DateTime(2000)).month == now.month && (DateTime.tryParse(i.date) ?? DateTime(2000)).year == now.year).fold(0.0, (s, i) => s + (i.total as num).toDouble());
     final trend = prevPaid > 0 ? ((thisPaid - prevPaid) / prevPaid * 100) : 0.0;
 
     return Card(
@@ -340,7 +347,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
             const SizedBox(height: 16),
             _buildProfitItem('Total Revenue', total > 0 ? 1.0 : 0, currency.format(total), 'Paid invoices', colors.accentPrimary),
             const SizedBox(height: 12),
-            _buildProfitItem('Est. Profit (60%)', total > 0 ? 0.6 : 0, currency.format(total * 0.6), '~40% costs', colors.success),
+            _buildProfitItem('Estimated profit', total > 0 ? 0.3 : 0, currency.format(total * 0.3), 'Assumes 70% costs; not recorded expenses', colors.success),
             const SizedBox(height: 12),
             _buildProfitItem('Outstanding', 0.3, currency.format(invoices.where((i) => i.status == 'Sent' || i.status == 'Overdue').fold(0.0, (s, i) => s + (i.total as num).toDouble())), 'Unpaid invoices', Colors.blue),
             const Spacer(),
@@ -744,13 +751,13 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
   }
 
   // ── Export ────────────────────────────────────────────────────────────────
-  void _exportReport(
+  Future<void> _exportReport(
     BuildContext context, {
     required List<dynamic> quotations,
     required List<dynamic> invoices,
     required List<dynamic> customers,
     required List<dynamic> allInvoices,
-  }) {
+  }) async {
     final paid = invoices.where((i) => i.status == 'Paid').toList();
     final totalRevenue = paid.fold(0.0, (s, i) => s + (i.total as num).toDouble());
     final pipeline = quotations
@@ -783,8 +790,14 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
           '${DateFormat('MMM yyyy').format(e.month)},${e.revenue.toStringAsFixed(2)}');
     }
 
-    Share.share(buffer.toString(), subject: 'Analytics Report');
-    ref.read(feedbackControllerProvider).success(context, 'Report ready to share');
+    try {
+      final directory = await getTemporaryDirectory();
+      final file = File('${directory.path}/analytics-report.csv');
+      await file.writeAsString(buffer.toString());
+      await Share.shareXFiles([XFile(file.path, mimeType: 'text/csv')], subject: 'Analytics Report');
+    } catch (_) {
+      if (context.mounted) ref.read(feedbackControllerProvider).error(context, 'Could not export the report. Please try again.');
+    }
   }
 
   Widget _emptyCard(String message, bool isDark) {
