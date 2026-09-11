@@ -85,6 +85,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       String? mimeType;
 
       if (_imageFile != null) {
+        final length = await _imageFile!.length();
+        if (length > 5 * 1024 * 1024) {
+          throw Exception('Profile photo must be 5MB or smaller.');
+        }
         final bytes = await _imageFile!.readAsBytes();
         base64Image = base64Encode(bytes);
         final extension = _imageFile!.path.split('.').last.toLowerCase();
@@ -134,15 +138,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final initials = () {
-      final name = _displayNameController.text.isNotEmpty
-          ? _displayNameController.text
-          : userProfile?.email ?? '';
+      final name = _displayNameController.text.trim().isNotEmpty
+          ? _displayNameController.text.trim()
+          : (userProfile?.email ?? '').trim();
       if (name.isEmpty) return '?';
-      final parts = name.split(' ');
-      if (parts.length >= 2) {
+      final parts = name.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+      if (parts.length >= 2 && parts[0].isNotEmpty && parts[1].isNotEmpty) {
         return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
       }
-      return name[0].toUpperCase();
+      return parts.isNotEmpty && parts[0].isNotEmpty ? parts[0][0].toUpperCase() : '?';
     }();
 
     return MeshBackground(
@@ -231,7 +235,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           child: const Text('Change Photo'),
                         ),
                         Text(
-                          'Max file size 2MB. JPG or PNG.',
+                          'Max file size 5MB. JPG or PNG.',
                           style: textTheme.bodySmall?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),

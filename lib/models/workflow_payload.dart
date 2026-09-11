@@ -31,10 +31,10 @@ Map<String, dynamic> normalizeWorkflowPayload(Map<String, dynamic> input) {
   }
 
   final rawTrigger = input['trigger'];
-  final trigger = rawTrigger is String ? <String, dynamic>{} : object(rawTrigger, 'Trigger');
-  final type = text(trigger['type'] ?? trigger['event'] ?? input['triggerEvent'] ??
-      (rawTrigger is String && rawTrigger.contains('_') ? rawTrigger : input['type']), 'Trigger');
-  final conditions = list(trigger['conditions'] ?? input['conditions'], 'Conditions').map((raw) {
+  final trigger = rawTrigger is Map ? object(rawTrigger, 'Trigger') : <String, dynamic>{};
+  final type = resolveTriggerEvent(rawTrigger, input['triggerEvent'], input['type']);
+  final rawConditions = (trigger['conditions'] is List) ? trigger['conditions'] : input['conditions'];
+  final conditions = list(rawConditions, 'Conditions').map((raw) {
     final c = object(raw, 'Condition');
     final field = text(c['field'], 'Condition field');
     final operator = text(c['operator'], 'Condition operator', 'equals');
@@ -93,4 +93,64 @@ Map<String, dynamic> normalizeWorkflowPayload(Map<String, dynamic> input) {
     'retryDelaySeconds': integer(input['retryDelaySeconds'], 'Retry delay', max: 86400),
     'onFailureAction': input['onFailureAction'] == null ? null : text(input['onFailureAction'], 'Failure action'),
   };
+}
+
+String resolveTriggerEvent(Object? rawTrigger, Object? triggerEvent, Object? rawType) {
+  if (triggerEvent is String && triggerEvent.trim().isNotEmpty) {
+    return _canonicalizeTrigger(triggerEvent);
+  }
+  if (rawTrigger is Map) {
+    final candidate = rawTrigger['type'] ?? rawTrigger['event'];
+    if (candidate is String && candidate.trim().isNotEmpty) {
+      return _canonicalizeTrigger(candidate);
+    }
+  }
+  if (rawTrigger is String && rawTrigger.trim().isNotEmpty) {
+    final candidate = _canonicalizeTrigger(rawTrigger);
+    if (candidate.isNotEmpty) return candidate;
+  }
+  if (rawType is String && rawType.trim().isNotEmpty) {
+    final candidate = _canonicalizeTrigger(rawType);
+    if (candidate.isNotEmpty) return candidate;
+  }
+  return 'quotation_created';
+}
+
+String _canonicalizeTrigger(String input) {
+  final clean = input.trim();
+  final lower = clean.toLowerCase();
+
+  const known = [
+    'quotation_created',
+    'quotation_sent',
+    'quotation_accepted',
+    'quotation_declined',
+    'invoice_created',
+    'invoice_sent',
+    'invoice_paid',
+    'quotation_no_response',
+    'invoice_overdue',
+    'quote_expires_soon',
+    'job_status_changed',
+    'customer_created',
+  ];
+
+  if (known.contains(lower)) return lower;
+
+  if (lower.contains('quote') && (lower.contains('sent') || lower.contains('send'))) return 'quotation_sent';
+  if (lower.contains('quote') && lower.contains('accept')) return 'quotation_accepted';
+  if (lower.contains('quote') && lower.contains('decline')) return 'quotation_declined';
+  if (lower.contains('quote') && (lower.contains('expire') || lower.contains('soon'))) return 'quote_expires_soon';
+  if (lower.contains('no reply') || lower.contains('no_response')) return 'quotation_no_response';
+  if (lower.contains('quotation_created') || (lower.contains('quote') && lower.contains('create'))) return 'quotation_created';
+
+  if (lower.contains('invoice') && lower.contains('paid')) return 'invoice_paid';
+  if (lower.contains('invoice') && lower.contains('overdue')) return 'invoice_overdue';
+  if (lower.contains('invoice') && (lower.contains('sent') || lower.contains('send'))) return 'invoice_sent';
+  if (lower.contains('invoice_created') || (lower.contains('invoice') && lower.contains('create'))) return 'invoice_created';
+
+  if (lower.contains('job') && lower.contains('status')) return 'job_status_changed';
+  if (lower.contains('customer') && lower.contains('create')) return 'customer_created';
+
+  return clean;
 }

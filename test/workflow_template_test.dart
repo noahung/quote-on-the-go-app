@@ -38,7 +38,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
         }
-      });
+      }, tags: 'golden');
     }
   }
   for (final template in builtInWorkflowTemplates) {

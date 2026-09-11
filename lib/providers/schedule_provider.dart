@@ -35,6 +35,10 @@ class ScheduleRepository {
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     };
+    final startDt = DateTime.tryParse(event.start);
+    if (startDt != null) data['start'] = Timestamp.fromDate(startDt);
+    final endDt = DateTime.tryParse(event.end);
+    if (endDt != null) data['end'] = Timestamp.fromDate(endDt);
     // Ensure job fields are persisted if present
     if (event.customerId != null) data['customerId'] = event.customerId;
     if (event.customerName != null) data['customerName'] = event.customerName;
@@ -65,6 +69,10 @@ class ScheduleRepository {
       ...event.toJson()..remove('id'),
       'updatedAt': FieldValue.serverTimestamp(),
     };
+    final startDt = DateTime.tryParse(event.start);
+    if (startDt != null) data['start'] = Timestamp.fromDate(startDt);
+    final endDt = DateTime.tryParse(event.end);
+    if (endDt != null) data['end'] = Timestamp.fromDate(endDt);
     if (event.customerId != null) data['customerId'] = event.customerId;
     if (event.customerName != null) data['customerName'] = event.customerName;
     if (event.customerAddress != null) {

@@ -30,52 +30,60 @@ class NotificationService extends ChangeNotifier {
   );
 
   Future<void> initialize() async {
-    // 1. Request permission
-    final settings = await _fcm.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-    debugPrint('[FCM] Permission: ${settings.authorizationStatus}');
+    try {
+      // 1. Request permission
+      final settings = await _fcm.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      debugPrint('[FCM] Permission: ${settings.authorizationStatus}');
 
-    // 2. Set up local notifications plugin for foreground display
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosInit = DarwinInitializationSettings();
-    await _localNotifications.initialize(
-      const InitializationSettings(android: androidInit, iOS: iosInit),
-      onDidReceiveNotificationResponse: _onNotificationTap,
-    );
+      // 2. Set up local notifications plugin for foreground display
+      const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const iosInit = DarwinInitializationSettings();
+      await _localNotifications.initialize(
+        const InitializationSettings(android: androidInit, iOS: iosInit),
+        onDidReceiveNotificationResponse: _onNotificationTap,
+      );
 
-    // 3. Create the Android high-importance channel
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(_androidChannel);
+      // 3. Create the Android high-importance channel
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(_androidChannel);
 
-    // 4. Foreground message handler
-    FirebaseMessaging.onMessage.listen(_onForegroundMessage);
+      // 4. Foreground message handler
+      FirebaseMessaging.onMessage.listen(_onForegroundMessage);
 
-    // 5. Register background handler
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      // 5. Register background handler
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-    // 6. Handle notification tap when app was in background (not terminated)
-    FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
+      // 6. Handle notification tap when app was in background (not terminated)
+      FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
 
-    // Handle notification tap when app was terminated (initial message)
-    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
-    if (initialMessage != null) {
-      _onMessageOpenedApp(initialMessage);
+      // Handle notification tap when app was terminated (initial message)
+      final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+      if (initialMessage != null) {
+        _onMessageOpenedApp(initialMessage);
+      }
+
+      // 7. Save token once auth is confirmed, then keep refreshed
+      // Listen to auth state so the token is saved even on a fresh install
+      // where persistent auth restores the user asynchronously after initialize().
+      FirebaseAuth.instance.authStateChanges().listen((user) async {
+        if (user == null) return;
+        try {
+          final token = await _fcm.getToken();
+          if (token != null) await _saveToken(token);
+        } catch (e) {
+          debugPrint('[FCM] Error getting token: $e');
+        }
+      });
+      _fcm.onTokenRefresh.listen(_saveToken);
+    } catch (e, stack) {
+      debugPrint('[NotificationService] Initialization error: $e\n$stack');
     }
-
-    // 7. Save token once auth is confirmed, then keep refreshed
-    // Listen to auth state so the token is saved even on a fresh install
-    // where persistent auth restores the user asynchronously after initialize().
-    FirebaseAuth.instance.authStateChanges().listen((user) async {
-      if (user == null) return;
-      final token = await _fcm.getToken();
-      if (token != null) await _saveToken(token);
-    });
-    _fcm.onTokenRefresh.listen(_saveToken);
   }
 
   Future<String> _installationId() async {

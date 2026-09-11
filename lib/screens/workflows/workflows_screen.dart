@@ -436,9 +436,14 @@ class _WorkflowsScreenState extends ConsumerState<WorkflowsScreen> with SingleTi
     bool isDark, {
     required Map<String, dynamic> template,
   }) {
-    final title = template['title'] as String;
-    final desc = template['desc'] as String;
-    final trigger = template['trigger'] as String;
+    final title = (template['title'] ?? template['name'] ?? 'Untitled Sequence').toString();
+    final desc = (template['desc'] ?? template['description'] ?? '').toString();
+    final rawTrigger = template['trigger'];
+    final trigger = rawTrigger is String
+        ? rawTrigger
+        : (rawTrigger is Map
+            ? (rawTrigger['type'] ?? rawTrigger['event'] ?? 'Trigger')
+            : (template['type'] ?? 'Trigger')).toString();
     return Card(
       elevation: 0,
       color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/providers.dart';
-import '../../providers/auth_provider.dart';
 import '../../components/glass_card.dart';
 import '../../components/mesh_background.dart';
 import '../../models/models.dart';
@@ -95,7 +94,9 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
         final template = WorkflowTemplate.fromJson(widget.prefillTemplate!);
         _nameController.text = template.name;
         _descriptionController.text = template.description ?? '';
-        _selectedTrigger = template.triggerEvent ?? '';
+        _selectedTrigger = _kTriggers.contains(template.triggerEvent)
+            ? template.triggerEvent!
+            : _kTriggers.first;
         _isActive = template.isActive;
         _maxRetries = template.maxRetries;
         _retryDelaySeconds = template.retryDelaySeconds;
@@ -116,8 +117,8 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
             ..waitValue = source.delay?.value ?? source.waitDays ?? 1
             ..waitUnit = source.delay?.type ?? 'days';
         }).toList();
-      } on FormatException catch (error) {
-        _templateError = error.message;
+      } catch (error) {
+        _templateError = error is FormatException ? error.message : error.toString();
       }
     }
     if (_steps.isEmpty) _steps = [_WorkflowStep()];

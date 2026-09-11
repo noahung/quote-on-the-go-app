@@ -89,3 +89,25 @@ Remaining email finding: workflowProcessor.ts builds HTML directly from workflow
 
 - Full Flutter regression suite: 93 tests pass (document-copy-full-mobile-tests.txt). Three additional real detail-screen action tests pass using bundled fonts at 390px: invoice duplicate, quotation duplicate and accepted quotation conversion all persist a request and reach Saved requests. These complement the service tests; they do not claim complete large-text/detail-menu coverage. Client activity and accepted-quote headers now wrap instead of overflowing.
 - Follow-up account-screen review found remaining work in Edit profile and Sign-in methods: older local styling, photo size/type enforcement, safe initials for whitespace names, picker/save lifecycle handling, authentication state refresh and scrolling password dialogs. These screens have not yet been marked complete.
+
+## Follow-through: workflows, schedule parity, security, email alignment & account screens
+
+- **Workflow Template Crash Resolution**: Fixed mobile crash when selecting built-in templates (`type 'String' is not a subtype of type 'int' of 'index'`). In `workflow_payload.dart`, implemented `resolveTriggerEvent` to normalize human-readable trigger labels (e.g. `'QUOTE SENT > £5,000'`), nested maps, and legacy snake_case strings into canonical triggers. In `workflows_screen.dart`, safely extract template title, description, and trigger strings. In `create_workflow_screen.dart`, guard dropdown selection against unknown trigger values, and add recoverable error presentation. 19 workflow template tests pass.
+- **Schedule & Jobs Parity**: Mobile `schedule_provider.dart` now saves `start` and `end` as Firestore `Timestamp` objects (`Timestamp.fromDate(...)`). In web `eventActions.ts`, added `requireActor()` and `requireCompany()` authorization guards, plus dual-query support fetching both Firestore `Timestamp` and legacy ISO string ranges with ID deduplication, sorting, and background auto-migration to `Timestamp`. 9 action tests pass in `eventActions.test.ts`.
+- **User Profile Security Hardening**: In `profileActions.ts` and `/api/profile/update/route.ts`, enforced `requireActor()` authentication, validated active company membership, and restricted modifying other users' profiles to company `owner` or `admin`. Added input validation (strict username pattern, display name max length 100, valid image MIME types, and 5MB payload limit). 9 security tests pass in `profileActions.test.ts`.
+- **Workflow Branded Email & PDF Auth**: Cloud Functions `workflowProcessor.ts` now wraps workflow email messages in `wrapInWorkflowEmailFrame` (`#F3EFEA` background, 600px container, orange CTA button, quiet footer). Added `x-internal-service-key` support to web PDF endpoints (`/api/invoices/[id]/pdf` and `/api/quotations/[id]/pdf`) and passed internal auth headers when `workflowProcessor.ts` fetches original PDFs for attachments. 3 email frame unit tests pass. Functions build cleanly with `tsc`.
+- **Account Screen Polish & Assertion Fixes**:
+  - `EditProfileScreen`: Replaced whitespace splitting with `split(RegExp(r'\s+'))` and guarded against empty segments to eliminate `RangeError`. Added a 5MB image size check before encoding, and updated the helper label to 5MB.
+  - `SignInMethodsScreen`: Wrapped set-password and change-password dialogs in `SingleChildScrollView` to prevent keyboard layout overflow. Derived `authProvidersProvider` reactively from `currentUserProvider`.
+  - `reminder_settings_screen.dart`: Wrapped `_Panel` in `Material` instead of `Container` with `BoxDecoration`, eliminating Flutter 3.29's `ListTile` background assertion failure.
+  - Added `test/profile_and_auth_screen_test.dart` (7 tests covering safe initials, widget layout, and scrollable dialogs).
+  - Configured `TolerantGoldenFileComparator` in `test/flutter_test_config.dart` to support cross-platform font rasterization tolerance between macOS CoreText and Linux CI rendering.
+- **Verification Ledger**:
+  - Flutter test suite: 128 tests pass across 23 test files (`flutter test`).
+  - Web Jest suite: 89 tests pass across 8 suites (`npm test`).
+  - Web Vitest suite: 9 tests pass across 2 suites (`vitest run`).
+  - Web & Functions TypeScript: 0 errors (`tsc --noEmit` and `functions npm run build`).
+  - Mobile Static Analysis: 0 errors (`flutter analyze`).
+  - Android debug APK build completed successfully: `build/app/outputs/flutter-apk/app-debug.apk` (171 MB, built 11 September 2026 at 15:29 local time).
+  - Verification boundaries: No production customer emails sent; no live external OAuth connections initiated.
+

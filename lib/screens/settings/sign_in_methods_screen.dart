@@ -5,14 +5,14 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../components/glass_card.dart';
 import '../../components/mesh_background.dart';
+import '../../providers/auth_provider.dart';
 import '../../theme/semantic_colors.dart';
 import '../../utils/feedback_controller.dart';
 
-final authProvidersProvider = StreamProvider.autoDispose<List<String>>((ref) {
-  return FirebaseAuth.instance.authStateChanges().map((user) {
-    if (user == null) return [];
-    return user.providerData.map((p) => p.providerId).toList();
-  });
+final authProvidersProvider = Provider.autoDispose<List<String>>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return [];
+  return user.providerData.map((p) => p.providerId).toList();
 });
 
 class SignInMethodsScreen extends ConsumerWidget {
@@ -21,13 +21,11 @@ class SignInMethodsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final user = FirebaseAuth.instance.currentUser;
-    final providersAsync = ref.watch(authProvidersProvider);
+    final user = ref.watch(currentUserProvider);
+    final providers = ref.watch(authProvidersProvider);
 
-    final hasPassword = providersAsync.valueOrNull?.contains('password') ?? false;
-    final hasGoogle = providersAsync.valueOrNull?.contains('google.com') ?? false;
+    final hasPassword = providers.contains('password');
+    final hasGoogle = providers.contains('google.com');
 
     return MeshBackground(
       child: Scaffold(
@@ -178,44 +176,46 @@ class SignInMethodsScreen extends ConsumerWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
           title: const Text('Set Password'),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Set a password for your account. You\'ll be able to log in with your email and this password.',
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'New Password',
-                    hintText: 'Min 6 characters',
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Set a password for your account. You\'ll be able to log in with your email and this password.',
                   ),
-                  validator: (v) {
-                    if (v == null || v.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: confirmController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Confirm Password',
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: passwordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'New Password',
+                      hintText: 'Min 6 characters',
+                    ),
+                    validator: (v) {
+                      if (v == null || v.length < 6) {
+                        return 'Password must be at least 6 characters';
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (v) {
-                    if (v != passwordController.text) {
-                      return 'Passwords do not match';
-                    }
-                    return null;
-                  },
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: confirmController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirm Password',
+                    ),
+                    validator: (v) {
+                      if (v != passwordController.text) {
+                        return 'Passwords do not match';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -285,54 +285,56 @@ class SignInMethodsScreen extends ConsumerWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
           title: const Text('Change Password'),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: currentController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Current Password',
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: currentController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Current Password',
+                    ),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) {
+                        return 'Current password is required';
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) {
-                      return 'Current password is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: newController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'New Password',
-                    hintText: 'Min 6 characters',
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: newController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'New Password',
+                      hintText: 'Min 6 characters',
+                    ),
+                    validator: (v) {
+                      if (v == null || v.length < 6) {
+                        return 'Password must be at least 6 characters';
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (v) {
-                    if (v == null || v.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: confirmController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Confirm New Password',
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: confirmController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirm New Password',
+                    ),
+                    validator: (v) {
+                      if (v != newController.text) {
+                        return 'Passwords do not match';
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (v) {
-                    if (v != newController.text) {
-                      return 'Passwords do not match';
-                    }
-                    return null;
-                  },
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           actions: [

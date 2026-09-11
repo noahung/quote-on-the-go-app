@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -19,9 +20,6 @@ void main() async {
   final firebaseService = FirebaseService();
   await firebaseService.initialize();
 
-  // Initialize FCM / local notifications
-  await NotificationService().initialize();
-
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -41,6 +39,11 @@ void main() async {
       child: MyApp(),
     ),
   );
+
+  // Initialize FCM / local notifications in background so UI renders immediately
+  unawaited(NotificationService().initialize().catchError((e) {
+    debugPrint('Notification service init error: $e');
+  }));
 }
 
 class MyApp extends ConsumerWidget {

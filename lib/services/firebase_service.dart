@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import '../firebase_options.dart';
 
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
@@ -21,7 +22,9 @@ class FirebaseService {
 
   Future<void> initialize() async {
     try {
-      await Firebase.initializeApp();
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
       _initialized = true;
 
       // Enable offline persistence for Firestore
@@ -29,15 +32,6 @@ class FirebaseService {
         persistenceEnabled: true,
         cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
       );
-
-      // Configure FCM
-      if (!kIsWeb && messaging != null) {
-        await messaging!.requestPermission(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
-      }
     } catch (e) {
       debugPrint('Firebase initialization failed: $e');
       debugPrint('App will run without Firebase features.');
