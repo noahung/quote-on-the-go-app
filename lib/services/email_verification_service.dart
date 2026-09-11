@@ -27,18 +27,20 @@ class EmailVerificationService {
         return (success: false, error: 'User is not authenticated.');
       }
 
-      final response = await http.post(
-        Uri.parse('$_baseUrl/api/auth/send-verification-code'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $idToken',
-        },
-        body: jsonEncode({
-          'uid': uid,
-          'email': email,
-          'displayName': displayName,
-        }),
-      );
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/api/auth/send-verification-code'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $idToken',
+            },
+            body: jsonEncode({
+              'uid': uid,
+              'email': email,
+              'displayName': displayName,
+            }),
+          )
+          .timeout(const Duration(seconds: 45));
 
       if (response.statusCode == 200) {
         return (success: true, error: null);
@@ -50,7 +52,10 @@ class EmailVerificationService {
         error: body['error'] as String? ?? 'Failed to send verification code.'
       );
     } catch (e) {
-      return (success: false, error: 'Network error: ${e.toString()}');
+      return (
+        success: false,
+        error: 'Could not connect. Check your connection and try again.'
+      );
     }
   }
 
@@ -64,21 +69,24 @@ class EmailVerificationService {
         return (success: false, error: 'User is not authenticated.');
       }
 
-      final response = await http.post(
-        Uri.parse('$_baseUrl/api/auth/verify-code'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $idToken',
-        },
-        body: jsonEncode({
-          'uid': uid,
-          'code': code,
-        }),
-      );
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/api/auth/verify-code'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $idToken',
+            },
+            body: jsonEncode({
+              'uid': uid,
+              'code': code,
+            }),
+          )
+          .timeout(const Duration(seconds: 45));
 
       if (response.statusCode == 200) {
         // Reload the Firebase Auth user so emailVerified is updated locally
         await FirebaseAuth.instance.currentUser?.reload();
+        await FirebaseAuth.instance.currentUser?.getIdToken(true);
         return (success: true, error: null);
       }
 
@@ -88,7 +96,10 @@ class EmailVerificationService {
         error: body['error'] as String? ?? 'Verification failed.'
       );
     } catch (e) {
-      return (success: false, error: 'Network error: ${e.toString()}');
+      return (
+        success: false,
+        error: 'Could not connect. Check your connection and try again.'
+      );
     }
   }
 }

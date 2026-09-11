@@ -14,8 +14,9 @@ enum _SortBy { name, revenue, lastActivity }
 enum _CrmStatus { active, overdue, inactive }
 
 _CrmStatus _deriveStatus(Customer c, List<dynamic> invoices) {
-  final ci = invoices.where((i) =>
-      i.customerEmail == c.email || i.customerName == c.name).toList();
+  final ci = invoices
+      .where((i) => i.customerEmail == c.email || i.customerName == c.name)
+      .toList();
   if (ci.any((i) => i.status == 'Overdue')) return _CrmStatus.overdue;
   if (ci.any((i) =>
       i.status == 'Paid' || i.status == 'Sent' || i.status == 'Pending')) {
@@ -60,18 +61,18 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
           c.name.toLowerCase().contains(_searchQuery) ||
           c.email.toLowerCase().contains(_searchQuery) ||
           (c.phone ?? '').toLowerCase().contains(_searchQuery);
-      final matchesTag =
-          _selectedTag == null || c.tags.contains(_selectedTag);
+      final matchesTag = _selectedTag == null || c.tags.contains(_selectedTag);
       return matchesSearch && matchesTag;
     }).toList();
 
     switch (_sortBy) {
       case _SortBy.name:
-        list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        list.sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         break;
       case _SortBy.revenue:
-        list.sort((a, b) =>
-            (b.totalSpent ?? 0.0).compareTo(a.totalSpent ?? 0.0));
+        list.sort(
+            (a, b) => (b.totalSpent ?? 0.0).compareTo(a.totalSpent ?? 0.0));
         break;
       case _SortBy.lastActivity:
         list.sort((a, b) {
@@ -112,7 +113,8 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
             onMenuPressed: () => openDrawer(ref),
             actions: [
               IconButton(
-                icon: const Icon(Icons.add, color: Colors.white),
+                icon: const Icon(Icons.add),
+                tooltip: 'Add customer',
                 onPressed: () => context.push('/customers/new'),
               ),
             ],
@@ -214,9 +216,7 @@ class _SortButton extends StatelessWidget {
   final bool isDark;
 
   const _SortButton(
-      {required this.current,
-      required this.onChanged,
-      required this.isDark});
+      {required this.current, required this.onChanged, required this.isDark});
 
   String get _label {
     switch (current) {
@@ -238,9 +238,7 @@ class _SortButton extends StatelessWidget {
         height: 48,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: isDark
-              ? const Color(0xFF1E1E24)
-              : const Color(0xFFF0F4F9),
+          color: isDark ? const Color(0xFF1E1E24) : const Color(0xFFF0F4F9),
           borderRadius: BorderRadius.circular(999),
         ),
         child: Row(
@@ -371,8 +369,10 @@ class _SummaryStrip extends StatelessWidget {
       return sum + (c.totalSpent ?? 0.0);
     });
 
-    final cardColor = isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white;
-    final borderColor = isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06);
+    final cardColor =
+        isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white;
+    final borderColor =
+        isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06);
     final labelColor = isDark ? Colors.white38 : Colors.black38;
 
     return Padding(
@@ -396,12 +396,15 @@ class _SummaryStrip extends StatelessWidget {
             _StatCell(
               value: '$overdue',
               label: 'Overdue',
-              valueColor: overdue > 0 ? const Color(0xFFFF3B30) : (isDark ? Colors.white : Colors.black87),
+              valueColor: overdue > 0
+                  ? const Color(0xFFFF3B30)
+                  : (isDark ? Colors.white : Colors.black87),
               labelColor: labelColor,
             ),
             _StatDivider(color: borderColor),
             _StatCell(
-              value: NumberFormat.compactCurrency(symbol: '£').format(totalRevenue),
+              value: NumberFormat.compactCurrency(symbol: '£')
+                  .format(totalRevenue),
               label: 'Revenue',
               valueColor: isDark ? Colors.white : Colors.black87,
               labelColor: labelColor,
@@ -494,7 +497,8 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Add your first customer to get started',
-            style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5)),
+            style:
+                TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5)),
           ),
         ],
       ),
@@ -507,8 +511,7 @@ class _CustomerCard extends ConsumerWidget {
   final Customer customer;
   final _CrmStatus crmStatus;
 
-  const _CustomerCard(
-      {required this.customer, required this.crmStatus});
+  const _CustomerCard({required this.customer, required this.crmStatus});
 
   Color _statusColor(BuildContext context) {
     switch (crmStatus) {
@@ -591,14 +594,15 @@ class _CustomerCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     final avatarColor = _getAvatarColor(customer.name, isDark);
     final avatarTextColor = _getAvatarTextColor(customer.name, isDark);
-    
+
     final initials = customer.name.trim().isEmpty
         ? '?'
         : customer.name.trim().split(' ').length > 1
-            ? '${customer.name.trim().split(' ').first[0]}${customer.name.trim().split(' ').last[0]}'.toUpperCase()
+            ? '${customer.name.trim().split(' ').first[0]}${customer.name.trim().split(' ').last[0]}'
+                .toUpperCase()
             : customer.name.trim()[0].toUpperCase();
 
     return Padding(
@@ -692,7 +696,8 @@ class _CustomerCard extends ConsumerWidget {
                                 horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: isDark
-                                  ? _statusColor(context).withValues(alpha: 0.15)
+                                  ? _statusColor(context)
+                                      .withValues(alpha: 0.15)
                                   : _statusBg(),
                               borderRadius: BorderRadius.circular(99),
                             ),
@@ -747,8 +752,7 @@ class _CustomerCard extends ConsumerWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    if (customer.totalSpent != null &&
-                        customer.totalSpent! > 0)
+                    if (customer.totalSpent != null && customer.totalSpent! > 0)
                       Text(
                         NumberFormat.compactCurrency(symbol: '£')
                             .format(customer.totalSpent),
@@ -795,8 +799,7 @@ class _MiniTag extends StatelessWidget {
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w600,
-          color:
-              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
       ),
     );

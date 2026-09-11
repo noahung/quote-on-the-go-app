@@ -9,7 +9,8 @@ import '../../providers/providers.dart';
 import '../../theme/semantic_colors.dart';
 
 class IntegrationsScreen extends ConsumerStatefulWidget {
-  const IntegrationsScreen({super.key});
+  const IntegrationsScreen({super.key, this.connectionFailed = false});
+  final bool connectionFailed;
 
   @override
   ConsumerState<IntegrationsScreen> createState() => _IntegrationsScreenState();
@@ -25,8 +26,9 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
     final company = ref.read(companyProvider);
     final tier = company?.tier;
     final status = company?.subscriptionStatus;
-    final isPremium = (tier == 'premium' || tier == 'individual' || tier == 'organisation') &&
-        (status == 'active' || status == 'referral_trial');
+    final isPremium =
+        (tier == 'premium' || tier == 'individual' || tier == 'organisation') &&
+            (status == 'active' || status == 'referral_trial');
     if (!isPremium) {
       showDialog(
         context: context,
@@ -70,7 +72,9 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Failed to connect Xero: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Failed to connect Xero: $e'),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -86,9 +90,12 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Disconnect Xero?'),
-        content: const Text('This will revoke access. Your existing data will not be deleted.'),
+        content: const Text(
+            'This will revoke access. Your existing data will not be deleted.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -105,13 +112,17 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
       await service.disconnectXero(companyId: company.id);
       if (mounted) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Xero disconnected'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text('Xero disconnected'),
+              backgroundColor: Colors.green),
         );
       }
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Failed to disconnect Xero: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Failed to disconnect Xero: $e'),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -138,7 +149,9 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Xero sync failed: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Xero sync failed: $e'),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -172,7 +185,9 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Failed to connect QuickBooks: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Failed to connect QuickBooks: $e'),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -188,9 +203,12 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Disconnect QuickBooks?'),
-        content: const Text('This will revoke access. Your data will not be deleted.'),
+        content: const Text(
+            'This will revoke access. Your data will not be deleted.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -207,13 +225,17 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
       await service.disconnectQuickBooks(companyId: company.id);
       if (mounted) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('QuickBooks disconnected'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text('QuickBooks disconnected'),
+              backgroundColor: Colors.green),
         );
       }
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Failed to disconnect: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Failed to disconnect: $e'),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -233,7 +255,9 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Failed to connect Monday.com: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Failed to connect Monday.com: $e'),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -247,9 +271,12 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Disconnect Monday.com?'),
-        content: const Text('This will remove board mappings. Your data will not be deleted.'),
+        content: const Text(
+            'This will remove board mappings. Your data will not be deleted.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -266,13 +293,17 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
       await service.disconnectMonday();
       if (mounted) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Monday.com disconnected'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text('Monday.com disconnected'),
+              backgroundColor: Colors.green),
         );
       }
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Failed to disconnect: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Failed to disconnect: $e'),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -300,13 +331,18 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
         builder: (ctx, setSheetState) {
           if (isLoadingBoards) {
             isLoadingBoards = false;
-            ref.read(integrationServiceProvider).getMondayBoards().then((result) {
+            ref
+                .read(integrationServiceProvider)
+                .getMondayBoards()
+                .then((result) {
               setSheetState(() => boards = result);
             }).catchError((e) {
               if (ctx.mounted) {
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to load boards: $e'), backgroundColor: Colors.red),
+                  SnackBar(
+                      content: Text('Failed to load boards: $e'),
+                      backgroundColor: Colors.red),
                 );
               }
             });
@@ -324,7 +360,10 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Configure Monday.com Boards',
-                    style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                    style: Theme.of(ctx)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 16),
                 if (boards.isEmpty)
                   const Padding(
@@ -336,7 +375,8 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
                     label: 'Quotations Board',
                     boards: boards,
                     value: quotationsBoardId,
-                    onChanged: (v) => setSheetState(() => quotationsBoardId = v),
+                    onChanged: (v) =>
+                        setSheetState(() => quotationsBoardId = v),
                   ),
                   const SizedBox(height: 12),
                   _BoardDropdown(
@@ -358,7 +398,9 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
                     child: FilledButton(
                       onPressed: () async {
                         try {
-                          await ref.read(integrationServiceProvider).configureMondayBoards(
+                          await ref
+                              .read(integrationServiceProvider)
+                              .configureMondayBoards(
                                 quotationsBoardId: quotationsBoardId,
                                 invoicesBoardId: invoicesBoardId,
                                 customersBoardId: customersBoardId,
@@ -395,16 +437,65 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
   }
 
   Future<void> _connectGoogleCalendar(BuildContext context) async {
-    if (!_checkPremiumOrPrompt(context)) return;
-    final messenger = ScaffoldMessenger.of(context);
-    final service = ref.read(integrationServiceProvider);
-    final url = service.getGoogleCalendarConnectUrl();
-    await _launchUrl(context, url);
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Complete the OAuth flow in your browser. The integration will appear here once connected.'),
-      ),
-    );
+    if (_gcalLoading || !_checkPremiumOrPrompt(context)) return;
+    setState(() => _gcalLoading = true);
+    try {
+      final url =
+          await ref.read(integrationServiceProvider).connectGoogleCalendar();
+      if (mounted) await _launchUrl(this.context, url);
+    } catch (_) {
+      if (mounted)
+        ScaffoldMessenger.of(this.context).showSnackBar(const SnackBar(
+            content: Text(
+                'Could not start the Google Calendar connection. Please try again.')));
+    } finally {
+      if (mounted) setState(() => _gcalLoading = false);
+    }
+  }
+
+  Future<void> _syncQuickBooks({String action = 'full'}) async {
+    if (_qbLoading) return;
+    setState(() => _qbLoading = true);
+    try {
+      final result = await ref
+          .read(integrationServiceProvider)
+          .syncQuickBooks(action: action);
+      final count = result['imported'] ??
+          ((result['customersImported'] as num? ?? 0) +
+              (result['invoicesImported'] as num? ?? 0) +
+              (result['servicesImported'] as num? ?? 0));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content:
+                Text('QuickBooks import finished: $count records processed.')));
+    } catch (error) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'QuickBooks import could not finish. ${error.toString().replaceFirst('Exception: ', '')}')));
+    } finally {
+      if (mounted) setState(() => _qbLoading = false);
+    }
+  }
+
+  Future<void> _syncMonday() async {
+    if (_mondayLoading) return;
+    setState(() => _mondayLoading = true);
+    try {
+      final result = await ref.read(integrationServiceProvider).syncMonday();
+      final message =
+          '${result['synced'] ?? 0} records synced. ${result['warning'] ?? ''}';
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+    } catch (error) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'Monday sync could not finish. ${error.toString().replaceFirst('Exception: ', '')}')));
+    } finally {
+      if (mounted) setState(() => _mondayLoading = false);
+    }
   }
 
   Future<void> _disconnectGoogleCalendar(BuildContext context) async {
@@ -415,9 +506,12 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Disconnect Google Calendar?'),
-        content: const Text('Scheduled jobs will no longer sync to your calendar.'),
+        content:
+            const Text('Scheduled jobs will no longer sync to your calendar.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -434,13 +528,17 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
       await service.disconnectGoogleCalendar(companyId: company.id);
       if (mounted) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Google Calendar disconnected'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text('Google Calendar disconnected'),
+              backgroundColor: Colors.green),
         );
       }
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Failed to disconnect: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Failed to disconnect: $e'),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -457,7 +555,8 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final tier = company?.tier;
-    final isPremium = tier == 'premium' || tier == 'individual' || tier == 'organisation';
+    final isPremium =
+        tier == 'premium' || tier == 'individual' || tier == 'organisation';
     final role = userProfile?.role.toLowerCase();
     final canManage = role == 'owner' || role == 'admin';
 
@@ -495,6 +594,12 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (widget.connectionFailed) ...[
+              Text(
+                  'The connection was cancelled or could not be completed. Try connecting again.',
+                  style: TextStyle(color: colorScheme.error)),
+              const SizedBox(height: 16),
+            ],
             Text(
               'Connect third-party services to enhance your workflow',
               style: TextStyle(
@@ -503,10 +608,10 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
               ),
             ),
             const SizedBox(height: 20),
-
             _IntegrationCard(
               title: 'QuickBooks Online',
-              description: 'Sync customers, invoices, and services with QuickBooks Online.',
+              description:
+                  'Sync customers, invoices, and services with QuickBooks Online.',
               icon: LucideIcons.wallet,
               iconColor: const Color(0xFF2CA01C),
               imageAssetPath: 'assets/images/quickbooks-logo.png',
@@ -524,25 +629,25 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
                 _IntegrationAction(
                   label: 'Sync All',
                   icon: LucideIcons.refreshCw,
-                  onTap: () => _launchUrl(context, 'https://app.quoteonthego.co.uk/settings/integrations'),
+                  onTap: () => _syncQuickBooks(action: 'full'),
                 ),
                 _IntegrationAction(
                   label: 'Import Customers',
                   icon: LucideIcons.download,
-                  onTap: () => _launchUrl(context, 'https://app.quoteonthego.co.uk/settings/integrations'),
+                  onTap: () => _syncQuickBooks(action: 'customers'),
                 ),
                 _IntegrationAction(
                   label: 'Import Invoices',
                   icon: LucideIcons.receipt,
-                  onTap: () => _launchUrl(context, 'https://app.quoteonthego.co.uk/settings/integrations'),
+                  onTap: () => _syncQuickBooks(action: 'invoices'),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-
             _IntegrationCard(
               title: 'Xero Integration',
-              description: 'Import contacts, sales invoices, and inventory items bidirectionally with Xero accounting.',
+              description:
+                  'Import contacts, sales invoices, and inventory items bidirectionally with Xero accounting.',
               icon: LucideIcons.fileSpreadsheet,
               iconColor: const Color(0xFF13B5EA),
               imageAssetPath: 'assets/images/xero-logo.png',
@@ -580,10 +685,10 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
               ],
             ),
             const SizedBox(height: 16),
-
             _IntegrationCard(
               title: 'Monday.com',
-              description: 'Sync quotations, invoices, and customers with Monday.com boards.',
+              description:
+                  'Sync quotations, invoices, and customers with Monday.com boards.',
               icon: LucideIcons.table2,
               iconColor: const Color(0xFFFF3D57),
               imageAssetPath: 'assets/images/monday-logo.png',
@@ -606,12 +711,11 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
                 _IntegrationAction(
                   label: 'Sync Now',
                   icon: LucideIcons.refreshCw,
-                  onTap: () => _launchUrl(context, 'https://app.quoteonthego.co.uk/settings/integrations'),
+                  onTap: _syncMonday,
                 ),
               ],
             ),
             const SizedBox(height: 16),
-
             _IntegrationCard(
               title: 'Google Calendar',
               description: 'Sync your scheduled jobs with Google Calendar.',
@@ -629,14 +733,13 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
               onDisconnect: () => _disconnectGoogleCalendar(context),
               showLastSync: false,
             ),
-
             const SizedBox(height: 24),
-
             GlassCard(
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: colorScheme.primary, size: 20),
+                  Icon(Icons.info_outline,
+                      color: colorScheme.primary, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -760,7 +863,9 @@ class _IntegrationCard extends StatelessWidget {
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: imageAssetPath != null
-                        ? (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04))
+                        ? (isDark
+                            ? Colors.white.withValues(alpha: 0.08)
+                            : Colors.black.withValues(alpha: 0.04))
                         : iconColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -770,7 +875,8 @@ class _IntegrationCard extends StatelessWidget {
                           child: Image.asset(
                             imageAssetPath!,
                             fit: BoxFit.contain,
-                            errorBuilder: (ctx, err, stack) => Icon(icon, color: iconColor, size: 24),
+                            errorBuilder: (ctx, err, stack) =>
+                                Icon(icon, color: iconColor, size: 24),
                           ),
                         )
                       : Icon(icon, color: iconColor, size: 24),
@@ -780,7 +886,9 @@ class _IntegrationCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
                           Text(
                             title,
@@ -813,12 +921,19 @@ class _IntegrationCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 2),
-                      Row(
+                      Wrap(
+                        spacing: 4,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Icon(
-                            isConnected ? LucideIcons.checkCircle : LucideIcons.circle,
+                            isConnected
+                                ? LucideIcons.checkCircle
+                                : LucideIcons.circle,
                             size: 14,
-                            color: isConnected ? semanticColors.success : colorScheme.onSurfaceVariant,
+                            color: isConnected
+                                ? semanticColors.success
+                                : colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -876,11 +991,12 @@ class _IntegrationCard extends StatelessWidget {
                 runSpacing: 8,
                 children: actions!.map((action) {
                   return OutlinedButton.icon(
-                    onPressed: canManage ? action.onTap : null,
+                    onPressed: canManage && !isLoading ? action.onTap : null,
                     icon: Icon(action.icon, size: 16),
                     label: Text(action.label),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       textStyle: const TextStyle(fontSize: 12),
                     ),
                   );
@@ -908,8 +1024,10 @@ class _IntegrationCard extends StatelessWidget {
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                runSpacing: 8,
                 children: [
                   if (isLoading)
                     SizedBox(
@@ -917,7 +1035,9 @@ class _IntegrationCard extends StatelessWidget {
                       height: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: isConnected ? semanticColors.error : colorScheme.primary,
+                        color: isConnected
+                            ? semanticColors.error
+                            : colorScheme.primary,
                       ),
                     )
                   else ...[

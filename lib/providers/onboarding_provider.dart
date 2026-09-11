@@ -13,6 +13,8 @@ final onboardingRepositoryProvider = Provider<OnboardingRepository>(
 class OnboardingFormState {
   final int currentStep;
   final String displayName;
+  final String userPhone;
+  final String jobTitle;
   final String companyName;
   final String companyEmail;
   final String companyPhone;
@@ -34,6 +36,8 @@ class OnboardingFormState {
   const OnboardingFormState({
     this.currentStep = 0,
     this.displayName = '',
+    this.userPhone = '',
+    this.jobTitle = '',
     this.companyName = '',
     this.companyEmail = '',
     this.companyPhone = '',
@@ -56,6 +60,8 @@ class OnboardingFormState {
   OnboardingFormState copyWith({
     int? currentStep,
     String? displayName,
+    String? userPhone,
+    String? jobTitle,
     String? companyName,
     String? companyEmail,
     String? companyPhone,
@@ -79,6 +85,8 @@ class OnboardingFormState {
     return OnboardingFormState(
       currentStep: currentStep ?? this.currentStep,
       displayName: displayName ?? this.displayName,
+      userPhone: userPhone ?? this.userPhone,
+      jobTitle: jobTitle ?? this.jobTitle,
       companyName: companyName ?? this.companyName,
       companyEmail: companyEmail ?? this.companyEmail,
       companyPhone: companyPhone ?? this.companyPhone,
@@ -119,6 +127,10 @@ class OnboardingNotifier extends StateNotifier<OnboardingFormState> {
 
   void updateDisplayName(String value) =>
       state = state.copyWith(displayName: value);
+
+  void updatePersonalDetails(
+          {required String phone, required String jobTitle}) =>
+      state = state.copyWith(userPhone: phone, jobTitle: jobTitle);
 
   void updateCompanyName(String value) =>
       state = state.copyWith(companyName: value);
@@ -181,18 +193,21 @@ class OnboardingNotifier extends StateNotifier<OnboardingFormState> {
   }
 
   Future<bool> submit(String uid) async {
+    if (state.isSubmitting) return false;
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {
-      final name = state.displayName.trim().isEmpty 
-          ? (state.companyEmail.split('@').first) 
+      final name = state.displayName.trim().isEmpty
+          ? (state.companyEmail.split('@').first)
           : state.displayName;
-      final compName = state.companyName.trim().isEmpty 
-          ? "$name's Company" 
+      final compName = state.companyName.trim().isEmpty
+          ? "$name's Company"
           : state.companyName;
 
       await _repository.completeOnboarding(
         uid: uid,
         displayName: name,
+        userPhone: state.userPhone,
+        jobTitle: state.jobTitle,
         email: state.companyEmail,
         companyName: compName,
         companyEmail: state.companyEmail,

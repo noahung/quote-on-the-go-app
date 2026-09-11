@@ -3,786 +3,132 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/providers.dart';
-import '../../theme/semantic_colors.dart';
-import '../../components/mesh_background.dart';
-import '../../components/glass_card.dart';
+import '../../components/settings_action_row.dart';
 
-class SettingsScreen extends ConsumerStatefulWidget {
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
-
   @override
-  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  final bool _isSubscriptionLoading = false;
-
-  Color _getAvatarColor(String name, bool isDark) {
-    final int hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
-    final List<Color> lightColors = [
-      const Color(0xFFC2E7FF),
-      const Color(0xFFC4EED0),
-      const Color(0xFFFEEFC3),
-      const Color(0xFFFAD2E1),
-      const Color(0xFFE8EAED),
-      const Color(0xFFD7C4F2),
-    ];
-    final List<Color> darkColors = [
-      const Color(0xFF004A77),
-      const Color(0xFF07522C),
-      const Color(0xFF7A5C00),
-      const Color(0xFF7D1B46),
-      const Color(0xFF3C4043),
-      const Color(0xFF532E7E),
-    ];
-    final list = isDark ? darkColors : lightColors;
-    return list[hash % list.length];
-  }
-
-  Color _getAvatarTextColor(String name, bool isDark) {
-    final int hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
-    final List<Color> lightTextColors = [
-      const Color(0xFF001D35),
-      const Color(0xFF072711),
-      const Color(0xFF553D00),
-      const Color(0xFF4B0024),
-      const Color(0xFF202124),
-      const Color(0xFF2C0A5E),
-    ];
-    final List<Color> darkTextColors = [
-      const Color(0xFFC2E7FF),
-      const Color(0xFFC4EED0),
-      const Color(0xFFFEEFC3),
-      const Color(0xFFFAD2E1),
-      const Color(0xFFE8EAED),
-      const Color(0xFFD7C4F2),
-    ];
-    final list = isDark ? darkTextColors : lightTextColors;
-    return list[hash % list.length];
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-    final userProfile = ref.watch(userProfileProvider);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(userProfileProvider);
     final company = ref.watch(companyProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final avatarName = userProfile?.displayName ?? userProfile?.email ?? 'User';
-    final avatarColor = _getAvatarColor(avatarName, isDark);
-    final avatarTextColor = _getAvatarTextColor(avatarName, isDark);
-
-    return MeshBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          leading: IconButton(
-            icon: const Icon(LucideIcons.arrowLeft),
-            onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/');
-              }
-            },
-          ),
-          title: const Text(
-            'Settings',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-        ),
-        body: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          children: [
-            // Profile Header
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Column(
+    final role = user?.role.toLowerCase();
+    Widget heading(String title) =>
+        SettingsSectionHeading(title, first: title == 'Your account');
+    Widget row(IconData icon, String title, String subtitle, String path) =>
+        SettingsActionRow(
+            icon: icon,
+            title: title,
+            subtitle: subtitle,
+            onTap: () => context.push(path));
+    return Scaffold(
+      appBar: AppBar(
+          toolbarHeight: 56 * MediaQuery.textScalerOf(context).scale(22) / 22,
+          title: const Text('Account & app settings')),
+      body: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: ListView(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
                 children: [
-                  GestureDetector(
-                    onTap: () => context.push('/profile/edit'),
-                    child: Stack(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: colorScheme.primary.withValues(alpha: 0.6),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: CircleAvatar(
-                            radius: 40,
-                            backgroundColor: avatarColor,
-                            backgroundImage: userProfile?.photoURL != null &&
-                                    userProfile!.photoURL!.isNotEmpty
-                                ? NetworkImage(userProfile.photoURL!)
-                                : null,
-                            child: userProfile?.photoURL == null ||
-                                    userProfile!.photoURL!.isEmpty
-                                ? Text(
-                                    userProfile?.displayName != null &&
-                                            userProfile!.displayName!.isNotEmpty
-                                        ? userProfile.displayName![0].toUpperCase()
-                                        : userProfile?.email != null &&
-                                                userProfile!.email!.isNotEmpty
-                                            ? userProfile.email![0].toUpperCase()
-                                            : '?',
-                                    style: TextStyle(
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.bold,
-                                      color: avatarTextColor,
-                                    ),
-                                  )
-                                : null,
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: colorScheme.primary,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isDark ? Colors.grey.shade900 : Colors.white,
-                                width: 1.5,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt,
-                              size: 14,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    userProfile?.displayName ?? userProfile?.email ?? 'User',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  if (userProfile?.email != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      userProfile!.email!,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
+                  heading('Your account'),
+                  row(LucideIcons.user, 'Edit profile',
+                      'Name, username and photo', '/profile/edit'),
+                  row(LucideIcons.keyRound, 'Sign-in methods',
+                      'Password and linked accounts', '/sign-in-methods'),
+                  heading('Your business'),
+                  row(
+                      LucideIcons.building2,
+                      'Company details',
+                      company?.name ?? 'Branding and contact details',
+                      '/company-branding'),
+                  row(LucideIcons.briefcase, 'Services',
+                      'Your service catalogue and prices', '/services'),
+                  row(LucideIcons.receipt, 'Expenses',
+                      'Costs and receipt attachments', '/expenses'),
+                  row(LucideIcons.files, 'Templates',
+                      'Documents and checklists', '/settings/templates'),
+                  row(LucideIcons.bell, 'Payment reminders',
+                      'Automated invoice follow-ups', '/settings/reminders'),
+                  if (['owner', 'admin'].contains(role)) ...[
+                    row(LucideIcons.users, 'Team management',
+                        'Invitations and member roles', '/team'),
+                    row(
+                        LucideIcons.link,
+                        'Integrations',
+                        'Accounting, calendars and connected tools',
+                        '/integrations'),
                   ],
-                  if (company != null) ...[
-                    const SizedBox(height: 12),
-                    (() {
-                      final isPremiumTier = company.tier == 'premium' || company.tier == 'individual' || company.tier == 'organisation';
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 6),
-                        decoration: BoxDecoration(
-                          gradient: isPremiumTier
-                              ? LinearGradient(
-                                  colors: [
-                                    colorScheme.primary,
-                                    Color.lerp(colorScheme.primary,
-                                        Colors.orangeAccent, 0.4)!,
-                                  ],
-                                )
-                              : null,
-                          color: !isPremiumTier
-                              ? colorScheme.onSurface.withValues(alpha: 0.08)
-                              : null,
-                          borderRadius: BorderRadius.circular(999),
-                          boxShadow: isPremiumTier
-                              ? [
-                                  BoxShadow(
-                                    color: colorScheme.primary
-                                        .withValues(alpha: 0.24),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        child: Text(
-                          company.tier.toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: isPremiumTier
-                                ? colorScheme.onPrimary
-                                : colorScheme.onSurface.withValues(alpha: 0.65),
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                      );
-                    })(),
+                  if (role == 'owner') ...[
+                    row(LucideIcons.creditCard, 'Plan & billing',
+                        'Subscription and payment details', '/billing'),
+                    row(LucideIcons.gift, 'Referrals',
+                        'Invite another business', '/referral'),
                   ],
-                ],
-              ),
-            ),
-
-            // PROFILE & COMPANY Section
-            const _SectionHeader(title: 'Profile & Company'),
-            GlassCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: Icon(LucideIcons.user, color: colorScheme.primary),
-                    title: const Text('Edit Profile',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(
-                      userProfile?.displayName != null && userProfile!.displayName!.isNotEmpty
-                          ? userProfile.displayName!
-                          : 'Manage display name, username & avatar',
-                      style: TextStyle(
-                          color: colorScheme.onSurface.withValues(alpha: 0.6)),
-                    ),
-                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
-                    onTap: () => context.push('/profile/edit'),
-                  ),
-                  _buildSubtleDivider(isDark),
-                  ListTile(
-                    leading: Icon(LucideIcons.building2, color: colorScheme.primary),
-                    title: const Text('Company Branding',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(
-                      company?.name ?? 'Tap to edit company details',
-                      style: TextStyle(
-                          color: colorScheme.onSurface.withValues(alpha: 0.6)),
-                    ),
-                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
-                    onTap: () => context.push('/company-branding'),
-                  ),
-                  _buildSubtleDivider(isDark),
-                  ListTile(
-                    leading: Icon(LucideIcons.users, color: colorScheme.primary),
-                    title: const Text('Team Management',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('Invite and manage team members',
-                        style: TextStyle(
-                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
-                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
-                    onTap: () => context.push('/team'),
-                  ),
-                  _buildSubtleDivider(isDark),
-                  ListTile(
-                    leading: Icon(LucideIcons.user, color: colorScheme.primary),
-                    title: const Text('Sign-in Methods',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('Manage passwords and linked accounts',
-                        style: TextStyle(
-                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
-                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
-                    onTap: () => context.push('/sign-in-methods'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // BUSINESS SETTINGS Section
-            const _SectionHeader(title: 'Business Settings'),
-            GlassCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: Icon(LucideIcons.hardHat, color: colorScheme.primary),
-                    title: const Text('Services',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('Manage your service catalogue & pricing',
-                        style: TextStyle(
-                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
-                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
-                    onTap: () => context.push('/services'),
-                  ),
-                  _buildSubtleDivider(isDark),
-                  ListTile(
-                    leading: Icon(LucideIcons.receipt, color: colorScheme.primary),
-                    title: const Text('Expenses',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('Track business expenses & receipts',
-                        style: TextStyle(
-                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
-                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
-                    onTap: () => context.push('/expenses'),
-                  ),
-                   ListTile(
-                    leading: Icon(LucideIcons.layout, color: colorScheme.primary),
-                    title: const Text('Templates',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('Manage your document & checklist templates',
-                        style: TextStyle(
-                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
-                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
-                    onTap: () => context.push('/settings/templates'),
-                  ),
-                  _buildSubtleDivider(isDark),
-                  ListTile(
-                    leading: Icon(LucideIcons.bell, color: colorScheme.primary),
-                    title: const Text('Payment Reminders',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('Configure automated invoice reminders',
-                        style: TextStyle(
-                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
-                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
-                    onTap: () => context.push('/settings/reminders'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // SUBSCRIPTION & REWARDS Section (Owner only)
-            if (userProfile?.role.toLowerCase() == 'owner') ...[
-              const _SectionHeader(title: 'Subscription & Rewards'),
-              GlassCard(
-                padding: EdgeInsets.zero,
-                child: Column(
-                  children: [
-                    _SubscriptionTile(
-                      tier: company?.tier ?? 'free',
-                      subscriptionStatus: company?.subscriptionStatus,
-                      trialEndsAt: company?.trialEndsAt,
-                      isLoading: _isSubscriptionLoading,
-                      onTap: () => context.push('/billing'),
-                    ),
-                    _buildSubtleDivider(isDark),
-                    ListTile(
-                      leading: Icon(LucideIcons.gift,
-                          color: const Color(0xFFF4781F)),
-                      title: const Text('Referral Programme',
-                          style: TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text('Earn free months by referring friends',
-                          style: TextStyle(
-                              color:
-                                  colorScheme.onSurface.withValues(alpha: 0.6))),
-                      trailing: const Icon(LucideIcons.chevronRight, size: 14),
-                      onTap: () => context.push('/referral'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // INTEGRATIONS Section (Owner/Admin only)
-            if (userProfile?.role.toLowerCase() == 'owner' ||
-                userProfile?.role.toLowerCase() == 'admin') ...[
-              _SectionHeader(
-                title: 'Integrations',
-                isProFeature: !(company?.tier == 'premium' ||
-                    company?.tier == 'individual' ||
-                    company?.tier == 'organisation'),
-              ),
-              GlassCard(
-                padding: EdgeInsets.zero,
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: Image.asset(
-                          'assets/images/quickbooks-logo.png',
-                          fit: BoxFit.contain,
-                          errorBuilder: (ctx, err, stack) =>
-                              Icon(LucideIcons.wallet, color: colorScheme.primary),
-                        ),
-                      ),
-                      title: const Text('QuickBooks',
-                          style: TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text(
-                        company?.quickbooksEnabled == true
-                            ? 'Connected'
-                            : 'Not connected',
-                        style: TextStyle(
-                            color: colorScheme.onSurface.withValues(alpha: 0.6)),
-                      ),
-                      trailing: Icon(
-                        company?.quickbooksEnabled == true
-                            ? LucideIcons.checkCircle
-                            : LucideIcons.chevronRight,
-                        color: company?.quickbooksEnabled == true
-                            ? semanticColors.success
-                            : colorScheme.onSurface.withValues(alpha: 0.3),
-                        size: 20,
-                      ),
-                      onTap: () => context.push('/integrations'),
-                    ),
-                    _buildSubtleDivider(isDark),
-                    ListTile(
-                      leading: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: Image.asset(
-                          'assets/images/xero-logo.png',
-                          fit: BoxFit.contain,
-                          errorBuilder: (ctx, err, stack) =>
-                              Icon(LucideIcons.fileSpreadsheet, color: colorScheme.primary),
-                        ),
-                      ),
-                      title: const Text('Xero',
-                          style: TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text(
-                        company?.xeroEnabled == true
-                            ? 'Connected'
-                            : 'Not connected',
-                        style: TextStyle(
-                            color: colorScheme.onSurface.withValues(alpha: 0.6)),
-                      ),
-                      trailing: Icon(
-                        company?.xeroEnabled == true
-                            ? LucideIcons.checkCircle
-                            : LucideIcons.chevronRight,
-                        color: company?.xeroEnabled == true
-                            ? semanticColors.success
-                            : colorScheme.onSurface.withValues(alpha: 0.3),
-                        size: 20,
-                      ),
-                      onTap: () => context.push('/integrations'),
-                    ),
-                    _buildSubtleDivider(isDark),
-                    ListTile(
-                      leading: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: Image.asset(
-                          'assets/images/monday-logo.png',
-                          fit: BoxFit.contain,
-                          errorBuilder: (ctx, err, stack) =>
-                              Icon(LucideIcons.table2, color: colorScheme.primary),
-                        ),
-                      ),
-                      title: const Text('Monday.com',
-                          style: TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text(
-                        company?.mondayEnabled == true
-                            ? 'Connected'
-                            : 'Not connected',
-                        style: TextStyle(
-                            color: colorScheme.onSurface.withValues(alpha: 0.6)),
-                      ),
-                      trailing: Icon(
-                        company?.mondayEnabled == true
-                            ? LucideIcons.checkCircle
-                            : LucideIcons.chevronRight,
-                        color: company?.mondayEnabled == true
-                            ? semanticColors.success
-                            : colorScheme.onSurface.withValues(alpha: 0.3),
-                        size: 20,
-                      ),
-                      onTap: () => context.push('/integrations'),
-                    ),
-                    _buildSubtleDivider(isDark),
-                    ListTile(
-                      leading: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: Image.asset(
-                          'assets/images/google-calendar-logo.png',
-                          fit: BoxFit.contain,
-                          errorBuilder: (ctx, err, stack) =>
-                              Icon(LucideIcons.calendar, color: colorScheme.primary),
-                        ),
-                      ),
-                      title: const Text('Google Calendar',
-                          style: TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text(
-                        company?.googleCalendarEnabled == true
-                            ? 'Connected'
-                            : 'Not connected',
-                        style: TextStyle(
-                            color: colorScheme.onSurface.withValues(alpha: 0.6)),
-                      ),
-                      trailing: Icon(
-                        company?.googleCalendarEnabled == true
-                            ? LucideIcons.checkCircle
-                            : LucideIcons.chevronRight,
-                        color: company?.googleCalendarEnabled == true
-                            ? semanticColors.success
-                            : colorScheme.onSurface.withValues(alpha: 0.3),
-                        size: 20,
-                      ),
-                      onTap: () => context.push('/integrations'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // COLLABORATION Section
-            const _SectionHeader(title: 'Collaboration'),
-            GlassCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: Icon(LucideIcons.messageSquare, color: colorScheme.primary),
-                    title: const Text('Collaboration Overview',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('Pending reviews, comments, activity',
-                        style: TextStyle(
-                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
-                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
-                    onTap: () => context.push('/collaboration'),
-                  ),
-                  _buildSubtleDivider(isDark),
-                  ListTile(
-                    leading: Icon(LucideIcons.messageCircle,
-                        color: colorScheme.primary),
-                    title: const Text('Client Responses',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('Customer comments, approvals & activity',
-                        style: TextStyle(
-                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
-                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
-                    onTap: () => context.push('/client-responses'),
-                  ),
-                  _buildSubtleDivider(isDark),
-                  ListTile(
-                    leading: Icon(LucideIcons.bell,
-                        color: colorScheme.primary),
-                    title: const Text('Notifications',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('Push notification settings',
-                        style: TextStyle(
-                            color: colorScheme.onSurface.withValues(alpha: 0.6))),
-                    trailing: const Icon(LucideIcons.chevronRight, size: 14),
-                    onTap: () => context.push('/notifications'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // PREFERENCES Section
-            const _SectionHeader(title: 'Preferences'),
-            GlassCard(
-              padding: EdgeInsets.zero,
-              child: ListTile(
-                leading: Icon(LucideIcons.moon, color: colorScheme.primary),
-                title: const Text('Dark Mode',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(
-                  ref.watch(themeModeProvider) == ThemeMode.system
-                      ? 'Following system setting'
-                      : ref.watch(themeModeProvider) == ThemeMode.dark
-                          ? 'Always dark'
-                          : 'Always light',
-                  style: TextStyle(
-                      color: colorScheme.onSurface.withValues(alpha: 0.6)),
-                ),
-                trailing: Switch(
-                  activeThumbColor: colorScheme.primary,
-                  value: ref.watch(themeModeProvider) == ThemeMode.dark ||
-                      (ref.watch(themeModeProvider) == ThemeMode.system &&
-                          Theme.of(context).brightness == Brightness.dark),
-                  onChanged: (value) {
-                    ref.read(themeModeProvider.notifier).setThemeMode(
-                          value ? ThemeMode.dark : ThemeMode.light,
-                        );
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Danger Zone
-            _SectionHeader(title: 'Danger Zone', color: semanticColors.error),
-            GlassCard(
-              padding: EdgeInsets.zero,
-              child: ListTile(
-                leading: Icon(LucideIcons.logOut, color: semanticColors.error),
-                title: Text(
-                  'Log Out',
-                  style: TextStyle(
-                      color: semanticColors.error, fontWeight: FontWeight.w600),
-                ),
-                trailing: Icon(LucideIcons.chevronRight,
-                    size: 14,
-                    color: semanticColors.error.withValues(alpha: 0.6)),
-                onTap: () => _handleLogOut(context),
-              ),
-            ),
-            const SizedBox(height: 48),
-          ],
-        ),
-      ),
+                  heading('Stay in touch'),
+                  row(LucideIcons.messageSquare, 'Collaboration',
+                      'Reviews, comments and activity', '/collaboration'),
+                  row(LucideIcons.messageCircle, 'Client responses',
+                      'Customer comments and approvals', '/client-responses'),
+                  row(LucideIcons.bell, 'Notifications',
+                      'Updates and reminders', '/notifications'),
+                  heading('Appearance'),
+                  SettingsActionRow(
+                      icon: LucideIcons.palette,
+                      title: 'Colour theme',
+                      subtitle: _themeName(ref.watch(themeModeProvider)),
+                      onTap: () async {
+                        final mode = await showModalBottomSheet<ThemeMode>(
+                            context: context,
+                            isScrollControlled: true,
+                            useSafeArea: true,
+                            showDragHandle: true,
+                            builder: (sheetContext) => SingleChildScrollView(
+                                child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        24, 0, 24, 24),
+                                    child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const SettingsSectionHeading(
+                                              'Colour theme',
+                                              first: true),
+                                          RadioGroup<ThemeMode>(
+                                              groupValue:
+                                                  ref.read(themeModeProvider),
+                                              onChanged: (value) =>
+                                                  Navigator.pop(
+                                                      sheetContext, value),
+                                              child: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    for (final mode
+                                                        in ThemeMode.values)
+                                                      RadioListTile<ThemeMode>(
+                                                          value: mode,
+                                                          title: Text(
+                                                              _themeName(mode)),
+                                                          contentPadding:
+                                                              EdgeInsets.zero),
+                                                  ])),
+                                        ]))));
+                        if (mode != null && context.mounted) {
+                          await ref
+                              .read(themeModeProvider.notifier)
+                              .setThemeMode(mode);
+                        }
+                      }),
+                ]),
+          )),
     );
   }
 
-  Widget _buildSubtleDivider(bool isDark) {
-    return Divider(
-      height: 1,
-      thickness: 1,
-      color: isDark
-          ? Colors.white.withValues(alpha: 0.06)
-          : Colors.black.withValues(alpha: 0.04),
-    );
-  }
-
-  Future<void> _handleLogOut(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Log Out'),
-        content: const Text('Are you sure you want to log out?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Log Out'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      final authService = ref.read(authServiceProvider);
-      await authService.signOut();
-    }
-  }
-}
-
-class _SubscriptionTile extends StatelessWidget {
-  final String tier;
-  final String? subscriptionStatus;
-  final DateTime? trialEndsAt;
-  final bool isLoading;
-  final VoidCallback onTap;
-
-  const _SubscriptionTile({
-    required this.tier,
-    required this.isLoading,
-    required this.onTap,
-    this.subscriptionStatus,
-    this.trialEndsAt,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isPremium = tier == 'premium' || tier == 'individual' || tier == 'organisation';
-    final isActive = isPremium &&
-        (subscriptionStatus == 'active' ||
-            subscriptionStatus == 'referral_trial');
-    final isReferralTrial = subscriptionStatus == 'referral_trial';
-
-    String planName = 'Free';
-    if (tier == 'organisation') {
-      planName = 'Organisation';
-    } else if (tier == 'individual') {
-      planName = 'Individual';
-    } else if (tier == 'premium') {
-      planName = 'Pro';
-    }
-
-    String subtitle;
-    if (isReferralTrial && trialEndsAt != null) {
-      final end =
-          '${trialEndsAt!.day}/${trialEndsAt!.month}/${trialEndsAt!.year}';
-      subtitle = '$planName Trial — ends $end';
-    } else if (isActive) {
-      subtitle = '$planName Plan — Active';
-    } else if (isPremium) {
-      subtitle = '$planName Plan (${subscriptionStatus ?? 'inactive'})';
-    } else {
-      subtitle = 'Free Plan — Tap to upgrade to Pro (£29/mo)';
-    }
-
-    return ListTile(
-      leading: Icon(
-        LucideIcons.creditCard,
-        color: isActive ? colorScheme.primary : null,
-      ),
-      title: Text(
-        isActive ? 'Manage Subscription' : 'Upgrade to Pro',
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: isActive ? null : colorScheme.primary,
-        ),
-      ),
-      subtitle: Text(subtitle),
-      trailing: isLoading
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : Icon(
-              isActive
-                  ? LucideIcons.userCog
-                  : LucideIcons.rocket,
-              color: isActive ? null : colorScheme.primary,
-              size: 20,
-            ),
-      onTap: isLoading ? null : onTap,
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final Color? color;
-  final bool isProFeature;
-
-  const _SectionHeader({required this.title, this.color, this.isProFeature = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
-      child: Row(
-        children: [
-          Text(
-            title.toUpperCase(),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: color ?? Theme.of(context).colorScheme.primary,
-              letterSpacing: 1.5,
-            ),
-          ),
-          if (isProFeature) ...[
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-              decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: const Text(
-                'PRO',
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.amber,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+  String _themeName(ThemeMode mode) => switch (mode) {
+        ThemeMode.system => 'Use device setting',
+        ThemeMode.light => 'Light',
+        ThemeMode.dark => 'Dark',
+      };
 }

@@ -26,7 +26,8 @@ class ExpensesScreen extends ConsumerWidget {
               title: 'Expenses',
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.add, color: Colors.white),
+                  icon: const Icon(Icons.add),
+                  tooltip: 'Add expense',
                   onPressed: () => context.push('/expenses/new'),
                 ),
               ],

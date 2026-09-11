@@ -2,12 +2,10 @@ import 'api_client.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class IntegrationService {
   String get _baseUrl {
-    final url = dotenv.maybeGet('APP_BASE_URL') ?? 'https://app.quoteonthego.co.uk';
-    return url.endsWith('/') ? url.substring(0, url.length - 1) : url;
+    return ApiClient.baseUrl;
   }
 
   Future<String> _getIdToken() async {
@@ -58,6 +56,7 @@ class IntegrationService {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $idToken',
           },
+          body: jsonEncode({'platform': 'mobile'}),
         )
         .timeout(const Duration(seconds: 30));
 
@@ -70,15 +69,13 @@ class IntegrationService {
 
   Future<void> disconnectMonday() async {
     final idToken = await _getIdToken();
-    final response = await http
-        .post(
-          Uri.parse('$_baseUrl/api/monday/disconnect'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $idToken',
-          },
-        )
-        .timeout(const Duration(seconds: 30));
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/monday/disconnect'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $idToken',
+      },
+    ).timeout(const Duration(seconds: 30));
 
     if (response.statusCode != 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -88,12 +85,10 @@ class IntegrationService {
 
   Future<List<Map<String, dynamic>>> getMondayBoards() async {
     final idToken = await _getIdToken();
-    final response = await http
-        .get(
-          Uri.parse('$_baseUrl/api/monday/boards'),
-          headers: {'Authorization': 'Bearer $idToken'},
-        )
-        .timeout(const Duration(seconds: 30));
+    final response = await http.get(
+      Uri.parse('$_baseUrl/api/monday/boards'),
+      headers: {'Authorization': 'Bearer $idToken'},
+    ).timeout(const Duration(seconds: 30));
 
     if (response.statusCode != 200) {
       throw Exception('Failed to load Monday.com boards');
@@ -119,10 +114,8 @@ class IntegrationService {
           body: jsonEncode({
             if (quotationsBoardId != null)
               'quotationsBoardId': quotationsBoardId,
-            if (invoicesBoardId != null)
-              'invoicesBoardId': invoicesBoardId,
-            if (customersBoardId != null)
-              'customersBoardId': customersBoardId,
+            if (invoicesBoardId != null) 'invoicesBoardId': invoicesBoardId,
+            if (customersBoardId != null) 'customersBoardId': customersBoardId,
           }),
         )
         .timeout(const Duration(seconds: 30));
@@ -133,12 +126,21 @@ class IntegrationService {
   }
 
   Future<void> disconnectGoogleCalendar({required String companyId}) async {
-    await ApiClient.post('/api/mobile/operations', {'operation': 'integrations.google.disconnect'});
+    await ApiClient.post('/api/mobile/operations',
+        {'operation': 'integrations.google.disconnect'});
   }
 
-  String getGoogleCalendarConnectUrl() {
-    return '$_baseUrl/settings/integrations';
+  Future<String> connectGoogleCalendar() async {
+    final result = await ApiClient.post(
+        '/api/mobile/operations', {'operation': 'integrations.google.connect'});
+    return result['authUrl'] as String;
   }
+
+  Future<Map<String, dynamic>> syncQuickBooks({String action = 'full'}) =>
+      ApiClient.post('/api/mobile/operations',
+          {'operation': 'integrations.quickbooks.sync', 'action': action});
+  Future<Map<String, dynamic>> syncMonday() => ApiClient.post(
+      '/api/mobile/operations', {'operation': 'integrations.monday.sync'});
 
   Future<String> connectXero({required String companyId}) async {
     final response = await http

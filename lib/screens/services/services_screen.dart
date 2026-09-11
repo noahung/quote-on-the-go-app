@@ -33,89 +33,99 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
 
     return MeshBackground(
       child: Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Column(
-        children: [
-          CurvedHeader(
-            title: 'Services',
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.add, color: Colors.white),
-                onPressed: () => context.push('/services/new'),
-              ),
-            ],
-          ),
-          Expanded(
-            child: servicesAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
-              data: (services) {
-                final filtered = _searchQuery.isEmpty
-                    ? services
-                    : services.where((s) =>
-                        s.name.toLowerCase().contains(_searchQuery) ||
-                        (s.description?.toLowerCase().contains(_searchQuery) ?? false)).toList();
+        backgroundColor: Colors.transparent,
+        body: Column(
+          children: [
+            CurvedHeader(
+              title: 'Services',
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  tooltip: 'Add service',
+                  onPressed: () => context.push('/services/new'),
+                ),
+              ],
+            ),
+            Expanded(
+              child: servicesAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => Center(child: Text('Error: $err')),
+                data: (services) {
+                  final filtered = _searchQuery.isEmpty
+                      ? services
+                      : services
+                          .where((s) =>
+                              s.name.toLowerCase().contains(_searchQuery) ||
+                              (s.description
+                                      ?.toLowerCase()
+                                      .contains(_searchQuery) ??
+                                  false))
+                          .toList();
 
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (v) => setState(() => _searchQuery = v.toLowerCase().trim()),
-                        decoration: InputDecoration(
-                          hintText: 'Search services...',
-                          prefixIcon: const Icon(Icons.search, size: 20),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear, size: 18),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _searchQuery = '');
-                                  },
-                                )
-                              : null,
-                          filled: true,
-                          fillColor: isDark
-                              ? Colors.white.withValues(alpha: 0.07)
-                              : Colors.black.withValues(alpha: 0.04),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide.none,
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (v) => setState(
+                              () => _searchQuery = v.toLowerCase().trim()),
+                          decoration: InputDecoration(
+                            hintText: 'Search services...',
+                            prefixIcon: const Icon(Icons.search, size: 20),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 18),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _searchQuery = '');
+                                    },
+                                  )
+                                : null,
+                            filled: true,
+                            fillColor: isDark
+                                ? Colors.white.withValues(alpha: 0.07)
+                                : Colors.black.withValues(alpha: 0.04),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 12),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: filtered.isEmpty
-                          ? AppEmptyState(
-                              icon: LucideIcons.hardHat,
-                              title: _searchQuery.isNotEmpty
-                                  ? 'No services match "$_searchQuery"'
-                                  : 'No services yet',
-                              subtitle: _searchQuery.isEmpty
-                                  ? 'Add your service offerings and pricing here.'
-                                  : null,
-                              actionLabel: _searchQuery.isEmpty ? 'Add Service' : null,
-                              onAction: _searchQuery.isEmpty
-                                  ? () => context.push('/services/new')
-                                  : null,
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                              itemCount: filtered.length,
-                              itemBuilder: (context, index) =>
-                                  _ServiceCard(service: filtered[index]),
-                            ),
-                    ),
-                  ],
-                );
-              },
+                      Expanded(
+                        child: filtered.isEmpty
+                            ? AppEmptyState(
+                                icon: LucideIcons.hardHat,
+                                title: _searchQuery.isNotEmpty
+                                    ? 'No services match "$_searchQuery"'
+                                    : 'No services yet',
+                                subtitle: _searchQuery.isEmpty
+                                    ? 'Add your service offerings and pricing here.'
+                                    : null,
+                                actionLabel:
+                                    _searchQuery.isEmpty ? 'Add Service' : null,
+                                onAction: _searchQuery.isEmpty
+                                    ? () => context.push('/services/new')
+                                    : null,
+                              )
+                            : ListView.builder(
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                                itemCount: filtered.length,
+                                itemBuilder: (context, index) =>
+                                    _ServiceCard(service: filtered[index]),
+                              ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -138,7 +148,8 @@ class _ServiceCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
-            color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+            color:
+                isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
@@ -174,8 +185,7 @@ class _ServiceCard extends StatelessWidget {
                       Text(
                         service.description!,
                         style: TextStyle(
-                            fontSize: 12,
-                            color: colorScheme.onSurfaceVariant),
+                            fontSize: 12, color: colorScheme.onSurfaceVariant),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

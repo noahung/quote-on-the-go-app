@@ -183,11 +183,6 @@ class _DashboardContentState extends State<DashboardContent> {
                                                   go('/notifications'),
                                               icon:
                                                   const Icon(LucideIcons.bell)),
-                                          IconButton(
-                                              tooltip: 'Your profile',
-                                              onPressed: () => go('/profile'),
-                                              icon: const Icon(
-                                                  LucideIcons.userRound)),
                                         ])),
                                     if (widget.search != null) ...[
                                       widget.search!,

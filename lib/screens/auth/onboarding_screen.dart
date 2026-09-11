@@ -1,3 +1,4 @@
+import '../../components/brand_mark.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,10 +7,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../components/mesh_background.dart';
-import '../../components/animated_celebration_icon.dart';
-import '../../models/feedback_type.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/onboarding_provider.dart';
+
+String? _validateRate(String? value) {
+  if (value == null || value.trim().isEmpty) return null;
+  final number = double.tryParse(value);
+  return number == null || !number.isFinite || number < 0
+      ? 'Enter a valid amount of zero or more'
+      : null;
+}
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -48,14 +55,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   // Branding Lists
   final List<Map<String, dynamic>> _accentColors = [
-    {'name': 'Default Orange', 'color': const Color(0xFFFF6B00), 'hex': '#FF6B00'},
-    {'name': 'Sleek Charcoal', 'color': const Color(0xFF374151), 'hex': '#374151'},
-    {'name': 'Royal Indigo', 'color': const Color(0xFF4F46E5), 'hex': '#4F46E5'},
+    {
+      'name': 'Default Orange',
+      'color': const Color(0xFFF4781F),
+      'hex': '#F4781F'
+    },
+    {
+      'name': 'Sleek Charcoal',
+      'color': const Color(0xFF374151),
+      'hex': '#374151'
+    },
+    {
+      'name': 'Royal Indigo',
+      'color': const Color(0xFF4F46E5),
+      'hex': '#4F46E5'
+    },
     {'name': 'Ocean Blue', 'color': const Color(0xFF2563EB), 'hex': '#2563EB'},
     {'name': 'Clean Teal', 'color': const Color(0xFF0D9488), 'hex': '#0D9488'},
     {'name': 'Emerald Pro', 'color': const Color(0xFF059669), 'hex': '#059669'},
     {'name': 'Amber Gold', 'color': const Color(0xFFD97706), 'hex': '#D97706'},
-    {'name': 'Rose Crimson', 'color': const Color(0xFFE11D48), 'hex': '#E11D48'},
+    {
+      'name': 'Rose Crimson',
+      'color': const Color(0xFFE11D48),
+      'hex': '#E11D48'
+    },
   ];
 
   final List<Map<String, String>> _templates = [
@@ -76,7 +99,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       if (user != null) {
         _displayNameCtrl.text = user.displayName ?? '';
         _companyEmailCtrl.text = user.email ?? '';
-        
+
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             ref.read(onboardingNotifierProvider.notifier).init(
@@ -111,6 +134,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _goToPage(int page) {
+    FocusManager.instance.primaryFocus?.unfocus();
     _pageController.animateToPage(
       page,
       duration: const Duration(milliseconds: 350),
@@ -138,17 +162,32 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       return;
     }
 
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-      maxWidth: 512,
-    );
-    if (picked != null) {
-      ref
-          .read(onboardingNotifierProvider.notifier)
-          .updateLogoFile(File(picked.path));
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: 512,
+      );
+      if (picked != null && mounted) {
+        ref
+            .read(onboardingNotifierProvider.notifier)
+            .updateLogoFile(File(picked.path));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Could not open your photos. Check photo access and try again.')));
+      }
     }
+  }
+
+  void _capturePersonalDetails() {
+    final notifier = ref.read(onboardingNotifierProvider.notifier);
+    notifier.updateDisplayName(_displayNameCtrl.text.trim());
+    notifier.updatePersonalDetails(
+        phone: _userPhoneCtrl.text.trim(),
+        jobTitle: _userJobTitleCtrl.text.trim());
   }
 
   Future<void> _submit() async {
@@ -167,7 +206,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (user == null) return;
 
     final notifier = ref.read(onboardingNotifierProvider.notifier);
-    notifier.updateDisplayName(_displayNameCtrl.text.trim());
+    _capturePersonalDetails();
     notifier.updateCompanyName(_companyNameCtrl.text.trim());
     notifier.updateCompanyEmail(_companyEmailCtrl.text.trim());
     notifier.updateCompanyPhone(_companyPhoneCtrl.text.trim());
@@ -189,6 +228,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final success = await notifier.submit(user.uid);
     if (success && mounted) {
       context.go('/');
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(ref.read(onboardingNotifierProvider).errorMessage ??
+              'Could not complete setup. Please try again.')));
     }
   }
 
@@ -201,93 +244,43 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         backgroundColor: Colors.transparent,
         body: Column(
           children: [
-            // ── Gradient header ──────────────────────────────────────────
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFFFF6B00), Color(0xFFF4781F)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
-                ),
-              ),
-              child: SafeArea(
+            SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.asset(
-                              'assets/images/app_icon.png',
-                              width: 36,
-                              height: 36,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          const Text(
-                            'Quote On The Go',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const Spacer(),
-                          if (formState.currentStep < 4) ...[
-                            TextButton(
-                              onPressed: _skipOnboarding,
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                              ),
-                              child: const Text(
-                                'Skip for now',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: Colors.white24,
-                              borderRadius: BorderRadius.circular(100),
-                            ),
-                            child: Text(
-                              'Step ${formState.currentStep + 1} of 5',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _StepProgressBar(
-                        currentStep: formState.currentStep,
-                        totalSteps: 5,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+                          Row(children: [
+                            const BrandMark(),
+                            const SizedBox(width: 12),
+                            Expanded(
+                                child: Text('Quote on the Go',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium))
+                          ]),
+                          const SizedBox(height: 20),
+                          Wrap(
+                              alignment: WrapAlignment.spaceBetween,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 16,
+                              children: [
+                                Text('Step ${formState.currentStep + 1} of 5',
+                                    style:
+                                        Theme.of(context).textTheme.labelLarge),
+                                if (formState.currentStep < 4)
+                                  TextButton(
+                                      onPressed: formState.isSubmitting
+                                          ? null
+                                          : _skipOnboarding,
+                                      child: const Text('Skip for now')),
+                              ]),
+                          const SizedBox(height: 12),
+                          _StepProgressBar(
+                              currentStep: formState.currentStep,
+                              totalSteps: 5),
+                        ]))),
 
             // ── Pages ────────────────────────────────────────────────────
             Expanded(
@@ -302,9 +295,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     jobTitleCtrl: _userJobTitleCtrl,
                     onNext: () {
                       if (_step1Key.currentState!.validate()) {
-                        ref
-                            .read(onboardingNotifierProvider.notifier)
-                            .updateDisplayName(_displayNameCtrl.text.trim());
+                        _capturePersonalDetails();
                         ref
                             .read(onboardingNotifierProvider.notifier)
                             .nextStep();
@@ -340,8 +331,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             _companyWebsiteCtrl.text.trim());
                         notifier.updateCompanyAddress(
                             _companyAddressCtrl.text.trim());
-                        notifier.updateReferralCode(
-                            _referralCodeCtrl.text.trim());
+                        notifier
+                            .updateReferralCode(_referralCodeCtrl.text.trim());
                         notifier.nextStep();
                         _goToPage(2);
                       }
@@ -365,8 +356,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       if (_step3Key.currentState!.validate()) {
                         final notifier =
                             ref.read(onboardingNotifierProvider.notifier);
-                        final taxVal = double.tryParse(_taxRateCtrl.text.trim()) ?? 20.0;
-                        final hourlyVal = double.tryParse(_hourlyRateCtrl.text.trim()) ?? 0.0;
+                        final taxVal =
+                            double.tryParse(_taxRateCtrl.text.trim()) ?? 20.0;
+                        final hourlyVal =
+                            double.tryParse(_hourlyRateCtrl.text.trim()) ?? 0.0;
                         notifier.updateDefaultTaxRate(taxVal);
                         notifier.updateDefaultHourlyRate(hourlyVal);
                         notifier.updateBankDetails(
@@ -395,9 +388,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       _goToPage(2);
                     },
                     onNext: () {
-                      ref
-                          .read(onboardingNotifierProvider.notifier)
-                          .nextStep();
+                      ref.read(onboardingNotifierProvider.notifier).nextStep();
                       _goToPage(4);
                     },
                   ),
@@ -445,7 +436,9 @@ class _StepProgressBar extends StatelessWidget {
             height: 4,
             margin: EdgeInsets.only(right: i < totalSteps - 1 ? 6 : 0),
             decoration: BoxDecoration(
-              color: active ? Colors.white : Colors.white38,
+              color: active
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.outlineVariant,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -506,24 +499,14 @@ class _Step1PersonalInfo extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : Colors.white,
+                color: colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: isDark
                       ? Colors.white10
                       : Colors.black.withValues(alpha: 0.05),
                 ),
-                boxShadow: isDark
-                    ? []
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 20,
-                          offset: const Offset(0, 4),
-                        )
-                      ],
+                boxShadow: const [],
               ),
               child: Column(
                 children: [
@@ -575,24 +558,7 @@ class _Step1PersonalInfo extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF6B00),
-                  foregroundColor: Colors.white,
-                  shape: const StadiumBorder(),
-                ),
-                onPressed: onNext,
-                icon: const Icon(LucideIcons.arrowRight, size: 18),
-                label: const Text(
-                  'Continue',
-                  style:
-                      TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                ),
-              ),
-            ),
+            _OnboardingActions(onNext: onNext),
           ],
         ),
       ),
@@ -659,24 +625,14 @@ class _Step2CompanyInfo extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : Colors.white,
+                color: colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: isDark
                       ? Colors.white10
                       : Colors.black.withValues(alpha: 0.05),
                 ),
-                boxShadow: isDark
-                    ? []
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 20,
-                          offset: const Offset(0, 4),
-                        )
-                      ],
+                boxShadow: const [],
               ),
               child: Column(
                 children: [
@@ -711,7 +667,9 @@ class _Step2CompanyInfo extends StatelessWidget {
                       ),
                     ),
                     validator: (v) {
-                      if (v == null || !v.contains('@')) {
+                      if (v == null ||
+                          !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+                              .hasMatch(v.trim())) {
                         return 'Please enter a valid email';
                       }
                       return null;
@@ -774,47 +732,7 @@ class _Step2CompanyInfo extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Row(
-              children: [
-                SizedBox(
-                  height: 52,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      shape: const StadiumBorder(),
-                      side: BorderSide(
-                        color: isDark
-                            ? Colors.white24
-                            : Colors.black.withValues(alpha: 0.12),
-                      ),
-                    ),
-                    onPressed: onBack,
-                    icon: const Icon(LucideIcons.arrowLeft, size: 18),
-                    label: const Text('Back',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: SizedBox(
-                    height: 52,
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF6B00),
-                        foregroundColor: Colors.white,
-                        shape: const StadiumBorder(),
-                      ),
-                      onPressed: onNext,
-                      icon: const Icon(LucideIcons.arrowRight, size: 18),
-                      label: const Text(
-                        'Continue',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 15),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            _OnboardingActions(onBack: onBack, onNext: onNext),
           ],
         ),
       ),
@@ -881,40 +799,38 @@ class _Step3RatesAndBank extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : Colors.white,
+                color: colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: isDark
                       ? Colors.white10
                       : Colors.black.withValues(alpha: 0.05),
                 ),
-                boxShadow: isDark
-                    ? []
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 20,
-                          offset: const Offset(0, 4),
-                        )
-                      ],
+                boxShadow: const [],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Billing Defaults',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFFFF6B00)),
+                    style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        color: Color(0xFFF4781F)),
                   ),
                   const SizedBox(height: 14),
-                  Row(
+                  _OnboardingFieldPair(
                     children: [
                       Expanded(
                         child: TextFormField(
                           controller: taxRateCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                          validator: _validateRate,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                                RegExp(r'^\d*\.?\d*'))
+                          ],
                           decoration: InputDecoration(
                             labelText: 'Default Tax (%)',
                             hintText: 'e.g. 20.0',
@@ -929,8 +845,13 @@ class _Step3RatesAndBank extends StatelessWidget {
                       Expanded(
                         child: TextFormField(
                           controller: hourlyRateCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                          validator: _validateRate,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                                RegExp(r'^\d*\.?\d*'))
+                          ],
                           decoration: InputDecoration(
                             labelText: 'Hourly Rate (£)',
                             hintText: 'e.g. 45.00',
@@ -948,7 +869,10 @@ class _Step3RatesAndBank extends StatelessWidget {
                   const SizedBox(height: 14),
                   const Text(
                     'Bank Account (For Invoice Payments)',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFFFF6B00)),
+                    style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        color: Color(0xFFF4781F)),
                   ),
                   const SizedBox(height: 14),
                   TextFormField(
@@ -977,7 +901,7 @@ class _Step3RatesAndBank extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  Row(
+                  _OnboardingFieldPair(
                     children: [
                       Expanded(
                         child: TextFormField(
@@ -1014,47 +938,7 @@ class _Step3RatesAndBank extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Row(
-              children: [
-                SizedBox(
-                  height: 52,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      shape: const StadiumBorder(),
-                      side: BorderSide(
-                        color: isDark
-                            ? Colors.white24
-                            : Colors.black.withValues(alpha: 0.12),
-                      ),
-                    ),
-                    onPressed: onBack,
-                    icon: const Icon(LucideIcons.arrowLeft, size: 18),
-                    label: const Text('Back',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: SizedBox(
-                    height: 52,
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF6B00),
-                        foregroundColor: Colors.white,
-                        shape: const StadiumBorder(),
-                      ),
-                      onPressed: onNext,
-                      icon: const Icon(LucideIcons.arrowRight, size: 18),
-                      label: const Text(
-                        'Continue',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 15),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            _OnboardingActions(onBack: onBack, onNext: onNext),
           ],
         ),
       ),
@@ -1088,11 +972,11 @@ class _Step4Branding extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final logoFile = formState.logoFile;
 
     // Resolve primary color of current selection
-    Color activeThemeColor = const Color(0xFFFF6B00);
+    Color activeThemeColor = const Color(0xFFF4781F);
     if (formState.pdfThemeColor.isNotEmpty) {
       try {
         final hexStr = formState.pdfThemeColor.replaceAll('#', '');
@@ -1126,47 +1010,21 @@ class _Step4Branding extends ConsumerWidget {
             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            height: 44,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: templates.length,
-              itemBuilder: (context, index) {
-                final item = templates[index];
-                final isSelected = formState.pdfTemplate == item['id'];
-
-                return GestureDetector(
-                  onTap: () {
-                    ref.read(onboardingNotifierProvider.notifier)
-                       .updatePdfTemplate(item['id'] as String);
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 10),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: isSelected 
-                          ? activeThemeColor.withValues(alpha: 0.15) 
-                          : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03)),
-                      borderRadius: BorderRadius.circular(100),
-                      border: Border.all(
-                        color: isSelected ? activeThemeColor : Colors.transparent,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Text(
-                      item['name'] as String,
-                      style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        fontSize: 13,
-                        color: isSelected ? activeThemeColor : colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final item in templates)
+              ChoiceChip(
+                label: ConstrainedBox(
+                    constraints: BoxConstraints(
+                        maxWidth: MediaQuery.sizeOf(context).width - 128),
+                    child: Text(item['name']!, softWrap: true)),
+                selected: formState.pdfTemplate == item['id'],
+                selectedColor: colorScheme.primaryContainer,
+                labelStyle: TextStyle(color: colorScheme.onSurface),
+                onSelected: (_) => ref
+                    .read(onboardingNotifierProvider.notifier)
+                    .updatePdfTemplate(item['id']!),
+              ),
+          ]),
           const SizedBox(height: 20),
 
           // Pick Accent Color
@@ -1175,47 +1033,34 @@ class _Step4Branding extends ConsumerWidget {
             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            height: 50,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: accentColors.length,
-              itemBuilder: (context, index) {
-                final item = accentColors[index];
-                final isSelected = formState.pdfThemeColor == item['hex'] || 
-                                   (formState.pdfThemeColor.isEmpty && index == 0);
-                return GestureDetector(
-                  onTap: () {
-                    ref.read(onboardingNotifierProvider.notifier)
-                       .updatePdfThemeColor(item['hex'] as String);
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 12),
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: item['color'] as Color,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isSelected ? Colors.white : Colors.transparent,
-                        width: 3,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 4,
-                          spreadRadius: 1,
-                        )
-                      ],
-                    ),
-                    child: isSelected
-                        ? const Icon(LucideIcons.check, color: Colors.white, size: 18)
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final item in accentColors)
+              Semantics(
+                selected: formState.pdfThemeColor == item['hex'] ||
+                    (formState.pdfThemeColor.isEmpty &&
+                        item == accentColors.first),
+                child: IconButton(
+                  tooltip: item['name'] as String,
+                  constraints:
+                      const BoxConstraints(minWidth: 48, minHeight: 48),
+                  style: IconButton.styleFrom(
+                      backgroundColor: item['color'] as Color),
+                  onPressed: () => ref
+                      .read(onboardingNotifierProvider.notifier)
+                      .updatePdfThemeColor(item['hex'] as String),
+                  icon: Icon(
+                    formState.pdfThemeColor == item['hex'] ||
+                            (formState.pdfThemeColor.isEmpty &&
+                                item == accentColors.first)
+                        ? LucideIcons.check
                         : null,
+                    color: (item['color'] as Color).computeLuminance() > 0.35
+                        ? const Color(0xFF24251F)
+                        : Colors.white,
                   ),
-                );
-              },
-            ),
-          ),
+                ),
+              ),
+          ]),
           const SizedBox(height: 20),
 
           // Pick Logo
@@ -1232,14 +1077,12 @@ class _Step4Branding extends ConsumerWidget {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.06)
-                      : const Color(0xFFF5F5F5),
+                  color: colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: logoFile != null
                         ? activeThemeColor
-                        : (isDark ? Colors.white24 : Colors.black12),
+                        : colorScheme.outlineVariant,
                     width: 2,
                   ),
                 ),
@@ -1249,23 +1092,21 @@ class _Step4Branding extends ConsumerWidget {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(18),
-                            child: Image.file(logoFile, fit: BoxFit.cover),
+                            child: Image.file(logoFile,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) =>
+                                    const Icon(Icons.broken_image_outlined)),
                           ),
                           Positioned(
-                            top: 6,
-                            right: 6,
-                            child: GestureDetector(
-                              onTap: onRemoveLogo,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: colorScheme.error,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(LucideIcons.x,
-                                    size: 14, color: colorScheme.onError),
-                              ),
-                            ),
+                            top: 0,
+                            right: 0,
+                            child: IconButton.filled(
+                                tooltip: 'Remove logo',
+                                onPressed: onRemoveLogo,
+                                style: IconButton.styleFrom(
+                                    backgroundColor: colorScheme.error,
+                                    foregroundColor: colorScheme.onError),
+                                icon: const Icon(LucideIcons.x, size: 20)),
                           ),
                         ],
                       )
@@ -1291,58 +1132,19 @@ class _Step4Branding extends ConsumerWidget {
 
           // Live document preview
           const Text(
-            'Live Document Preview',
+            'Sample document style',
             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
           ),
           const SizedBox(height: 10),
-          _DocumentPreviewCard(
+          MediaQuery.withNoTextScaling(
+              child: _DocumentPreviewCard(
             template: formState.pdfTemplate,
             themeColorHex: formState.pdfThemeColor,
             companyName: formState.companyName,
-          ),
+          )),
           const SizedBox(height: 24),
 
-          Row(
-            children: [
-              SizedBox(
-                height: 52,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    shape: const StadiumBorder(),
-                    side: BorderSide(
-                      color: isDark
-                          ? Colors.white24
-                          : Colors.black.withValues(alpha: 0.12),
-                    ),
-                  ),
-                  onPressed: onBack,
-                  icon: const Icon(LucideIcons.arrowLeft, size: 18),
-                  label: const Text('Back',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SizedBox(
-                  height: 52,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF6B00),
-                      foregroundColor: Colors.white,
-                      shape: const StadiumBorder(),
-                    ),
-                    onPressed: onNext,
-                    icon: const Icon(LucideIcons.arrowRight, size: 18),
-                    label: const Text(
-                      'Continue',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 15),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          _OnboardingActions(onBack: onBack, onNext: onNext),
         ],
       ),
     );
@@ -1374,14 +1176,8 @@ class _Step5Success extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(height: 10),
-          const AnimatedCelebrationIcon(
-            type: CelebrationType.sparkle,
-            size: 80,
-          ),
-          const SizedBox(height: 24),
           const Text(
-            "You're all set!",
+            'Review your details',
             style: TextStyle(
               fontSize: 26,
               fontWeight: FontWeight.w900,
@@ -1391,7 +1187,7 @@ class _Step5Success extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            "Your workspace has been successfully personalised and is ready to use.",
+            'Check your details below, then complete setup to create your workspace.',
             style: TextStyle(
               color: colorScheme.onSurfaceVariant,
               fontSize: 14,
@@ -1405,42 +1201,39 @@ class _Step5Success extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.white,
+              color: colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
                 color: isDark
                     ? Colors.white10
                     : Colors.black.withValues(alpha: 0.05),
               ),
-              boxShadow: isDark
-                  ? []
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
-                      )
-                    ],
+              boxShadow: const [],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
                   'Workspace Summary',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFFFF6B00)),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      color: Color(0xFFF4781F)),
                 ),
                 const SizedBox(height: 14),
                 _SummaryRow(
                   icon: LucideIcons.user,
                   label: 'Owner',
-                  value: formState.displayName.isEmpty ? 'Trade Specialist' : formState.displayName,
+                  value: formState.displayName.isEmpty
+                      ? 'Trade Specialist'
+                      : formState.displayName,
                 ),
                 _SummaryRow(
                   icon: LucideIcons.building2,
                   label: 'Company',
-                  value: formState.companyName.isEmpty ? 'My Company' : formState.companyName,
+                  value: formState.companyName.isEmpty
+                      ? 'My Company'
+                      : formState.companyName,
                 ),
                 if (formState.companyWebsite.isNotEmpty)
                   _SummaryRow(
@@ -1476,8 +1269,8 @@ class _Step5Success extends StatelessWidget {
               decoration: BoxDecoration(
                 color: colorScheme.errorContainer,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: colorScheme.error.withValues(alpha: 0.2)),
+                border:
+                    Border.all(color: colorScheme.error.withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [
@@ -1497,55 +1290,11 @@ class _Step5Success extends StatelessWidget {
           ],
 
           // Buttons
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                height: 52,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    shape: const StadiumBorder(),
-                    side: BorderSide(
-                      color: isDark
-                          ? Colors.white24
-                          : Colors.black.withValues(alpha: 0.12),
-                    ),
-                  ),
-                  onPressed: formState.isSubmitting ? null : onBack,
-                  icon: const Icon(LucideIcons.arrowLeft, size: 18),
-                  label: const Text('Back',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SizedBox(
-                  height: 52,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF6B00),
-                      foregroundColor: Colors.white,
-                      shape: const StadiumBorder(),
-                    ),
-                    onPressed: formState.isSubmitting ? null : onSubmit,
-                    icon: formState.isSubmitting
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Icon(LucideIcons.check, size: 18),
-                    label: Text(
-                      formState.isSubmitting ? 'Setting up...' : 'Complete Setup & Launch Dashboard',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 14),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          _OnboardingActions(
+              onBack: onBack,
+              onNext: onSubmit,
+              busy: formState.isSubmitting,
+              nextLabel: 'Complete setup'),
         ],
       ),
     );
@@ -1576,23 +1325,17 @@ class _SummaryRow extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
           const SizedBox(width: 8),
-          Text(
-            '$label: ',
-            style: TextStyle(
-              color: colorScheme.onSurfaceVariant,
-              fontSize: 13,
-            ),
-          ),
           Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 13,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text(label,
+                    style: TextStyle(
+                        color: colorScheme.onSurfaceVariant, fontSize: 13)),
+                Text(value,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w500, fontSize: 16)),
+              ])),
         ],
       ),
     );
@@ -1673,9 +1416,9 @@ class _DocumentPreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     // Find active color
-    Color accentColor = const Color(0xFFFF6B00);
+    Color accentColor = const Color(0xFFF4781F);
     if (themeColorHex.isNotEmpty) {
       try {
         final hexStr = themeColorHex.replaceAll('#', '');
@@ -1683,7 +1426,8 @@ class _DocumentPreviewCard extends StatelessWidget {
       } catch (_) {}
     }
 
-    final displayCompanyName = companyName.trim().isEmpty ? "Your Company" : companyName;
+    final displayCompanyName =
+        companyName.trim().isEmpty ? "Your Company" : companyName;
 
     return Container(
       width: double.infinity,
@@ -1705,7 +1449,9 @@ class _DocumentPreviewCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Banner layout based on template type
-          if (template == 'modern-orange' || template == 'clean-teal' || template == 'emerald-pro')
+          if (template == 'modern-orange' ||
+              template == 'clean-teal' ||
+              template == 'emerald-pro')
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -1719,7 +1465,8 @@ class _DocumentPreviewCard extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
+                  Expanded(
+                      child: Text(
                     displayCompanyName.toUpperCase(),
                     style: const TextStyle(
                       color: Colors.white,
@@ -1728,7 +1475,8 @@ class _DocumentPreviewCard extends StatelessWidget {
                       letterSpacing: 0.5,
                     ),
                     overflow: TextOverflow.ellipsis,
-                  ),
+                  )),
+                  const SizedBox(width: 12),
                   const Text(
                     'QUOTATION',
                     style: TextStyle(
@@ -1828,7 +1576,8 @@ class _DocumentPreviewCard extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Quote To:', style: TextStyle(fontSize: 8, color: Colors.grey)),
+                        const Text('Quote To:',
+                            style: TextStyle(fontSize: 8, color: Colors.grey)),
                         const SizedBox(height: 2),
                         Text(
                           'Acme Corporation',
@@ -1843,30 +1592,44 @@ class _DocumentPreviewCard extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        const Text('Quote No: #QT-0001', style: TextStyle(fontSize: 8, color: Colors.grey)),
-                        Text('Date: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}', style: const TextStyle(fontSize: 8, color: Colors.grey)),
+                        const Text('Quote No: #QT-0001',
+                            style: TextStyle(fontSize: 8, color: Colors.grey)),
+                        Text(
+                            'Date: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+                            style: const TextStyle(
+                                fontSize: 8, color: Colors.grey)),
                       ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Lines divider
                 Container(
                   height: 1,
-                  color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.05),
+                  color: isDark
+                      ? Colors.white12
+                      : Colors.black.withValues(alpha: 0.05),
                 ),
                 const SizedBox(height: 8),
 
                 // Table rows mockup
-                const _MockRow(desc: 'Electrical Maintenance & Rewire', qty: '1', price: '£120.00'),
+                const _MockRow(
+                    desc: 'Electrical Maintenance & Rewire',
+                    qty: '1',
+                    price: '£120.00'),
                 const SizedBox(height: 4),
-                const _MockRow(desc: 'Premium Consumer Unit Replacement', qty: '1', price: '£350.00'),
-                
+                const _MockRow(
+                    desc: 'Premium Consumer Unit Replacement',
+                    qty: '1',
+                    price: '£350.00'),
+
                 const SizedBox(height: 12),
                 Container(
                   height: 1,
-                  color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.05),
+                  color: isDark
+                      ? Colors.white12
+                      : Colors.black.withValues(alpha: 0.05),
                 ),
                 const SizedBox(height: 8),
 
@@ -1883,7 +1646,8 @@ class _DocumentPreviewCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
                             color: accentColor,
                             borderRadius: BorderRadius.circular(8),
@@ -1908,4 +1672,50 @@ class _DocumentPreviewCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _OnboardingActions extends StatelessWidget {
+  const _OnboardingActions(
+      {this.onBack,
+      required this.onNext,
+      this.nextLabel = 'Continue',
+      this.busy = false});
+  final VoidCallback? onBack;
+  final VoidCallback onNext;
+  final String nextLabel;
+  final bool busy;
+  @override
+  Widget build(BuildContext context) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        FilledButton(
+            onPressed: busy ? null : onNext,
+            child: Text(busy ? 'Setting up…' : nextLabel)),
+        if (onBack != null) ...[
+          const SizedBox(height: 8),
+          TextButton(
+              onPressed: busy ? null : onBack, child: const Text('Back')),
+        ],
+      ]);
+}
+
+class _OnboardingFieldPair extends StatelessWidget {
+  const _OnboardingFieldPair({required this.children});
+  final List<Widget> children;
+  @override
+  Widget build(BuildContext context) =>
+      LayoutBuilder(builder: (context, constraints) {
+        if (constraints.maxWidth >= 500 &&
+            MediaQuery.textScalerOf(context).scale(16) <= 20) {
+          return Row(children: children);
+        }
+        return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final child in children)
+                if (child is Expanded)
+                  child.child
+                else
+                  const SizedBox(height: 14),
+            ]);
+      });
 }

@@ -1,3 +1,4 @@
+import 'document_email_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -7,13 +8,22 @@ import '../models/custom_email_template.dart';
 import '../providers/custom_email_template_provider.dart';
 import 'custom_date_time_picker.dart';
 
+String formatEmailDocumentDate(String? value) {
+  final date = DateTime.tryParse(value ?? '');
+  return date == null ? 'Not set' : DateFormat('d MMM yyyy').format(date);
+}
+
 class CustomEmailSendBottomSheet extends ConsumerStatefulWidget {
+  final String documentId;
   final String docType; // 'quotation' | 'invoice'
   final String docNumber;
   final String customerName;
   final String customerEmail;
   final String totalAmount;
   final String companyId;
+  final String companyName;
+  final String dueDateOrExpiry;
+  final String portalLink;
   final bool isPremiumUser;
   final Function(Map<String, dynamic> payload) onSendNow;
   final Function(DateTime sendAt, Map<String, dynamic> payload) onScheduleSend;
@@ -21,27 +31,33 @@ class CustomEmailSendBottomSheet extends ConsumerStatefulWidget {
   const CustomEmailSendBottomSheet({
     super.key,
     required this.docType,
+    required this.documentId,
     required this.docNumber,
     required this.customerName,
     required this.customerEmail,
     required this.totalAmount,
     required this.companyId,
+    required this.companyName,
+    required this.dueDateOrExpiry,
+    required this.portalLink,
     required this.isPremiumUser,
     required this.onSendNow,
     required this.onScheduleSend,
   });
 
   @override
-  ConsumerState<CustomEmailSendBottomSheet> createState() => _CustomEmailSendBottomSheetState();
+  ConsumerState<CustomEmailSendBottomSheet> createState() =>
+      _CustomEmailSendBottomSheetState();
 }
 
-class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBottomSheet> {
+class _CustomEmailSendBottomSheetState
+    extends ConsumerState<CustomEmailSendBottomSheet> {
   late TextEditingController _subjectController;
   late TextEditingController _bodyController;
   late TextEditingController _newTemplateNameController;
-  
+
   String? _selectedTemplateId = 'default';
-  String _headerColor = '#f47421';
+  String _headerColor = '#F4781F';
   bool _showAdvancedOptions = false;
   bool _showSaveInput = false;
   bool _isSavingTemplate = false;
@@ -57,7 +73,7 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
   ];
 
   final List<Map<String, String>> _colorSwatches = [
-    {'name': 'Brand Orange', 'hex': '#f47421'},
+    {'name': 'Brand Orange', 'hex': '#F4781F'},
     {'name': 'Dark Slate', 'hex': '#0f172a'},
     {'name': 'Ocean Blue', 'hex': '#2563eb'},
     {'name': 'Forest Green', 'hex': '#059669'},
@@ -73,7 +89,8 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
       text: '$docTitle {document_number} from {company_name}',
     );
     _bodyController = TextEditingController(
-      text: 'Hello {customer_name},\n\nPlease find attached your ${widget.docType} {document_number} for {total_amount}.\n\nYou can view and manage your document online using the link below.\n\nRegards,\n{company_name}',
+      text:
+          'Hello {customer_name},\n\nPlease find attached your ${widget.docType} {document_number} for {total_amount}.\n\nYou can view and manage your document online using the link below.\n\nRegards,\n{company_name}',
     );
     _newTemplateNameController = TextEditingController();
   }
@@ -91,7 +108,7 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
       final hex = hexString.replaceAll('#', '');
       return Color(int.parse('FF$hex', radix: 16));
     } catch (_) {
-      return const Color(0xFFF47421);
+      return const Color(0xFFF4781F);
     }
   }
 
@@ -102,7 +119,8 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
       final newText = text.replaceRange(selection.start, selection.end, tag);
       _bodyController.value = TextEditingValue(
         text: newText,
-        selection: TextSelection.collapsed(offset: selection.start + tag.length),
+        selection:
+            TextSelection.collapsed(offset: selection.start + tag.length),
       );
     } else {
       _bodyController.text += tag;
@@ -110,7 +128,8 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
     setState(() {});
   }
 
-  Future<void> _handleSaveTemplate(List<CustomEmailTemplate> existingTemplates) async {
+  Future<void> _handleSaveTemplate(
+      List<CustomEmailTemplate> existingTemplates) async {
     final name = _newTemplateNameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -168,33 +187,33 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
     return {'templateMode': 'default'};
   }
 
-  String _renderPreviewSubject() {
-    return _subjectController.text
-        .replaceAll('{document_number}', widget.docNumber)
-        .replaceAll('{company_name}', 'Your Company');
+  String _mergeTagsIn(String text) {
+    final values = {
+      'customer_name': widget.customerName,
+      'document_number': widget.docNumber,
+      'total_amount': widget.totalAmount,
+      'due_date_or_expiry': widget.dueDateOrExpiry,
+      'portal_link': widget.portalLink,
+      'company_name': widget.companyName
+    };
+    return text.replaceAllMapped(
+        RegExp(r'\{([a-z_]+)\}'), (match) => values[match[1]] ?? match[0]!);
   }
 
-  String _renderPreviewText() {
-    return _bodyController.text
-        .replaceAll('{customer_name}', widget.customerName)
-        .replaceAll('{document_number}', widget.docNumber)
-        .replaceAll('{total_amount}', widget.totalAmount)
-        .replaceAll('{due_date_or_expiry}', DateFormat('d MMM yyyy').format(DateTime.now()))
-        .replaceAll('{portal_link}', '#online-portal')
-        .replaceAll('{company_name}', 'Your Company');
-  }
+  String _renderPreviewSubject() => _mergeTagsIn(_subjectController.text);
+  String _renderPreviewText() => _mergeTagsIn(_bodyController.text);
 
   Future<void> _launchNativeEmailApp() async {
     final subject = _renderPreviewSubject();
-    final body = _renderPreviewText();
+    final body = _selectedTemplateId == 'default'
+        ? 'Hello ${widget.customerName},\n\nHere is your ${widget.docType} ${widget.docNumber} for ${widget.totalAmount}.\n\nView your document: ${widget.portalLink}\n\nRegards,\n${widget.companyName}'
+        : '${_renderPreviewText()}\n\nView your document: ${widget.portalLink}';
 
     final Uri emailLaunchUri = Uri(
       scheme: 'mailto',
       path: widget.customerEmail,
-      queryParameters: {
-        'subject': subject,
-        'body': body,
-      },
+      query:
+          'subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}',
     );
 
     try {
@@ -206,8 +225,11 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
         if (mounted) Navigator.pop(context);
       }
     } catch (_) {
-      await Share.share('$subject\n\n$body', subject: subject);
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Could not open your email or sharing app. Try sending from here instead.')));
+      }
     }
   }
 
@@ -217,14 +239,15 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
     final textTheme = Theme.of(context).textTheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final templatesAsync = ref.watch(customEmailTemplatesProvider(widget.docType));
+    final templatesAsync =
+        ref.watch(customEmailTemplatesProvider(widget.docType));
 
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.90,
       ),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF141416) : Colors.white,
+        color: colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -249,7 +272,8 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
+              Expanded(
+                  child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -265,17 +289,18 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                       Icon(Icons.mark_email_read_outlined,
                           size: 13, color: colorScheme.primary),
                       const SizedBox(width: 4),
-                      Text(
+                      Flexible(
+                          child: Text(
                         'To: ${widget.customerEmail.isNotEmpty ? widget.customerEmail : widget.customerName}',
                         style: textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurface.withValues(alpha: 0.65),
                           fontWeight: FontWeight.w500,
                         ),
-                      ),
+                      )),
                     ],
                   ),
                 ],
-              ),
+              )),
               IconButton(
                 icon: const Icon(Icons.close, size: 20),
                 onPressed: () => Navigator.pop(context),
@@ -304,7 +329,8 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                       ),
                       if (!widget.isPremiumUser)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: Colors.amber.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
@@ -332,10 +358,12 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                     isExpanded: true,
                     initialValue: _selectedTemplateId,
                     decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
+                        borderSide: BorderSide(
+                            color: isDark ? Colors.white24 : Colors.black12),
                       ),
                     ),
                     items: [
@@ -371,7 +399,8 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                       if (val != 'default' && !widget.isPremiumUser) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Custom email templates are a Premium feature.'),
+                            content: Text(
+                                'Custom email templates are a Premium feature.'),
                           ),
                         );
                         return;
@@ -379,7 +408,8 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                       setState(() => _selectedTemplateId = val);
                       if (val != 'default' && val != 'custom') {
                         final list = templatesAsync.value ?? [];
-                        final match = list.firstWhere((t) => t.id == val, orElse: () => list.first);
+                        final match = list.firstWhere((t) => t.id == val,
+                            orElse: () => list.first);
                         _subjectController.text = match.subject;
                         _bodyController.text = match.body;
                         if (match.headerColor != null) {
@@ -398,17 +428,20 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                       decoration: BoxDecoration(
                         color: colorScheme.primary.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.18)),
+                        border: Border.all(
+                            color: colorScheme.primary.withValues(alpha: 0.18)),
                       ),
                       child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: colorScheme.primary.withValues(alpha: 0.12),
+                              color:
+                                  colorScheme.primary.withValues(alpha: 0.12),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.mark_email_read_rounded, color: colorScheme.primary, size: 22),
+                            child: Icon(Icons.mark_email_read_rounded,
+                                color: colorScheme.primary, size: 22),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -425,7 +458,8 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                                 Text(
                                   'Includes company branding, logo, summary table, total amount, and interactive online approval button.',
                                   style: textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurface.withValues(alpha: 0.7),
+                                    color: colorScheme.onSurface
+                                        .withValues(alpha: 0.7),
                                     height: 1.35,
                                   ),
                                 ),
@@ -450,10 +484,12 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                       style: const TextStyle(fontSize: 13),
                       decoration: InputDecoration(
                         hintText: 'Enter subject line...',
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
+                          borderSide: BorderSide(
+                              color: isDark ? Colors.white24 : Colors.black12),
                         ),
                       ),
                     ),
@@ -477,7 +513,8 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                         contentPadding: const EdgeInsets.all(12),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
+                          borderSide: BorderSide(
+                              color: isDark ? Colors.white24 : Colors.black12),
                         ),
                       ),
                     ),
@@ -485,19 +522,24 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
 
                     // Collapsible Advanced Styling & Tag Options Toggle
                     GestureDetector(
-                      onTap: () => setState(() => _showAdvancedOptions = !_showAdvancedOptions),
+                      onTap: () => setState(
+                          () => _showAdvancedOptions = !_showAdvancedOptions),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Row(
                           children: [
                             Icon(
-                              _showAdvancedOptions ? Icons.tune_rounded : Icons.tune_outlined,
+                              _showAdvancedOptions
+                                  ? Icons.tune_rounded
+                                  : Icons.tune_outlined,
                               size: 16,
                               color: colorScheme.primary,
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              _showAdvancedOptions ? 'Hide Styling & Preview Options' : 'Styling, Tags & Live Preview',
+                              _showAdvancedOptions
+                                  ? 'Hide styling and tags'
+                                  : 'Styling and merge tags',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -506,7 +548,9 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                             ),
                             const Spacer(),
                             Icon(
-                              _showAdvancedOptions ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                              _showAdvancedOptions
+                                  ? Icons.keyboard_arrow_up
+                                  : Icons.keyboard_arrow_down,
                               size: 18,
                               color: colorScheme.primary,
                             ),
@@ -521,9 +565,12 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.03)
+                              : Colors.grey.shade50,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                          border: Border.all(
+                              color: isDark ? Colors.white12 : Colors.black12),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -533,7 +580,8 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                               'Click tag to insert dynamic variable:',
                               style: textTheme.labelSmall?.copyWith(
                                 fontWeight: FontWeight.w600,
-                                color: colorScheme.onSurface.withValues(alpha: 0.6),
+                                color: colorScheme.onSurface
+                                    .withValues(alpha: 0.6),
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -550,9 +598,11 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                                       color: colorScheme.primary,
                                     ),
                                   ),
-                                  backgroundColor: colorScheme.primary.withValues(alpha: 0.08),
+                                  backgroundColor: colorScheme.primary
+                                      .withValues(alpha: 0.08),
                                   padding: EdgeInsets.zero,
-                                  onPressed: () => _insertMergeTag(item['tag']!),
+                                  onPressed: () =>
+                                      _insertMergeTag(item['tag']!),
                                 );
                               }).toList(),
                             ),
@@ -563,16 +613,19 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                               'Header Banner Color',
                               style: textTheme.labelSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface.withValues(alpha: 0.6),
+                                color: colorScheme.onSurface
+                                    .withValues(alpha: 0.6),
                               ),
                             ),
                             const SizedBox(height: 8),
                             Row(
                               children: _colorSwatches.map((swatch) {
-                                final isSelected = _headerColor == swatch['hex'];
+                                final isSelected =
+                                    _headerColor == swatch['hex'];
                                 final color = _parseHexColor(swatch['hex']!);
                                 return GestureDetector(
-                                  onTap: () => setState(() => _headerColor = swatch['hex']!),
+                                  onTap: () => setState(
+                                      () => _headerColor = swatch['hex']!),
                                   child: Container(
                                     margin: const EdgeInsets.only(right: 10),
                                     width: 28,
@@ -581,7 +634,9 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                                       color: color,
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: isSelected ? colorScheme.primary : Colors.transparent,
+                                        color: isSelected
+                                            ? colorScheme.primary
+                                            : Colors.transparent,
                                         width: 2.5,
                                       ),
                                       boxShadow: [
@@ -593,7 +648,8 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                                       ],
                                     ),
                                     child: isSelected
-                                        ? const Icon(Icons.check, size: 14, color: Colors.white)
+                                        ? const Icon(Icons.check,
+                                            size: 14, color: Colors.white)
                                         : null,
                                   ),
                                 );
@@ -606,9 +662,12 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                               Align(
                                 alignment: Alignment.centerLeft,
                                 child: TextButton.icon(
-                                  onPressed: () => setState(() => _showSaveInput = true),
-                                  icon: const Icon(Icons.bookmark_add_outlined, size: 16),
-                                  label: const Text('Save as Reusable Template', style: TextStyle(fontSize: 12)),
+                                  onPressed: () =>
+                                      setState(() => _showSaveInput = true),
+                                  icon: const Icon(Icons.bookmark_add_outlined,
+                                      size: 16),
+                                  label: const Text('Save as Reusable Template',
+                                      style: TextStyle(fontSize: 12)),
                                 ),
                               )
                             else
@@ -621,7 +680,8 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                                       decoration: const InputDecoration(
                                         hintText: 'Template Name...',
                                         isDense: true,
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                        contentPadding: EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 8),
                                         border: OutlineInputBorder(),
                                       ),
                                     ),
@@ -630,94 +690,67 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                                   ElevatedButton(
                                     onPressed: _isSavingTemplate
                                         ? null
-                                        : () => _handleSaveTemplate(templatesAsync.value ?? []),
+                                        : () => _handleSaveTemplate(
+                                            templatesAsync.value ?? []),
                                     child: _isSavingTemplate
                                         ? const SizedBox(
                                             width: 14,
                                             height: 14,
-                                            child: CircularProgressIndicator(strokeWidth: 2),
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2),
                                           )
-                                        : const Text('Save', style: TextStyle(fontSize: 12)),
+                                        : const Text('Save',
+                                            style: TextStyle(fontSize: 12)),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.close, size: 18),
-                                    onPressed: () => setState(() => _showSaveInput = false),
+                                    onPressed: () =>
+                                        setState(() => _showSaveInput = false),
                                   ),
                                 ],
                               ),
                             const SizedBox(height: 12),
-
-                            // Live Preview Container
-                            Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Container(
-                                    color: _parseHexColor(_headerColor),
-                                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                                    child: Column(
-                                      children: [
-                                        Text(
-                                          'Your Company',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                        Text(
-                                          '${widget.docType == 'quotation' ? 'Quotation' : 'Invoice'} ${widget.docNumber}',
-                                          style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 10,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    color: isDark ? const Color(0xFF1F1F24) : Colors.white,
-                                    child: Text(
-                                      _renderPreviewText(),
-                                      style: textTheme.bodySmall?.copyWith(fontSize: 11, height: 1.4),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                           ],
                         ),
                       ),
                     ],
                   ],
 
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.visibility_outlined),
+                    label: const Text('Preview customer email'),
+                    onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => DocumentEmailPreview(
+                                documentId: widget.documentId,
+                                documentType: widget.docType,
+                                options: _buildPayload()))),
+                  ),
                   // Scheduled Date Badge Indicator
                   if (_scheduledDateTime != null) ...[
                     const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: Colors.blue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.schedule, color: Colors.blue, size: 16),
+                          const Icon(Icons.schedule,
+                              color: Colors.blue, size: 16),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Scheduled: ${DateFormat('d MMM, HH:mm').format(_scheduledDateTime!)}',
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                           ),
                           GestureDetector(
-                            onTap: () => setState(() => _scheduledDateTime = null),
+                            onTap: () =>
+                                setState(() => _scheduledDateTime = null),
                             child: const Icon(Icons.close, size: 16),
                           ),
                         ],
@@ -741,28 +774,31 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                     isScrollControlled: true,
                     backgroundColor: Colors.transparent,
                     builder: (ctx) => CustomDateTimePickerSheet(
-                      initialDateTime: DateTime.now().add(const Duration(minutes: 10)),
+                      initialDateTime: _scheduledDateTime ??
+                          DateTime.now().add(const Duration(minutes: 10)),
                       title: 'Schedule Delivery',
                     ),
                   );
-                  if (selected != null) {
+                  if (selected != null && mounted) {
                     if (selected.isBefore(DateTime.now())) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Scheduled date must be in the future.')),
+                          const SnackBar(
+                              content: Text(
+                                  'Scheduled date must be in the future.')),
                         );
                       }
                       return;
                     }
                     setState(() => _scheduledDateTime = selected);
-                    widget.onScheduleSend(selected, _buildPayload());
                   }
                 },
                 icon: const Icon(Icons.calendar_month_outlined, size: 18),
                 tooltip: 'Schedule for Later',
                 style: IconButton.styleFrom(
                   padding: const EdgeInsets.all(14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
                 ),
               ),
               const SizedBox(width: 8),
@@ -771,10 +807,11 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
               IconButton.outlined(
                 onPressed: _launchNativeEmailApp,
                 icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                tooltip: 'Open in Email App',
+                tooltip: 'Share a link in your email app (PDF not attached)',
                 style: IconButton.styleFrom(
                   padding: const EdgeInsets.all(14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
                 ),
               ),
               const SizedBox(width: 10),
@@ -784,20 +821,25 @@ class _CustomEmailSendBottomSheetState extends ConsumerState<CustomEmailSendBott
                 child: FilledButton.icon(
                   onPressed: () {
                     if (_scheduledDateTime != null) {
-                      widget.onScheduleSend(_scheduledDateTime!, _buildPayload());
+                      widget.onScheduleSend(
+                          _scheduledDateTime!, _buildPayload());
                     } else {
                       widget.onSendNow(_buildPayload());
                     }
                   },
                   icon: const Icon(Icons.send_rounded, size: 18),
                   label: Text(
-                    _scheduledDateTime != null ? 'Confirm Schedule' : 'Send Email',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    _scheduledDateTime != null
+                        ? 'Confirm Schedule'
+                        : 'Send Email',
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     backgroundColor: colorScheme.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
               ),

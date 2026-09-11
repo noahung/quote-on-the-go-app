@@ -98,15 +98,18 @@ class QuotationRepository {
   }) async {
     if (userProfile.role.toLowerCase() == 'member') {
       try {
-        await _ref.read(collaborationRepositoryProvider).initiateApprovalWorkflow(
-          documentId: docId,
-          documentType: docType,
-          workflowType: 'serial',
-          userId: userProfile.uid,
-          userName: userProfile.displayName ?? userProfile.email ?? 'Anonymous',
-          userEmail: userProfile.email ?? '',
-          companyId: companyId,
-        );
+        await _ref
+            .read(collaborationRepositoryProvider)
+            .initiateApprovalWorkflow(
+              documentId: docId,
+              documentType: docType,
+              workflowType: 'serial',
+              userId: userProfile.uid,
+              userName:
+                  userProfile.displayName ?? userProfile.email ?? 'Anonymous',
+              userEmail: userProfile.email ?? '',
+              companyId: companyId,
+            );
       } catch (e) {
         debugPrint('[QuotationRepo] Failed to initiate approval workflow: $e');
       }
@@ -144,22 +147,33 @@ class QuotationRepository {
   Future<void> updateQuotation(String id, Map<String, dynamic> data) async {
     final userProfile = _ref.read(userProfileProvider);
     final isMember = userProfile?.role.toLowerCase() == 'member';
+    const metadata = {
+      'isStarred',
+      'isArchived',
+      'updatedAt',
+      'lockedBy',
+      'lockedAt',
+      'jobId'
+    };
+    final needsReview =
+        isMember && data.keys.any((key) => !metadata.contains(key));
 
     final updateData = {
       ...data,
       'updatedAt': FieldValue.serverTimestamp(),
     };
 
-    if (isMember) {
+    if (needsReview) {
       updateData['requiresApproval'] = true;
       updateData['approvalStatus'] = 'pending';
     }
 
     await _firestore.collection('quotations').doc(id).update(updateData);
 
-    if (isMember && userProfile != null) {
+    if (needsReview && userProfile != null) {
       final snap = await _firestore.collection('quotations').doc(id).get();
-      final companyId = snap.data()?['companyId'] as String? ?? userProfile.companyId;
+      final companyId =
+          snap.data()?['companyId'] as String? ?? userProfile.companyId;
       await _checkAndInitiateApproval(
         docId: id,
         docType: 'quotation',

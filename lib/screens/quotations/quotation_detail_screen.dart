@@ -1,3 +1,5 @@
+import '../../providers/document_outbox_provider.dart';
+import '../../services/document_copy.dart';
 import '../../services/api_client.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -24,10 +26,19 @@ import '../invoices/create_invoice_screen.dart';
 
 String get _webAppBaseUrl => ApiClient.baseUrl;
 
-class QuotationDetailScreen extends ConsumerWidget {
+class QuotationDetailScreen extends ConsumerStatefulWidget {
   final String quotationId;
 
   const QuotationDetailScreen({super.key, required this.quotationId});
+
+  @override
+  ConsumerState<QuotationDetailScreen> createState() =>
+      _QuotationDetailScreenState();
+}
+
+class _QuotationDetailScreenState extends ConsumerState<QuotationDetailScreen> {
+  String get quotationId => widget.quotationId;
+  bool _copying = false;
 
   Color _getStatusColor(SemanticColors colors, String status) {
     switch (status) {
@@ -53,8 +64,7 @@ class QuotationDetailScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _sendByEmail(
-      BuildContext context, WidgetRef ref, quotation,
+  Future<void> _sendByEmail(BuildContext context, WidgetRef ref, quotation,
       {DateTime? sendAt, Map<String, dynamic>? emailOptions}) async {
     try {
       final body = <String, dynamic>{
@@ -78,13 +88,13 @@ class QuotationDetailScreen extends ConsumerWidget {
         if (response.statusCode == 200) {
           final isScheduled = sendAt != null;
           await ref.read(feedbackControllerProvider).showCelebration(
-            context: context,
-            type: CelebrationType.send,
-            title: isScheduled ? 'Email Scheduled' : 'Email Sent',
-            subtitle: isScheduled
-                ? 'Your quotation will be sent at the scheduled time'
-                : 'Your quotation has been sent to the customer',
-          );
+                context: context,
+                type: CelebrationType.send,
+                title: isScheduled ? 'Email Scheduled' : 'Email Sent',
+                subtitle: isScheduled
+                    ? 'Your quotation will be sent at the scheduled time'
+                    : 'Your quotation has been sent to the customer',
+              );
         } else {
           String err = 'Send failed (${response.statusCode})';
           try {
@@ -116,12 +126,16 @@ class QuotationDetailScreen extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => CustomEmailSendBottomSheet(
+        documentId: quotation.id,
         docType: 'quotation',
         docNumber: quotation.quotationNumber,
         customerName: quotation.customerName,
         customerEmail: quotation.customerEmail,
         totalAmount: totalFormatted,
         companyId: companyId,
+        companyName: company?.name ?? '',
+        dueDateOrExpiry: formatEmailDocumentDate(quotation.expiryDate),
+        portalLink: '$_webAppBaseUrl/portal/quotations/${quotation.id}',
         isPremiumUser: isPremium,
         onSendNow: (payload) {
           Navigator.pop(ctx);
@@ -129,7 +143,8 @@ class QuotationDetailScreen extends ConsumerWidget {
         },
         onScheduleSend: (sendAt, payload) {
           Navigator.pop(ctx);
-          _sendByEmail(context, ref, quotation, sendAt: sendAt, emailOptions: payload);
+          _sendByEmail(context, ref, quotation,
+              sendAt: sendAt, emailOptions: payload);
         },
       ),
     );
@@ -163,47 +178,23 @@ class QuotationDetailScreen extends ConsumerWidget {
 
   Future<void> _convertToInvoice(
       BuildContext context, WidgetRef ref, Quotation quotation) async {
-    final companyId = ref.read(companyIdProvider);
-    final userProfile = ref.read(userProfileProvider);
-    if (companyId == null || userProfile == null) return;
-
+    if (_copying) return;
+    _copying = true;
     try {
-      final invoiceRepository = ref.read(invoiceRepositoryProvider);
-      final invoice = Invoice(
-        id: '',
-        companyId: companyId,
-        createdBy: userProfile.uid,
-        invoiceNumber: 'INV-${DateTime.now().millisecondsSinceEpoch}',
-        customerName: quotation.customerName,
-        customerEmail: quotation.customerEmail,
-        customerPhone: quotation.customerPhone,
-        customerAddress: quotation.customerAddress,
-        date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
-        dueDate: DateFormat('yyyy-MM-dd')
-            .format(DateTime.now().add(const Duration(days: 14))),
-        items: quotation.items,
-        subtotal: quotation.subtotal,
-        taxRate: quotation.taxRate,
-        taxAmount: quotation.taxAmount,
-        total: quotation.total,
-        status: 'Draft',
-        notes: quotation.notes,
-        jobId: quotation.jobId,
-        quotationId: quotation.id,
-        customerId: quotation.customerId,
-        discount: quotation.discount, discountType: quotation.discountType, discountAmount: quotation.discountAmount,
-        pdfTemplateId: quotation.pdfTemplateId, pdfThemeColor: quotation.pdfThemeColor,
-      );
-      final invoiceId = await invoiceRepository.createInvoice(invoice);
-
+      final queue = ref.read(documentOutboxProvider);
+      if (queue == null) throw StateError('Sign in again before saving.');
+      final entry = await DocumentCopy.quotation(quotation, toInvoice: true)
+          .enqueue(queue);
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).success(context, 'Converted to Invoice successfully!');
-        context.push('/invoices/$invoiceId');
+        context.push('/settings/saves?request=${entry['requestId']}&preview=0');
       }
-    } catch (e) {
+    } catch (_) {
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).error(context, 'Failed to convert to invoice: $e');
+        ref.read(feedbackControllerProvider).error(context,
+            'Could not save this request on your device. Please try again.');
       }
+    } finally {
+      _copying = false;
     }
   }
 
@@ -214,11 +205,15 @@ class QuotationDetailScreen extends ConsumerWidget {
           .read(quotationRepositoryProvider)
           .updateQuotationStatus(id, 'Declined');
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).success(context, 'Quotation declined.');
+        ref
+            .read(feedbackControllerProvider)
+            .success(context, 'Quotation declined.');
       }
     } catch (e) {
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).error(context, 'Failed to update status: $e');
+        ref
+            .read(feedbackControllerProvider)
+            .error(context, 'Failed to update status: $e');
       }
     }
   }
@@ -227,14 +222,13 @@ class QuotationDetailScreen extends ConsumerWidget {
       BuildContext context, WidgetRef ref, Quotation quotation) async {
     final isArchived = quotation.status == 'Archived';
     try {
-      await ref
-          .read(quotationRepositoryProvider)
-          .updateQuotationStatus(quotation.id, isArchived ? 'Draft' : 'Archived');
+      await ref.read(quotationRepositoryProvider).updateQuotationStatus(
+          quotation.id, isArchived ? 'Draft' : 'Archived');
       if (context.mounted) {
         ref.read(feedbackControllerProvider).success(
-          context,
-          isArchived ? 'Quotation unarchived.' : 'Quotation archived.',
-        );
+              context,
+              isArchived ? 'Quotation unarchived.' : 'Quotation archived.',
+            );
       }
     } catch (e) {
       if (context.mounted) {
@@ -245,44 +239,22 @@ class QuotationDetailScreen extends ConsumerWidget {
 
   Future<void> _duplicateQuotation(
       BuildContext context, WidgetRef ref, Quotation quotation) async {
-    final companyId = ref.read(companyIdProvider);
-    final userProfile = ref.read(userProfileProvider);
-    if (companyId == null || userProfile == null) return;
-
+    if (_copying) return;
+    _copying = true;
     try {
-      final newQuote = Quotation(
-        id: '',
-        companyId: companyId,
-        createdBy: userProfile.uid,
-        quotationNumber: 'Q-${DateTime.now().millisecondsSinceEpoch}',
-        customerName: quotation.customerName,
-        customerEmail: quotation.customerEmail,
-        customerPhone: quotation.customerPhone,
-        customerAddress: quotation.customerAddress,
-        date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
-        expiryDate: DateFormat('yyyy-MM-dd')
-            .format(DateTime.now().add(const Duration(days: 30))),
-        items: quotation.items,
-        subtotal: quotation.subtotal,
-        taxRate: quotation.taxRate,
-        taxAmount: quotation.taxAmount,
-        total: quotation.total,
-        status: 'Draft',
-        notes: quotation.notes,
-        discount: quotation.discount,
-        discountType: quotation.discountType,
-        discountAmount: quotation.discountAmount,
-        customerId: quotation.customerId, pdfTemplateId: quotation.pdfTemplateId, pdfThemeColor: quotation.pdfThemeColor,
-      );
-      final newId = await ref.read(quotationRepositoryProvider).createQuotation(newQuote);
+      final queue = ref.read(documentOutboxProvider);
+      if (queue == null) throw StateError('Sign in again before saving.');
+      final entry = await DocumentCopy.quotation(quotation).enqueue(queue);
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).success(context, 'Quotation duplicated successfully!');
-        context.push('/quotations/$newId');
+        context.push('/settings/saves?request=${entry['requestId']}&preview=0');
       }
-    } catch (e) {
+    } catch (_) {
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).error(context, 'Failed to duplicate: $e');
+        ref.read(feedbackControllerProvider).error(context,
+            'Could not save this request on your device. Please try again.');
       }
+    } finally {
+      _copying = false;
     }
   }
 
@@ -293,7 +265,9 @@ class QuotationDetailScreen extends ConsumerWidget {
           .read(quotationRepositoryProvider)
           .updateQuotationStatus(id, 'Sent');
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).success(context, 'Quotation marked as Sent.');
+        ref
+            .read(feedbackControllerProvider)
+            .success(context, 'Quotation marked as Sent.');
       }
     } catch (e) {
       if (context.mounted) {
@@ -307,7 +281,8 @@ class QuotationDetailScreen extends ConsumerWidget {
     final nameCtrl = TextEditingController(
         text: 'Template for Quote ${quotation.quotationNumber}');
     final descCtrl = TextEditingController(
-        text: 'Preset items and terms from quotation ${quotation.quotationNumber}');
+        text:
+            'Preset items and terms from quotation ${quotation.quotationNumber}');
 
     final result = await showDialog<bool>(
       context: context,
@@ -354,67 +329,76 @@ class QuotationDetailScreen extends ConsumerWidget {
 
     try {
       await ref.read(documentTemplateRepositoryProvider).createTemplate(
-        companyId: companyId,
-        name: nameCtrl.text.trim(),
-        description: descCtrl.text.trim(),
-        type: 'quotation',
-        items: quotation.items,
-        notes: quotation.notes,
-        taxRate: quotation.taxRate,
-        discount: quotation.discount,
-        discountType: quotation.discountType,
-        discountAmount: quotation.discountAmount,
-      );
+            companyId: companyId,
+            name: nameCtrl.text.trim(),
+            description: descCtrl.text.trim(),
+            type: 'quotation',
+            items: quotation.items,
+            notes: quotation.notes,
+            taxRate: quotation.taxRate,
+            discount: quotation.discount,
+            discountType: quotation.discountType,
+            discountAmount: quotation.discountAmount,
+          );
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).success(context, 'Template saved successfully!');
+        ref
+            .read(feedbackControllerProvider)
+            .success(context, 'Template saved successfully!');
       }
     } catch (e) {
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).error(context, 'Failed to save template: $e');
+        ref
+            .read(feedbackControllerProvider)
+            .error(context, 'Failed to save template: $e');
       }
     }
   }
 
-  void _copyPortalLink(BuildContext context, WidgetRef ref, Quotation quotation) {
+  void _copyPortalLink(
+      BuildContext context, WidgetRef ref, Quotation quotation) {
     final link = '$_webAppBaseUrl/portal/quotations/${quotation.id}';
     Clipboard.setData(ClipboardData(text: link));
-    ref.read(feedbackControllerProvider).success(context, 'Client portal link copied to clipboard!');
+    ref
+        .read(feedbackControllerProvider)
+        .success(context, 'Client portal link copied to clipboard!');
   }
 
   void _sharePdf(BuildContext context, Quotation quotation) {
     final link = '$_webAppBaseUrl/portal/quotations/${quotation.id}';
     Share.share(
       'View your quotation here: $link',
-      subject:
-          'Quotation #${quotation.quotationNumber.replaceFirst('Q-', '')}',
+      subject: 'Quotation #${quotation.quotationNumber.replaceFirst('Q-', '')}',
     );
   }
 
-  Future<bool> _showLockWarningDialog(BuildContext context, String lockedBy) async {
+  Future<bool> _showLockWarningDialog(
+      BuildContext context, String lockedBy) async {
     return await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('Document Locked'),
-          ],
-        ),
-        content: Text('This document is currently being edited by another user (ID: $lockedBy). Editing it simultaneously might overwrite changes. Do you want to proceed anyway?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                SizedBox(width: 8),
+                Text('Document Locked'),
+              ],
+            ),
+            content: Text(
+                'This document is currently being edited by another user (ID: $lockedBy). Editing it simultaneously might overwrite changes. Do you want to proceed anyway?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Proceed'),
+              ),
+            ],
           ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.orange),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Proceed'),
-          ),
-        ],
-      ),
-    ) ?? false;
+        ) ??
+        false;
   }
 
   Future<void> _showRenameDialog(
@@ -452,23 +436,28 @@ class QuotationDetailScreen extends ConsumerWidget {
           .read(quotationRepositoryProvider)
           .updateQuotation(quotation.id, {'title': newTitle});
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).success(context, 'Quotation renamed.');
+        ref
+            .read(feedbackControllerProvider)
+            .success(context, 'Quotation renamed.');
       }
     }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final quotation = ref.watch(quotationProvider(quotationId));
-    final lockAsync = ref.watch(documentLockProvider((documentId: quotationId, documentType: 'quotation')));
+    final lockAsync = ref.watch(documentLockProvider(
+        (documentId: quotationId, documentType: 'quotation')));
     final lockInfo = lockAsync.valueOrNull;
     final userProfile = ref.watch(userProfileProvider);
     final currentUserId = userProfile?.uid;
-    final canDelete = userProfile?.role == 'owner' || userProfile?.role == 'admin';
-    final isPendingApproval = quotation?.requiresApproval == true && quotation?.approvalStatus == 'pending';
+    final canDelete =
+        userProfile?.role == 'owner' || userProfile?.role == 'admin';
+    final isPendingApproval = quotation?.requiresApproval == true &&
+        quotation?.approvalStatus == 'pending';
 
     if (quotation == null) {
       return const MeshBackground(
@@ -491,8 +480,9 @@ class QuotationDetailScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         body: Column(
           children: [
-             CurvedHeader(
-              title: 'Quotation #${quotation.quotationNumber.replaceFirst('Q-', '')}',
+            CurvedHeader(
+              title:
+                  'Quotation #${quotation.quotationNumber.replaceFirst('Q-', '')}',
               actions: [
                 IconButton(
                   icon: const Icon(LucideIcons.messageSquare),
@@ -505,13 +495,15 @@ class QuotationDetailScreen extends ConsumerWidget {
                     quotation.isStarred ? Icons.star : Icons.star_border,
                     color: quotation.isStarred ? Colors.amber : null,
                   ),
-                  tooltip: quotation.isStarred ? 'Remove Star' : 'Star Quotation',
+                  tooltip:
+                      quotation.isStarred ? 'Remove Star' : 'Star Quotation',
                   onPressed: () async {
                     final companyId = ref.read(companyIdProvider);
                     if (companyId != null) {
                       await ref
                           .read(quotationRepositoryProvider)
-                          .updateQuotation(quotation.id, {'isStarred': !quotation.isStarred});
+                          .updateQuotation(quotation.id,
+                              {'isStarred': !quotation.isStarred});
                     }
                   },
                 ),
@@ -525,9 +517,12 @@ class QuotationDetailScreen extends ConsumerWidget {
                   icon: const Icon(LucideIcons.moreVertical),
                   onSelected: (value) async {
                     if (value == 'edit') {
-                      final isLocked = lockInfo != null && lockInfo.isLocked && lockInfo.lockedBy != currentUserId;
+                      final isLocked = lockInfo != null &&
+                          lockInfo.isLocked &&
+                          lockInfo.lockedBy != currentUserId;
                       if (isLocked) {
-                        final proceed = await _showLockWarningDialog(context, lockInfo.lockedBy!);
+                        final proceed = await _showLockWarningDialog(
+                            context, lockInfo.lockedBy!);
                         if (!proceed) return;
                       }
                       if (context.mounted) {
@@ -536,7 +531,8 @@ class QuotationDetailScreen extends ConsumerWidget {
                       }
                     } else if (value == 'send') {
                       if (isPendingApproval) {
-                        ref.read(feedbackControllerProvider).error(context, 'This document must be approved first.');
+                        ref.read(feedbackControllerProvider).error(
+                            context, 'This document must be approved first.');
                         return;
                       }
                       await _showSendOptions(context, ref, quotation);
@@ -545,19 +541,22 @@ class QuotationDetailScreen extends ConsumerWidget {
                     } else if (value == 'share_pdf') {
                       _sharePdf(context, quotation);
                     } else if (value == 'view_pdf') {
-                      await PdfService.viewQuotationPdfInBrowser(quotation.id);
+                      context.push('/pdf-preview/quotation/${quotation.id}');
                     } else if (value == 'share_pdf_file') {
                       try {
                         await PdfService.shareQuotationPdf(quotation.id,
                             quotationNumber: quotation.quotationNumber);
                       } catch (e) {
                         if (context.mounted) {
-                          ref.read(feedbackControllerProvider).error(context, 'Error sharing PDF: $e');
+                          ref
+                              .read(feedbackControllerProvider)
+                              .error(context, 'Error sharing PDF: $e');
                         }
                       }
                     } else if (value == 'mark_sent') {
                       if (isPendingApproval) {
-                        ref.read(feedbackControllerProvider).error(context, 'This document must be approved first.');
+                        ref.read(feedbackControllerProvider).error(
+                            context, 'This document must be approved first.');
                         return;
                       }
                       await _markAsSent(context, ref, quotation.id);
@@ -617,7 +616,8 @@ class QuotationDetailScreen extends ConsumerWidget {
                     PopupMenuItem(
                       value: 'view_pdf',
                       child: Row(children: [
-                        Icon(Icons.picture_as_pdf_outlined, color: semanticColors.info),
+                        Icon(Icons.picture_as_pdf_outlined,
+                            color: semanticColors.info),
                         const SizedBox(width: 8),
                         const Text('View PDF Document')
                       ]),
@@ -625,7 +625,8 @@ class QuotationDetailScreen extends ConsumerWidget {
                     PopupMenuItem(
                       value: 'share_pdf_file',
                       child: Row(children: [
-                        Icon(Icons.file_present_outlined, color: semanticColors.info),
+                        Icon(Icons.file_present_outlined,
+                            color: semanticColors.info),
                         const SizedBox(width: 8),
                         const Text('Share PDF File')
                       ]),
@@ -649,7 +650,8 @@ class QuotationDetailScreen extends ConsumerWidget {
                     PopupMenuItem(
                       value: 'save_template',
                       child: Row(children: [
-                        Icon(Icons.bookmark_add_outlined, color: colorScheme.primary),
+                        Icon(Icons.bookmark_add_outlined,
+                            color: colorScheme.primary),
                         const SizedBox(width: 8),
                         const Text('Save as Template'),
                       ]),
@@ -676,7 +678,8 @@ class QuotationDetailScreen extends ConsumerWidget {
                       PopupMenuItem(
                         value: 'delete',
                         child: Row(children: [
-                          Icon(Icons.delete_outline, color: semanticColors.error),
+                          Icon(Icons.delete_outline,
+                              color: semanticColors.error),
                           const SizedBox(width: 8),
                           Text('Delete',
                               style: TextStyle(color: semanticColors.error))
@@ -690,7 +693,8 @@ class QuotationDetailScreen extends ConsumerWidget {
               Container(
                 width: double.infinity,
                 color: Colors.orange.shade800,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: const Row(
                   children: [
                     Icon(Icons.lock_clock, color: Colors.white),
@@ -698,17 +702,23 @@ class QuotationDetailScreen extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         'Approval Pending: This document requires approval from an Admin or Owner before it can be sent or converted.',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13),
                       ),
                     ),
                   ],
                 ),
               ),
-            if (lockInfo != null && lockInfo.isLocked && lockInfo.lockedBy != currentUserId)
+            if (lockInfo != null &&
+                lockInfo.isLocked &&
+                lockInfo.lockedBy != currentUserId)
               Container(
                 width: double.infinity,
                 color: Colors.amber.shade900,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: const Row(
                   children: [
                     Icon(Icons.warning_amber_rounded, color: Colors.white),
@@ -716,7 +726,10 @@ class QuotationDetailScreen extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         'Warning: This document is currently locked/edited by another user.',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13),
                       ),
                     ),
                   ],
@@ -734,13 +747,15 @@ class QuotationDetailScreen extends ConsumerWidget {
                     Center(
                       child: Column(
                         children: [
-                          if (quotation.title != null && quotation.title!.isNotEmpty) ...[
+                          if (quotation.title != null &&
+                              quotation.title!.isNotEmpty) ...[
                             Text(
                               quotation.title!,
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: colorScheme.onSurface.withValues(alpha: 0.7),
+                                color: colorScheme.onSurface
+                                    .withValues(alpha: 0.7),
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -799,14 +814,17 @@ class QuotationDetailScreen extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: const Color(0xFF10B981).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                          border: Border.all(
+                              color: const Color(0xFF10B981)
+                                  .withValues(alpha: 0.3)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Row(
                               children: [
-                                Icon(LucideIcons.checkCircle2, color: Color(0xFF10B981), size: 18),
+                                Icon(LucideIcons.checkCircle2,
+                                    color: Color(0xFF10B981), size: 18),
                                 SizedBox(width: 8),
                                 Text(
                                   'Quotation Accepted! Next Step:',
@@ -823,7 +841,8 @@ class QuotationDetailScreen extends ConsumerWidget {
                               'Book a service job in the schedule or convert straight to an invoice:',
                               style: TextStyle(
                                 fontSize: 11.5,
-                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                                color: colorScheme.onSurfaceVariant
+                                    .withValues(alpha: 0.8),
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -832,15 +851,24 @@ class QuotationDetailScreen extends ConsumerWidget {
                                 Expanded(
                                   child: OutlinedButton.icon(
                                     style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 8),
-                                      side: BorderSide(color: colorScheme.primary),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 8),
+                                      side: BorderSide(
+                                          color: colorScheme.primary),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
                                     ),
                                     onPressed: () {
-                                      context.push('/schedule/new?fromQuotation=${quotation.id}');
+                                      context.push(
+                                          '/schedule/new?fromQuotation=${quotation.id}');
                                     },
-                                    icon: const Icon(LucideIcons.calendar, size: 14),
-                                    label: const Text('Book Job', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    icon: const Icon(LucideIcons.calendar,
+                                        size: 14),
+                                    label: const Text('Book Job',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold)),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -848,19 +876,27 @@ class QuotationDetailScreen extends ConsumerWidget {
                                   child: FilledButton.icon(
                                     style: FilledButton.styleFrom(
                                       backgroundColor: colorScheme.primary,
-                                      padding: const EdgeInsets.symmetric(vertical: 8),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 8),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
                                     ),
                                     onPressed: () {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => CreateInvoiceScreen(fromQuotationId: quotation.id),
+                                          builder: (_) => CreateInvoiceScreen(
+                                              fromQuotationId: quotation.id),
                                         ),
                                       );
                                     },
-                                    icon: const Icon(LucideIcons.briefcase, size: 14),
-                                    label: const Text('Create Invoice', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    icon: const Icon(LucideIcons.briefcase,
+                                        size: 14),
+                                    label: const Text('Create Invoice',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold)),
                                   ),
                                 ),
                               ],
@@ -1102,7 +1138,8 @@ class QuotationDetailScreen extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: semanticColors.error.withValues(alpha: 0.1),
+                              color:
+                                  semanticColors.error.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
@@ -1127,11 +1164,14 @@ class QuotationDetailScreen extends ConsumerWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 8),
                               shape: const StadiumBorder(),
-                              side: BorderSide(color: colorScheme.outlineVariant),
-                              backgroundColor: colorScheme.onSurface.withValues(alpha: 0.05),
+                              side:
+                                  BorderSide(color: colorScheme.outlineVariant),
+                              backgroundColor:
+                                  colorScheme.onSurface.withValues(alpha: 0.05),
                             ),
                             onPressed: () {
-                              context.push('/pdf-preview/quotation/${quotation.id}');
+                              context.push(
+                                  '/pdf-preview/quotation/${quotation.id}');
                             },
                             child: Text(
                               'View PDF',
@@ -1160,8 +1200,12 @@ class QuotationDetailScreen extends ConsumerWidget {
                         width: double.infinity,
                         child: FilledButton(
                           style: FilledButton.styleFrom(
-                            backgroundColor: isDark ? const Color(0xFF004A77) : const Color(0xFFC2E7FF),
-                            foregroundColor: isDark ? const Color(0xFFC2E7FF) : const Color(0xFF001D35),
+                            backgroundColor: isDark
+                                ? const Color(0xFF004A77)
+                                : const Color(0xFFC2E7FF),
+                            foregroundColor: isDark
+                                ? const Color(0xFFC2E7FF)
+                                : const Color(0xFF001D35),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: const StadiumBorder(),
                           ),
@@ -1187,7 +1231,9 @@ class QuotationDetailScreen extends ConsumerWidget {
                               color: colorScheme.outlineVariant,
                               width: 1.2,
                             ),
-                            backgroundColor: isDark ? const Color(0xFF1E1E24) : const Color(0xFFF0F4F9),
+                            backgroundColor: isDark
+                                ? const Color(0xFF1E1E24)
+                                : const Color(0xFFF0F4F9),
                           ),
                           onPressed: () =>
                               _declineQuote(context, ref, quotation.id),
@@ -1250,4 +1296,3 @@ class _DetailRow extends StatelessWidget {
     );
   }
 }
-

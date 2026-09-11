@@ -2,320 +2,196 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../components/mesh_background.dart';
 import '../../components/glass_card.dart';
+import '../../components/settings_action_row.dart';
 import '../../providers/providers.dart';
 
 class ProfileMenuScreen extends ConsumerWidget {
   const ProfileMenuScreen({super.key});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final userProfile = ref.watch(userProfileProvider);
+    final user = ref.watch(userProfileProvider);
     final company = ref.watch(companyProvider);
-
-    final initials = () {
-      final name = userProfile?.displayName ?? userProfile?.email ?? '';
-      if (name.isEmpty) return '?';
-      final parts = name.split(' ');
-      if (parts.length >= 2) {
-        return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-      }
-      return name[0].toUpperCase();
-    }();
-
-    return MeshBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/');
-              }
-            },
-          ),
-          title: Text(
-            'Profile',
-            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-          ),
-        ),
-        body: ListView(
-          children: [
-            // Profile Header Card
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: GlassCard(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 32,
-                      backgroundColor: colorScheme.primaryContainer,
-                      backgroundImage: userProfile?.photoURL != null && userProfile!.photoURL!.isNotEmpty
-                          ? NetworkImage(userProfile.photoURL!)
-                          : null,
-                      child: userProfile?.photoURL == null || userProfile!.photoURL!.isEmpty
-                          ? Text(
-                              initials,
-                              style: textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.primary,
-                              ),
-                            )
-                          : null,
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            userProfile?.displayName ?? 'User',
-                            style: textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          if (userProfile?.email != null) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              userProfile!.email!,
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                          if (company?.name != null) ...[
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: colorScheme.secondaryContainer,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                company!.name,
-                                style: textTheme.labelSmall?.copyWith(
-                                  color: colorScheme.onSecondaryContainer,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.edit_outlined,
-                          color: colorScheme.onSurfaceVariant),
-                      onPressed: () {
-                        context.pop();
-                        context.push('/profile/edit');
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Quick Actions
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'QUICK ACTIONS',
-                style: textTheme.labelSmall?.copyWith(
-                  color: colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            _ProfileMenuItem(
-              icon: LucideIcons.settings,
-              title: 'Settings & Profile',
-              subtitle: 'Account, company, integrations',
-              onTap: () {
-                context.pop();
-                context.push('/settings');
-              },
-            ),
-            _ProfileMenuItem(
-              icon: LucideIcons.bell,
-              title: 'Notifications',
-              subtitle: 'Alerts and reminders',
-              onTap: () {
-                context.pop();
-                context.push('/notifications');
-              },
-            ),
-            _ProfileMenuItem(
-              icon: LucideIcons.users,
-              title: 'Team Management',
-              subtitle: 'Manage team members and roles',
-              onTap: () {
-                context.pop();
-                context.push('/team');
-              },
-            ),
-            _ProfileMenuItem(
-              icon: LucideIcons.playCircle,
-              title: 'Automated Workflows',
-              subtitle: 'Triggers and automations',
-              onTap: () {
-                context.pop();
-                context.push('/workflows');
-              },
-            ),
-            _ProfileMenuItem(
-              icon: LucideIcons.helpCircle,
-              title: 'Help & Support',
-              subtitle: 'FAQs and contact support',
-              onTap: () {
-                context.pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content:
-                        Text('For support, email support@quoteonthego.co.uk'),
-                    duration: Duration(seconds: 4),
-                  ),
-                );
-              },
-            ),
-
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Divider(),
-            ),
-
-            // Plan Info
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: GlassCard(
-                padding: EdgeInsets.zero,
-                child: ListTile(
-                  leading: Icon(Icons.workspace_premium_outlined,
-                      color: colorScheme.tertiary),
-                  title: Text(
-                    company?.tier ?? 'Free Plan',
-                    style: textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle:
-                      const Text('Upgrade for unlimited quotes & invoices'),
-                  trailing: TextButton(
-                    onPressed: () {
-                      context.pop();
-                      context.push('/settings');
-                    },
-                    child: const Text('Upgrade'),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Sign Out
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: colorScheme.error,
-                  side: BorderSide(
-                      color: colorScheme.error.withValues(alpha: 0.5)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Sign Out'),
-                      content: const Text('Are you sure you want to sign out?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('Cancel'),
-                        ),
-                        FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: colorScheme.error,
-                          ),
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Sign Out'),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (confirmed == true) {
-                    final authService = ref.read(authServiceProvider);
-                    await authService.signOut();
-                  }
-                },
-                icon: const Icon(Icons.logout),
-                label: const Text('Sign Out'),
-              ),
-            ),
-
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
+    return SettingsHubContent(
+      name: user?.displayName ?? 'Your account',
+      email: user?.email ?? '',
+      companyName: company?.name ?? '',
+      photoUrl: user?.photoURL,
+      tier: company?.tier ?? 'free',
+      isOwner: user?.role.toLowerCase() == 'owner',
+      canManageTeam: ['owner', 'admin'].contains(user?.role.toLowerCase()),
+      onOpen: (path) => context.push(path),
+      onSignOut: () async {
+        final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+                    title: const Text('Sign out?'),
+                    content: const Text(
+                        'Your saved work will be here when you return.'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(dialogContext, false),
+                          child: const Text('Stay signed in')),
+                      FilledButton(
+                          onPressed: () => Navigator.pop(dialogContext, true),
+                          child: const Text('Sign out'))
+                    ]));
+        if (confirmed != true) return;
+        try {
+          await ref.read(authServiceProvider).signOut();
+        } catch (_) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Could not sign out. Please try again.')));
+          }
+        }
+      },
     );
   }
 }
 
-class _ProfileMenuItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _ProfileMenuItem({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
+class SettingsHubContent extends StatelessWidget {
+  const SettingsHubContent(
+      {super.key,
+      required this.name,
+      required this.email,
+      required this.companyName,
+      this.photoUrl,
+      required this.tier,
+      required this.isOwner,
+      required this.canManageTeam,
+      required this.onOpen,
+      required this.onSignOut});
+  final String name, email, companyName, tier;
+  final String? photoUrl;
+  final bool isOwner, canManageTeam;
+  final ValueChanged<String> onOpen;
+  final VoidCallback onSignOut;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, color: colorScheme.onSurfaceVariant, size: 20),
-      ),
-      title: Text(title,
-          style: Theme.of(context)
-              .textTheme
-              .titleSmall
-              ?.copyWith(fontWeight: FontWeight.w500)),
-      subtitle: Text(subtitle,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              )),
-      trailing: Icon(Icons.chevron_right,
-          color: colorScheme.onSurfaceVariant, size: 20),
-      onTap: onTap,
+    final theme = Theme.of(context);
+    final words = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    final initials = words.isEmpty
+        ? '?'
+        : words
+            .take(2)
+            .map((part) => part.characters.first)
+            .join()
+            .toUpperCase();
+    return Scaffold(
+      appBar: AppBar(
+          title: const Text('Settings'), automaticallyImplyLeading: false),
+      body: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: ListView(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+                children: [
+                  const SettingsSectionHeading('Profile', first: true),
+                  GlassCard(
+                      onTap: () => onOpen('/profile/edit'),
+                      child: Row(children: [
+                        ClipOval(
+                            child: SizedBox(
+                                width: 56,
+                                height: 56,
+                                child: photoUrl != null && photoUrl!.isNotEmpty
+                                    ? Image.network(photoUrl!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) =>
+                                            _avatar(context, initials))
+                                    : _avatar(context, initials))),
+                        const SizedBox(width: 16),
+                        Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                              Text(name, style: theme.textTheme.titleLarge),
+                              if (email.isNotEmpty)
+                                Text(email,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                        color: theme
+                                            .colorScheme.onSurfaceVariant)),
+                              if (companyName.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Text(companyName,
+                                    style: theme.textTheme.bodyMedium)
+                              ],
+                            ])),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.edit_outlined,
+                            semanticLabel: 'Edit profile', size: 22),
+                      ])),
+                  const SettingsSectionHeading('Settings'),
+                  SettingsActionRow(
+                      icon: LucideIcons.settings,
+                      title: 'Account & app settings',
+                      subtitle: 'Company, appearance and integrations',
+                      onTap: () => onOpen('/settings/preferences')),
+                  SettingsActionRow(
+                      icon: LucideIcons.bell,
+                      title: 'Notifications',
+                      subtitle: 'Updates and reminders',
+                      onTap: () => onOpen('/notifications')),
+                  if (canManageTeam)
+                    SettingsActionRow(
+                        icon: LucideIcons.users,
+                        title: 'Team management',
+                        subtitle: 'Manage members and roles',
+                        onTap: () => onOpen('/team')),
+                  SettingsActionRow(
+                      icon: LucideIcons.playCircle,
+                      title: 'Automated workflows',
+                      subtitle: 'Follow-ups and automations',
+                      onTap: () => onOpen('/workflows')),
+                  SettingsActionRow(
+                      icon: LucideIcons.helpCircle,
+                      title: 'Help & support',
+                      subtitle: 'support@quoteonthego.co.uk',
+                      onTap: () {
+                        showDialog<void>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                                    title: const Text('Help & support'),
+                                    content: const SelectableText(
+                                        'Email support@quoteonthego.co.uk with the task you need help with.'),
+                                    actions: [
+                                      TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                          child: const Text('Close'))
+                                    ]));
+                      }),
+                  if (isOwner) ...[
+                    SettingsActionRow(
+                        icon: LucideIcons.creditCard,
+                        title: 'Plan & billing',
+                        subtitle:
+                            '${tier.isEmpty ? 'Free' : tier[0].toUpperCase() + tier.substring(1)} plan',
+                        onTap: () => onOpen('/billing')),
+                  ],
+                  SettingsActionRow(
+                      icon: Icons.cloud_upload_outlined,
+                      title: 'Saved requests',
+                      subtitle: 'Document sync and retry status',
+                      onTap: () => onOpen('/settings/saves')),
+                  SettingsActionRow(
+                      onTap: onSignOut, icon: Icons.logout, title: 'Sign out'),
+                ]),
+          )),
     );
   }
+
+  Widget _avatar(BuildContext context, String initials) => ColoredBox(
+      color: Theme.of(context).colorScheme.primaryContainer,
+      child: Center(
+          child: Text(initials,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onPrimaryContainer))));
 }

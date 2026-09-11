@@ -7,36 +7,59 @@ import 'quotation_provider.dart';
 class ReminderSettings {
   final bool enabled;
   final List<int> triggerDays;
+  final List<int> disabledTriggerDays;
   final String emailTemplate;
 
   ReminderSettings({
     required this.enabled,
     required this.triggerDays,
     required this.emailTemplate,
+    this.disabledTriggerDays = const [],
   });
 
   factory ReminderSettings.fromJson(Map<String, dynamic> json) {
     return ReminderSettings(
-      enabled: json['enableAutoReminders'] as bool? ?? json['enabled'] as bool? ?? false,
+      enabled: json['enableAutoReminders'] as bool? ??
+          json['enabled'] as bool? ??
+          false,
       triggerDays: json['reminderSchedule'] is List
-          ? (json['reminderSchedule'] as List).where((s) => s['enabled'] == true).map((s) => (s['daysAfterDue'] as num).toInt()).toList()
+          ? (json['reminderSchedule'] as List)
+              .where((s) => s['enabled'] == true)
+              .map((s) => (s['daysAfterDue'] as num).toInt())
+              .toList()
           : json['triggerDays'] != null
-          ? List<int>.from(json['triggerDays'])
-          : [1, 7, 14],
-      emailTemplate: json['reminderTemplate'] as String? ?? json['emailTemplate'] as String? ?? _defaultTemplate,
+              ? List<int>.from(json['triggerDays'])
+              : [1, 7, 14],
+      emailTemplate: json['reminderTemplate'] as String? ??
+          json['emailTemplate'] as String? ??
+          _defaultTemplate,
+      disabledTriggerDays: json['reminderSchedule'] is List
+          ? (json['reminderSchedule'] as List)
+              .where((s) => s['enabled'] != true)
+              .map((s) => (s['daysAfterDue'] as num).toInt())
+              .toList()
+          : [],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'enableAutoReminders': enabled,
-      'reminderSchedule': triggerDays.toSet().map((day) => {'daysAfterDue': day, 'enabled': true}).toList(),
+      'reminderSchedule': [
+        ...triggerDays
+            .toSet()
+            .map((day) => {'daysAfterDue': day, 'enabled': true}),
+        ...disabledTriggerDays
+            .toSet()
+            .where((day) => !triggerDays.contains(day))
+            .map((day) => {'daysAfterDue': day, 'enabled': false}),
+      ]..sort((a, b) =>
+          (a['daysAfterDue'] as int).compareTo(b['daysAfterDue'] as int)),
       'reminderTemplate': emailTemplate,
     };
   }
 
-  static const String _defaultTemplate =
-      "Hi {{customer_name}},\n\nThis is a friendly reminder that invoice {{invoice_number}} for {{invoice_total}} was due on {{due_date}}.\n\nPlease find the invoice attached or view it in the client portal: {{portal_url}}\n\nKind regards,\n{{company_name}}";
+  static const String _defaultTemplate = '';
 
   factory ReminderSettings.defaultSettings() {
     return ReminderSettings(
@@ -87,8 +110,12 @@ class ReminderHistoryEntry {
       invoiceId: data['invoiceId'] as String? ?? '',
       companyId: data['companyId'] as String? ?? '',
       sentAt: sentAt,
-      recipientEmail: data['customerEmail'] as String? ?? data['recipientEmail'] as String? ?? '',
-      status: (data['status'] as String? ?? 'sent').toLowerCase() == 'sent' ? 'Sent' : 'Failed',
+      recipientEmail: data['customerEmail'] as String? ??
+          data['recipientEmail'] as String? ??
+          '',
+      status: (data['status'] as String? ?? 'sent').toLowerCase() == 'sent'
+          ? 'Sent'
+          : 'Failed',
       triggerType: data['triggerType'] as String? ?? 'Manual',
       daysOverdue: data['daysOverdue'] as int?,
       error: data['error'] as String?,
@@ -103,12 +130,16 @@ class ReminderRepository {
   ReminderRepository(this._firestore, this.companyId);
 
   Future<ReminderSettings> getReminderSettings(String companyId) async {
-    final result = await ApiClient.post('/api/mobile/operations', {'operation': 'reminders.get'});
-    return ReminderSettings.fromJson(Map<String, dynamic>.from(result['data'] as Map));
+    final result = await ApiClient.post(
+        '/api/mobile/operations', {'operation': 'reminders.get'});
+    return ReminderSettings.fromJson(
+        Map<String, dynamic>.from(result['data'] as Map));
   }
 
-  Future<void> updateReminderSettings(String companyId, ReminderSettings settings) async {
-    await ApiClient.post('/api/mobile/operations', {'operation': 'reminders.update', 'settings': settings.toJson()});
+  Future<void> updateReminderSettings(
+      String companyId, ReminderSettings settings) async {
+    await ApiClient.post('/api/mobile/operations',
+        {'operation': 'reminders.update', 'settings': settings.toJson()});
   }
 
   Stream<List<ReminderHistoryEntry>> streamReminderHistory(String invoiceId) {
@@ -118,18 +149,22 @@ class ReminderRepository {
         .where('invoiceId', isEqualTo: invoiceId)
         .snapshots()
         .map((snap) {
-      final entries = snap.docs.map((d) => ReminderHistoryEntry.fromFirestore(d)).toList();
+      final entries =
+          snap.docs.map((d) => ReminderHistoryEntry.fromFirestore(d)).toList();
       entries.sort((a, b) => b.sentAt.compareTo(a.sentAt));
       return entries;
     });
   }
 
-  Future<void> sendManualReminderEmail(String invoiceId, String recipientEmail) async {
-    await ApiClient.post('/api/mobile/operations', {'operation': 'reminders.send', 'invoiceId': invoiceId});
+  Future<void> sendManualReminderEmail(
+      String invoiceId, String recipientEmail) async {
+    await ApiClient.post('/api/mobile/operations',
+        {'operation': 'reminders.send', 'invoiceId': invoiceId});
   }
 
   Future<void> processAutoReminders(String companyId) async {
-    await ApiClient.post('/api/mobile/operations', {'operation': 'reminders.process'});
+    await ApiClient.post(
+        '/api/mobile/operations', {'operation': 'reminders.process'});
   }
 }
 
@@ -138,22 +173,22 @@ final reminderRepositoryProvider = Provider<ReminderRepository>((ref) {
   return ReminderRepository(firestore, ref.watch(companyIdProvider) ?? '');
 });
 
-final reminderSettingsStreamProvider = StreamProvider.autoDispose<ReminderSettings>((ref) {
+final reminderSettingsStreamProvider =
+    StreamProvider.autoDispose<ReminderSettings>((ref) {
   final companyId = ref.watch(companyIdProvider);
   if (companyId == null) {
     return Stream.value(ReminderSettings.defaultSettings());
   }
   final firestore = ref.watch(firestoreProvider);
-  return firestore
-      .collection('companies')
-      .doc(companyId)
-      .snapshots()
-      .map((doc) => doc.exists && doc.data() != null
-          ? ReminderSettings.fromJson(Map<String, dynamic>.from(doc.data()!['reminderSettings'] as Map? ?? {}))
+  return firestore.collection('companies').doc(companyId).snapshots().map(
+      (doc) => doc.exists && doc.data() != null
+          ? ReminderSettings.fromJson(Map<String, dynamic>.from(
+              doc.data()!['reminderSettings'] as Map? ?? {}))
           : ReminderSettings.defaultSettings());
 });
 
-final reminderHistoryStreamProvider = StreamProvider.family.autoDispose<List<ReminderHistoryEntry>, String>((ref, invoiceId) {
+final reminderHistoryStreamProvider = StreamProvider.family
+    .autoDispose<List<ReminderHistoryEntry>, String>((ref, invoiceId) {
   final repo = ref.watch(reminderRepositoryProvider);
   return repo.streamReminderHistory(invoiceId);
 });

@@ -1,0 +1,995 @@
+{
+  "routes": [
+    "/invite/:id",
+    "/splash",
+    "/login",
+    "/register",
+    "/reset-password",
+    "/",
+    "/quotations",
+    "/invoices",
+    "/customers",
+    "/schedule",
+    "/workflows",
+    "/analytics",
+    "/pricing",
+    "/settings",
+    "/settings/preferences",
+    "/web-preview",
+    "/pdf-preview/:type/:id",
+    "/pipeline",
+    "/workflows/executions",
+    "/workflows/:id/executions",
+    "/quotations/new",
+    "/quotations/:id",
+    "/quotations/:id/portal",
+    "/quotations/:id/edit",
+    "/invoices/new",
+    "/invoices/:id",
+    "/invoices/:id/portal",
+    "/invoices/:id/edit",
+    "/invoices/recurring/new",
+    "/invoices/recurring/:id/edit",
+    "/customers/new",
+    "/customers/:id",
+    "/customers/:id/edit",
+    "/schedule/new",
+    "/schedule/:id",
+    "/schedule/:id/edit",
+    "/collaboration/:type/:id",
+    "/settings/reminders",
+    "/settings/saves",
+    "/integrations",
+    "/collaboration",
+    "/client-responses",
+    "/checklist-templates",
+    "/settings/templates",
+    "/settings/templates/add-edit",
+    "/sign-in-methods",
+    "/expenses",
+    "/expenses/new",
+    "/expenses/:id",
+    "/referral",
+    "/billing",
+    "/services",
+    "/services/new",
+    "/services/:id",
+    "/profile",
+    "/profile/edit",
+    "/notifications",
+    "/team",
+    "/company-branding",
+    "/onboarding",
+    "/verify-email",
+    "/account-pending-deletion"
+  ],
+  "surfaces": [
+    {
+      "path": "lib/components/analytics_metric.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/animated_celebration_icon.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/auth_page.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/brand_mark.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/curved_header.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/custom_date_time_picker.dart",
+      "overlays": [
+        {
+          "kind": "showTimePicker",
+          "line": 138
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/custom_email_send_bottom_sheet.dart",
+      "overlays": [
+        {
+          "kind": "showModalBottomSheet",
+          "line": 772
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/document_discount_field.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/document_email_preview.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/draft_status_banner.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 60
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/flash_message.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/glass_card.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/mesh_background.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/pdf_preview_panel.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/pill_button.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/preview_status_panel.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/settings_action_row.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/success_bottom_sheet.dart",
+      "overlays": [
+        {
+          "kind": "showModalBottomSheet",
+          "line": 33
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/components/success_celebration_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 42
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/analytics/analytics_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/analytics/document_trends.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/auth/account_pending_deletion_screen.dart",
+      "overlays": [],
+      "verification": "Representative light/dark renders inspected; see ledger for state coverage"
+    },
+    {
+      "path": "lib/screens/auth/auth_credentials_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/auth/email_verification_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/auth/invitation_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/auth/login_screen.dart",
+      "overlays": [],
+      "verification": "Representative light/dark renders inspected; see ledger for state coverage"
+    },
+    {
+      "path": "lib/screens/auth/onboarding_screen.dart",
+      "overlays": [],
+      "verification": "Representative light/dark renders inspected; see ledger for state coverage"
+    },
+    {
+      "path": "lib/screens/auth/register_screen.dart",
+      "overlays": [],
+      "verification": "Representative light/dark renders inspected; see ledger for state coverage"
+    },
+    {
+      "path": "lib/screens/auth/reset_password_screen.dart",
+      "overlays": [],
+      "verification": "Representative light/dark renders inspected; see ledger for state coverage"
+    },
+    {
+      "path": "lib/screens/auth/splash_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/client_responses/client_activity_card.dart",
+      "overlays": [
+        {
+          "kind": "showModalBottomSheet",
+          "line": 123
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/client_responses/client_responses_screen.dart",
+      "overlays": [
+        {
+          "kind": "showModalBottomSheet",
+          "line": 360
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/collaboration/collaboration_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 106
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 438
+        },
+        {
+          "kind": "showDialog",
+          "line": 760
+        },
+        {
+          "kind": "showDialog",
+          "line": 847
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/customers/add_edit_customer_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/customers/customer_detail_screen.dart",
+      "overlays": [
+        {
+          "kind": "showModalBottomSheet",
+          "line": 58
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 161
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 277
+        },
+        {
+          "kind": "PopupMenuButton",
+          "line": 551
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/customers/customers_screen.dart",
+      "overlays": [
+        {
+          "kind": "PopupMenuButton",
+          "line": 234
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/dashboard/dashboard_screen.dart",
+      "overlays": [],
+      "verification": "Representative light/dark renders inspected; see ledger for state coverage"
+    },
+    {
+      "path": "lib/screens/expenses/expense_detail_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 142
+        },
+        {
+          "kind": "showDatePicker",
+          "line": 168
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/expenses/expenses_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/expenses/log_expense_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDatePicker",
+          "line": 92
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 102
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/invoices/add_edit_recurring_invoice_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDatePicker",
+          "line": 193
+        },
+        {
+          "kind": "PopupMenuButton",
+          "line": 759
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 810
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 829
+        },
+        {
+          "kind": "showDialog",
+          "line": 1588
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/invoices/create_invoice_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 614
+        },
+        {
+          "kind": "showDatePicker",
+          "line": 850
+        },
+        {
+          "kind": "PopupMenuButton",
+          "line": 974
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 1036
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 1052
+        },
+        {
+          "kind": "showDialog",
+          "line": 1821
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/invoices/invoice_detail_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 106
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 141
+        },
+        {
+          "kind": "showDialog",
+          "line": 294
+        },
+        {
+          "kind": "showDialog",
+          "line": 366
+        },
+        {
+          "kind": "showDialog",
+          "line": 397
+        },
+        {
+          "kind": "PopupMenuButton",
+          "line": 503
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/invoices/invoice_portal_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/invoices/invoices_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 130
+        },
+        {
+          "kind": "PopupMenuButton",
+          "line": 928
+        },
+        {
+          "kind": "showDialog",
+          "line": 959
+        },
+        {
+          "kind": "showDialog",
+          "line": 975
+        },
+        {
+          "kind": "showDialog",
+          "line": 1004
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/notifications/notifications_screen.dart",
+      "overlays": [
+        {
+          "kind": "PopupMenuButton",
+          "line": 99
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/pricing/smart_pricing_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/profile/edit_profile_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/profile/profile_menu_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 25
+        },
+        {
+          "kind": "showDialog",
+          "line": 158
+        }
+      ],
+      "verification": "Representative light/dark renders inspected; see ledger for state coverage"
+    },
+    {
+      "path": "lib/screens/quotations/create_quotation_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 466
+        },
+        {
+          "kind": "showDatePicker",
+          "line": 702
+        },
+        {
+          "kind": "PopupMenuButton",
+          "line": 826
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 887
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 910
+        },
+        {
+          "kind": "showDialog",
+          "line": 1657
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/quotations/kanban_board_screen.dart",
+      "overlays": [
+        {
+          "kind": "PopupMenuButton",
+          "line": 416
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/quotations/quotation_detail_screen.dart",
+      "overlays": [
+        {
+          "kind": "showModalBottomSheet",
+          "line": 113
+        },
+        {
+          "kind": "showDialog",
+          "line": 144
+        },
+        {
+          "kind": "showDialog",
+          "line": 336
+        },
+        {
+          "kind": "showDialog",
+          "line": 425
+        },
+        {
+          "kind": "showDialog",
+          "line": 456
+        },
+        {
+          "kind": "PopupMenuButton",
+          "line": 565
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/quotations/quotation_portal_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/quotations/quotations_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 116
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/schedule/create_event_screen.dart",
+      "overlays": [
+        {
+          "kind": "showModalBottomSheet",
+          "line": 82
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/schedule/create_job_screen.dart",
+      "overlays": [
+        {
+          "kind": "showModalBottomSheet",
+          "line": 135
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 164
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/schedule/job_detail_screen.dart",
+      "overlays": [
+        {
+          "kind": "showModalBottomSheet",
+          "line": 142
+        },
+        {
+          "kind": "showDialog",
+          "line": 160
+        },
+        {
+          "kind": "PopupMenuButton",
+          "line": 271
+        },
+        {
+          "kind": "showDialog",
+          "line": 535
+        },
+        {
+          "kind": "showDialog",
+          "line": 562
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 596
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 673
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 2162
+        },
+        {
+          "kind": "showDialog",
+          "line": 2231
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 2358
+        },
+        {
+          "kind": "showDialog",
+          "line": 2458
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 2556
+        },
+        {
+          "kind": "showDialog",
+          "line": 2793
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 2821
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/schedule/job_edit_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/schedule/monthly_schedule_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/schedule/schedule_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/services/create_service_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/services/service_detail_screen.dart",
+      "overlays": [
+        {
+          "kind": "PopupMenuButton",
+          "line": 65
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 233
+        },
+        {
+          "kind": "showDialog",
+          "line": 326
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/services/services_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/settings/add_edit_document_template_screen.dart",
+      "overlays": [
+        {
+          "kind": "showModalBottomSheet",
+          "line": 148
+        },
+        {
+          "kind": "PopupMenuButton",
+          "line": 363
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/settings/billing_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/settings/checklist_templates_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 140
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/settings/collaboration_overview_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/settings/company_branding_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 259
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/settings/document_saves_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 143
+        }
+      ],
+      "verification": "Representative light/dark renders inspected; see ledger for state coverage"
+    },
+    {
+      "path": "lib/screens/settings/integrations_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 33
+        },
+        {
+          "kind": "showDialog",
+          "line": 89
+        },
+        {
+          "kind": "showDialog",
+          "line": 202
+        },
+        {
+          "kind": "showDialog",
+          "line": 270
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 327
+        },
+        {
+          "kind": "showDialog",
+          "line": 505
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/settings/referral_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/settings/reminder_settings_screen.dart",
+      "overlays": [],
+      "verification": "Representative light/dark renders inspected; see ledger for state coverage"
+    },
+    {
+      "path": "lib/screens/settings/settings_screen.dart",
+      "overlays": [
+        {
+          "kind": "showModalBottomSheet",
+          "line": 81
+        }
+      ],
+      "verification": "Representative light/dark renders inspected; see ledger for state coverage"
+    },
+    {
+      "path": "lib/screens/settings/sign_in_methods_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 176
+        },
+        {
+          "kind": "showDialog",
+          "line": 283
+        },
+        {
+          "kind": "showDialog",
+          "line": 407
+        },
+        {
+          "kind": "showDialog",
+          "line": 456
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/settings/templates_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 43
+        },
+        {
+          "kind": "PopupMenuButton",
+          "line": 277
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/shared/document_edit_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/shared/document_snapshot_view.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/shared/in_app_web_view_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/shared/local_draft_mixin.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 160
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/shared/pdf_preview_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/shell_scaffold.dart",
+      "overlays": [
+        {
+          "kind": "showModalBottomSheet",
+          "line": 22
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/team/team_management_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 316
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 357
+        },
+        {
+          "kind": "showDialog",
+          "line": 452
+        },
+        {
+          "kind": "showDialog",
+          "line": 605
+        },
+        {
+          "kind": "PopupMenuButton",
+          "line": 846
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/workflows/create_workflow_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/workflows/workflow_execution_log_screen.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 469
+        },
+        {
+          "kind": "showModalBottomSheet",
+          "line": 509
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/screens/workflows/workflows_screen.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/widgets/account_deletion_card.dart",
+      "overlays": [
+        {
+          "kind": "showDialog",
+          "line": 25
+        }
+      ],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/widgets/app_empty_state.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/widgets/document_preview.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/widgets/job_profitability_card.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/widgets/premium_empty_state.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/widgets/status_chip.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    },
+    {
+      "path": "lib/widgets/widgets.dart",
+      "overlays": [],
+      "verification": "Pending complete rendered/state review"
+    }
+  ]
+}

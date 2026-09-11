@@ -39,6 +39,7 @@ import '../screens/settings/templates_screen.dart';
 import '../screens/settings/add_edit_document_template_screen.dart';
 import '../screens/settings/sign_in_methods_screen.dart';
 import '../screens/settings/reminder_settings_screen.dart';
+import '../screens/settings/document_saves_screen.dart';
 import '../screens/expenses/expenses_screen.dart';
 import '../screens/expenses/expense_detail_screen.dart';
 import '../screens/expenses/log_expense_screen.dart';
@@ -92,7 +93,8 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
     debugLogDiagnostics: false,
-    refreshListenable: Listenable.merge([refreshListenable, NotificationService()]),
+    refreshListenable:
+        Listenable.merge([refreshListenable, NotificationService()]),
     redirect: (context, state) async {
       // Use FirebaseAuth directly — the Riverpod provider chain may not
       // have processed the stream event yet when refreshListenable fires.
@@ -101,12 +103,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       final location = state.matchedLocation;
       final invitationPreferences = await SharedPreferences.getInstance();
       final incomingInvitation = state.uri.queryParameters['invite'] ??
-        (location.startsWith('/invite/') ? state.pathParameters['id'] : null);
-      if (incomingInvitation != null && incomingInvitation.isNotEmpty && !incomingInvitation.contains('/')) {
-        await invitationPreferences.setString('pendingInvitationId', incomingInvitation);
+          (location.startsWith('/invite/') ? state.pathParameters['id'] : null);
+      if (incomingInvitation != null &&
+          incomingInvitation.isNotEmpty &&
+          !incomingInvitation.contains('/')) {
+        await invitationPreferences.setString(
+            'pendingInvitationId', incomingInvitation);
       }
-      final pendingInvitation = invitationPreferences.getString('pendingInvitationId');
-      final isLoggingIn = location == '/login' || location == '/register' || location == '/reset-password';
+      final pendingInvitation =
+          invitationPreferences.getString('pendingInvitationId');
+      final isLoggingIn = location == '/login' ||
+          location == '/register' ||
+          location == '/reset-password';
       final isOnboarding = location == '/onboarding';
       final isVerifyingEmail = location == '/verify-email';
       final isSplash = location == '/splash';
@@ -128,7 +136,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         final hasProfile = userProfile != null;
 
         // Check for pending deletion status
-        final isPendingDeletion = userProfile?.accountStatus == 'pending_deletion';
+        final isPendingDeletion =
+            userProfile?.accountStatus == 'pending_deletion';
         final isPendingDeletionPage = location == '/account-pending-deletion';
 
         if (isPendingDeletion && !isPendingDeletionPage) {
@@ -144,7 +153,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         }
 
         if (pendingInvitation != null && isEmailVerified) {
-          return location == '/invite/$pendingInvitation' ? null : '/invite/$pendingInvitation';
+          return location == '/invite/$pendingInvitation'
+              ? null
+              : '/invite/$pendingInvitation';
         }
 
         // Once verified, send to onboarding if no profile yet
@@ -170,7 +181,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/invite/:id', builder: (context, state) => InvitationScreen(id: state.pathParameters['id']!)),
+      GoRoute(
+          path: '/invite/:id',
+          builder: (context, state) =>
+              InvitationScreen(id: state.pathParameters['id']!)),
       // Splash route
       GoRoute(
         path: '/splash',
@@ -188,7 +202,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/reset-password',
         builder: (context, state) => const ResetPasswordScreen(),
-      ),      // Main app shell with bottom navigation
+      ), // Main app shell with bottom navigation
       ShellRoute(
         builder: (context, state, child) => ShellScaffold(child: child),
         routes: [
@@ -232,18 +246,26 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/settings',
-            builder: (context, state) => const SettingsScreen(),
+            builder: (context, state) => const ProfileMenuScreen(),
           ),
         ],
       ),
 
       // Routes outside shell (no bottom nav)
       GoRoute(
+        path: '/settings/preferences',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
         path: '/web-preview',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          final url = extra?['url'] as String? ?? state.uri.queryParameters['url'] ?? '';
-          final title = extra?['title'] as String? ?? state.uri.queryParameters['title'] ?? 'Preview';
+          final url = extra?['url'] as String? ??
+              state.uri.queryParameters['url'] ??
+              '';
+          final title = extra?['title'] as String? ??
+              state.uri.queryParameters['title'] ??
+              'Preview';
           return InAppWebViewScreen(url: url, title: title);
         },
       ),
@@ -273,7 +295,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/quotations/new',
         builder: (context, state) => CreateQuotationScreen(
-          prefilledCustomer: (state.extra is Map ? (state.extra as Map)['prefilledCustomer'] : state.extra) as Customer?),
+            prefilledCustomer: (state.extra is Map
+                ? (state.extra as Map)['prefilledCustomer']
+                : state.extra) as Customer?),
       ),
       GoRoute(
         path: '/quotations/:id',
@@ -299,9 +323,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/invoices/new',
         builder: (context, state) => CreateInvoiceScreen(
-          prefilledCustomer: (state.extra is Map ? (state.extra as Map)['prefilledCustomer'] : state.extra) as Customer?,
-          fromQuotationId: state.uri.queryParameters['fromQuotation'],
-          fromJobId: state.uri.queryParameters['fromJob']),
+            prefilledCustomer: (state.extra is Map
+                ? (state.extra as Map)['prefilledCustomer']
+                : state.extra) as Customer?,
+            fromQuotationId: state.uri.queryParameters['fromQuotation'],
+            fromJobId: state.uri.queryParameters['fromJob']),
       ),
       GoRoute(
         path: '/invoices/:id',
@@ -320,7 +346,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/invoices/:id/edit',
         builder: (context, state) {
-          return DocumentEditScreen(id: state.pathParameters['id']!, invoice: true);
+          return DocumentEditScreen(
+              id: state.pathParameters['id']!, invoice: true);
         },
       ),
       GoRoute(
@@ -338,7 +365,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-
 
       GoRoute(
         path: '/customers/new',
@@ -361,7 +387,8 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/schedule/new',
-        builder: (context, state) => CreateJobScreen(fromQuotationId: state.uri.queryParameters['fromQuotation']),
+        builder: (context, state) => CreateJobScreen(
+            fromQuotationId: state.uri.queryParameters['fromQuotation']),
       ),
       GoRoute(
         path: '/schedule/:id',
@@ -373,7 +400,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/schedule/:id/edit',
         builder: (context, state) {
-            return JobEditScreen(id: state.pathParameters['id']!);
+          return JobEditScreen(id: state.pathParameters['id']!);
         },
       ),
 
@@ -390,8 +417,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ReminderSettingsScreen(),
       ),
       GoRoute(
+        path: '/settings/saves',
+        builder: (context, state) => DocumentSavesScreen(
+            requestId: state.uri.queryParameters['request'],
+            preview: state.uri.queryParameters['preview'] == '1'),
+      ),
+      GoRoute(
         path: '/integrations',
-        builder: (context, state) => const IntegrationsScreen(),
+        builder: (context, state) => IntegrationsScreen(
+            connectionFailed: state.uri.queryParameters.containsKey('error')),
       ),
       GoRoute(
         path: '/collaboration',
@@ -461,7 +495,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/profile',
-        builder: (context, state) => const ProfileMenuScreen(),
+        redirect: (context, state) => '/settings',
       ),
       GoRoute(
         path: '/profile/edit',

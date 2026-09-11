@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/providers.dart';
 import '../models/company.dart';
+import '../providers/document_outbox_provider.dart';
 
 class ShellScaffold extends ConsumerStatefulWidget {
   final Widget child;
@@ -45,6 +46,7 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     final company = ref.watch(companyProvider);
+    final queue = ref.watch(documentOutboxProvider);
     _currentIndex = location.startsWith('/schedule')
         ? 1
         : location.startsWith('/customers')
@@ -56,7 +58,9 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
       key: ref.watch(drawerControllerProvider),
       drawer: _buildNavigationDrawer(context, company),
       body: widget.child,
-      floatingActionButton: location == '/'
+      floatingActionButton: location == '/' ||
+              location.startsWith('/settings') ||
+              location == '/analytics'
           ? null
           : FloatingActionButton(
               tooltip: 'Create document',
@@ -65,19 +69,31 @@ class _ShellScaffoldState extends ConsumerState<ShellScaffold> {
               foregroundColor: Theme.of(context).colorScheme.onPrimary,
               elevation: 0,
               child: const Icon(LucideIcons.plus)),
-      bottomNavigationBar: NavigationBar(
-          selectedIndex: _currentIndex,
-          onDestinationSelected: (index) => context
-              .go(const ['/', '/schedule', '/customers', '/settings'][index]),
-          destinations: const [
-            NavigationDestination(icon: Icon(LucideIcons.house), label: 'Home'),
-            NavigationDestination(
-                icon: Icon(LucideIcons.calendar), label: 'Schedule'),
-            NavigationDestination(
-                icon: Icon(LucideIcons.users), label: 'Customers'),
-            NavigationDestination(
-                icon: Icon(LucideIcons.settings), label: 'Settings'),
-          ]),
+      bottomNavigationBar: Column(mainAxisSize: MainAxisSize.min, children: [
+        if ((queue?.pendingCount ?? 0) > 0 || queue?.storageError != null)
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: TextButton.icon(
+                  onPressed: () => context.push('/settings/saves'),
+                  icon: const Icon(Icons.cloud_upload_outlined),
+                  label: Text(queue?.storageError != null
+                      ? 'Review saved requests'
+                      : '${queue!.pendingCount} saved requests waiting to sync'))),
+        NavigationBar(
+            selectedIndex: _currentIndex,
+            onDestinationSelected: (index) => context
+                .go(const ['/', '/schedule', '/customers', '/settings'][index]),
+            destinations: const [
+              NavigationDestination(
+                  icon: Icon(LucideIcons.house), label: 'Home'),
+              NavigationDestination(
+                  icon: Icon(LucideIcons.calendar), label: 'Schedule'),
+              NavigationDestination(
+                  icon: Icon(LucideIcons.users), label: 'Customers'),
+              NavigationDestination(
+                  icon: Icon(LucideIcons.settings), label: 'Settings'),
+            ]),
+      ]),
     );
   }
 

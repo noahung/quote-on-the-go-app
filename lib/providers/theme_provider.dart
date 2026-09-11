@@ -18,6 +18,8 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
       state = ThemeMode.dark;
     } else if (stored == 'light') {
       state = ThemeMode.light;
+    } else if (stored == 'system') {
+      state = ThemeMode.system;
     } else {
       state = ThemeMode.light;
     }

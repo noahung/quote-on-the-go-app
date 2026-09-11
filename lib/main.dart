@@ -7,6 +7,7 @@ import 'router/app_router.dart';
 import 'services/firebase_service.dart';
 import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
+import 'providers/document_outbox_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +50,7 @@ class MyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+    ref.watch(documentOutboxProvider);
 
     return MaterialApp.router(
       title: 'Quote On The Go',

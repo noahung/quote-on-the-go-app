@@ -1,32 +1,31 @@
 import 'api_client.dart';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:http/http.dart' as http;
+import 'pdf_transport.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 String get _webAppBaseUrl => ApiClient.baseUrl;
 
 class PdfService {
   /// Fetches PDF bytes from the server for a quotation.
   static Future<Uint8List> fetchQuotationPdf(String quotationId) async {
-    final url = Uri.parse('$_webAppBaseUrl/api/quotations/$quotationId/pdf');
-    final response = await http.get(url, headers: await ApiClient.headers());
-    if (response.statusCode == 200) {
-      return response.bodyBytes;
-    }
-    throw Exception('Failed to fetch PDF (${response.statusCode})');
+    return _fetch('quotations', quotationId);
   }
 
   /// Fetches PDF bytes from the server for an invoice.
   static Future<Uint8List> fetchInvoicePdf(String invoiceId) async {
-    final url = Uri.parse('$_webAppBaseUrl/api/invoices/$invoiceId/pdf');
-    final response = await http.get(url);
-    if (response.statusCode == 200) {
-      return response.bodyBytes;
+    return _fetch('invoices', invoiceId);
+  }
+
+  static Future<Uint8List> _fetch(String collection, String id) async {
+    final transport =
+        PdfTransport(baseUrl: _webAppBaseUrl, headers: ApiClient.headers);
+    try {
+      return await transport.fetch(collection, id);
+    } finally {
+      transport.close();
     }
-    throw Exception('Failed to fetch PDF (${response.statusCode})');
   }
 
   /// Downloads and shares a quotation PDF via the native share sheet.
@@ -65,21 +64,5 @@ class PdfService {
       text: 'Invoice ${invoiceNumber ?? ''}',
       subject: 'Invoice $invoiceNumber',
     );
-  }
-
-  /// Opens the PDF in the device's default browser.
-  static Future<void> viewQuotationPdfInBrowser(String quotationId) async {
-    final url = Uri.parse('$_webAppBaseUrl/api/quotations/$quotationId/pdf');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    }
-  }
-
-  /// Opens the invoice PDF in the device's default browser.
-  static Future<void> viewInvoicePdfInBrowser(String invoiceId) async {
-    final url = Uri.parse('$_webAppBaseUrl/api/invoices/$invoiceId/pdf');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    }
   }
 }

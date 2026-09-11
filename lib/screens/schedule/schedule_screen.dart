@@ -101,7 +101,8 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
             onMenuPressed: () => openDrawer(ref),
             actions: [
               IconButton(
-                icon: const Icon(Icons.add, color: Colors.white),
+                icon: const Icon(Icons.add),
+                tooltip: 'Add job',
                 onPressed: () => context.push('/schedule/new'),
               ),
             ],

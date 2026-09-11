@@ -1,3 +1,6 @@
+import '../../utils/recorded_profit.dart';
+import '../../components/analytics_metric.dart';
+import '../../components/glass_card.dart';
 import 'dart:io';
 import 'document_trends.dart';
 import 'package:path_provider/path_provider.dart';
@@ -18,7 +21,8 @@ class AnalyticsScreen extends ConsumerStatefulWidget {
   ConsumerState<AnalyticsScreen> createState() => _AnalyticsScreenState();
 }
 
-class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTickerProviderStateMixin {
+class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _selectedDateRange = '90 Days';
 
@@ -34,16 +38,14 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     super.dispose();
   }
 
-  // Compute date cutoff based on selected range
-  DateTime _cutoff() {
-    final now = DateTime.now();
-    switch (_selectedDateRange) {
-      case '30 Days':  return now.subtract(const Duration(days: 30));
-      case '6 Months': return now.subtract(const Duration(days: 183));
-      case '1 Year':   return now.subtract(const Duration(days: 365));
-      default:         return now.subtract(const Duration(days: 90));
-    }
-  }
+  DateTime _cutoff(DateTime now) => RecordedProfit.periodStart(
+      switch (_selectedDateRange) {
+        '30 Days' => 30,
+        '6 Months' => 180,
+        '1 Year' => 365,
+        _ => 90,
+      },
+      now);
 
   @override
   Widget build(BuildContext context) {
@@ -53,35 +55,48 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
 
     // Real data from Firestore
     final allQuotations = ref.watch(quotationsProvider);
-    final allInvoices   = ref.watch(invoicesProvider);
-    final allCustomers  = ref.watch(customersProvider);
+    final allInvoices = ref.watch(invoicesProvider);
+    final allCustomers = ref.watch(customersProvider);
 
-    final cutoff = _cutoff();
+    final now = RecordedProfit.periodEnd(DateTime.now());
+    final cutoff = _cutoff(now);
+    final expenses = ref.watch(expensesStreamProvider);
+    final profit = expenses.hasError || expenses.valueOrNull == null
+        ? null
+        : RecordedProfit.calculate(
+            allInvoices, expenses.valueOrNull!, cutoff, now);
 
     // Filter to selected date range
-    final quotations = allQuotations.where((q) =>
-        (DateTime.tryParse(q.date) ?? DateTime(2000)).isAfter(cutoff)).toList();
-    final invoices = allInvoices.where((i) =>
-        (DateTime.tryParse(i.date) ?? DateTime(2000)).isAfter(cutoff)).toList();
+    final quotations = allQuotations
+        .where((q) => RecordedProfit.inRange(q.date, cutoff, now))
+        .toList();
+    final invoices = allInvoices
+        .where((i) => RecordedProfit.inRange(i.date, cutoff, now))
+        .toList();
 
     // ── Metric computations ──────────────────────────────────────────────────
-    final paidInvoices  = invoices.where((i) => i.status == 'Paid').toList();
-    final totalRevenue  = paidInvoices.fold(0.0, (s, i) => s + i.total);
-    final totalCost     = totalRevenue * 0.7; // Same explicitly estimated cost assumption as web analytics
-    final avgMargin     = totalRevenue > 0
-        ? ((totalRevenue - totalCost) / totalRevenue * 100).clamp(0, 100)
-        : 0.0;
+    final paidInvoices = invoices.where((i) => i.status == 'Paid').toList();
+    final totalRevenue = paidInvoices.fold(0.0, (s, i) => s + i.total);
+    final pipelineQuotes = quotations
+        .where((q) =>
+            q.status == 'Draft' || q.status == 'Sent' || q.status == 'Amended')
+        .toList();
+    final pipelineValue = pipelineQuotes.fold(0.0, (s, q) => s + q.total);
 
-    final pipelineQuotes = quotations.where((q) =>
-        q.status == 'Draft' || q.status == 'Sent').toList();
-    final pipelineValue  = pipelineQuotes.fold(0.0, (s, q) => s + q.total);
-
-    final customerCount  = allCustomers.length;
+    final customerCount = allCustomers.length;
     final avgLtv = customerCount > 0 ? totalRevenue / customerCount : 0.0;
 
-    final sentCount     = quotations.where((q) => q.status == 'Sent' || q.status == 'Accepted' || q.status == 'Declined').length;
-    final acceptedCount = quotations.where((q) => q.status == 'Accepted').length;
-    final conversionRate = sentCount > 0 ? acceptedCount / sentCount * 100 : 0.0;
+    final sentCount = quotations
+        .where((q) =>
+            q.status == 'Sent' ||
+            q.status == 'Accepted' ||
+            q.status == 'Declined' ||
+            q.status == 'Amended')
+        .length;
+    final acceptedCount =
+        quotations.where((q) => q.status == 'Accepted').length;
+    final conversionRate =
+        sentCount > 0 ? acceptedCount / sentCount * 100 : 0.0;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -99,6 +114,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                   invoices: invoices,
                   customers: allCustomers,
                   allInvoices: allInvoices,
+                  profit: profit,
+                  start: cutoff,
+                  end: now,
                 ),
               ),
             ],
@@ -108,14 +126,17 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
               padding: const EdgeInsets.all(16),
               children: [
                 ExpansionTile(title: const Text('Six-month trends'), children: [
-  MonthlyRevenueChart(invoices: allInvoices), const SizedBox(height: 16),
-  QuoteActivityChart(quotations: allQuotations), const SizedBox(height: 24),
-]),
+                  MonthlyRevenueChart(invoices: allInvoices),
+                  const SizedBox(height: 16),
+                  QuoteActivityChart(quotations: allQuotations),
+                  const SizedBox(height: 24),
+                ]),
 // Date Range Selection Row
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
-                    children: ['30 Days', '90 Days', '6 Months', '1 Year'].map((range) {
+                    children: ['30 Days', '90 Days', '6 Months', '1 Year']
+                        .map((range) {
                       final isSelected = _selectedDateRange == range;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8.0),
@@ -123,17 +144,23 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                           label: Text(
                             range,
                             style: TextStyle(
-                              color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.onPrimary
+                                  : Theme.of(context).colorScheme.onSurface,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           selected: isSelected,
                           selectedColor: const Color(0xFFF4781F),
-                          backgroundColor: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04),
+                          backgroundColor: isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : Colors.black.withValues(alpha: 0.04),
                           shape: const StadiumBorder(),
                           side: BorderSide.none,
                           onSelected: (selected) {
-                            if (selected) setState(() => _selectedDateRange = range);
+                            if (selected) {
+                              setState(() => _selectedDateRange = range);
+                            }
                           },
                         ),
                       );
@@ -142,63 +169,52 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                 ),
                 const SizedBox(height: 16),
 
-                // Hero Metric Cards
-                SizedBox(
-                  height: 130,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      _buildMetricCard(
-                        context,
-                        title: 'Estimated margin',
-                        value: '${avgMargin.toStringAsFixed(1)}%',
-                        subtitle: 'Assumes costs are 70% of revenue',
-                        icon: LucideIcons.trendingUp,
-                        iconColor: semanticColors.success,
-                        bgColor: const Color(0xFFF4781F),
-                        textColor: Colors.white,
-                        useGradient: true,
-                      ),
-                      _buildMetricCard(
-                        context,
-                        title: 'Pipeline Value',
-                        value: currency.format(pipelineValue),
-                        subtitle: '${pipelineQuotes.length} open quotes',
-                        icon: LucideIcons.target,
-                        iconColor: Colors.blueAccent,
-                      ),
-                      _buildMetricCard(
-                        context,
-                        title: 'Avg. Customer LTV',
-                        value: currency.format(avgLtv),
-                        subtitle: '$customerCount total customers',
-                        icon: LucideIcons.users,
-                        iconColor: Colors.purpleAccent,
-                      ),
-                      _buildMetricCard(
-                        context,
-                        title: 'Conversion Rate',
-                        value: '${conversionRate.toStringAsFixed(1)}%',
-                        subtitle: '$acceptedCount / $sentCount quotes',
-                        icon: LucideIcons.checkCircle,
-                        iconColor: Colors.orangeAccent,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
+                GlassCard(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                      AnalyticsMetric(
+                          title: 'Recorded margin',
+                          value: profit?.margin == null
+                              ? '—'
+                              : '${profit!.margin!.toStringAsFixed(1)}%',
+                          subtitle: profit == null
+                              ? 'Expenses unavailable; retry below'
+                              : 'Paid revenue less recorded GBP expenses'),
+                      const Divider(),
+                      AnalyticsMetric(
+                          title: 'Pipeline value',
+                          value: currency.format(pipelineValue),
+                          subtitle: '${pipelineQuotes.length} open quotes'),
+                      const Divider(),
+                      AnalyticsMetric(
+                          title: 'Average customer revenue',
+                          value: currency.format(avgLtv),
+                          subtitle:
+                              '$customerCount customers in this calculation'),
+                      const Divider(),
+                      AnalyticsMetric(
+                          title: 'Quote conversion',
+                          value: '${conversionRate.toStringAsFixed(1)}%',
+                          subtitle:
+                              '$acceptedCount accepted of $sentCount sent quotes'),
+                    ])),
+                const SizedBox(height: 24),
 
                 // Segmented Tabs
                 Container(
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.04),
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.04)
+                        : Colors.black.withValues(alpha: 0.04),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: TabBar(
                     controller: _tabController,
                     indicatorColor: const Color(0xFFF4781F),
-                    labelColor: Colors.white,
-                    unselectedLabelColor: isDark ? Colors.white54 : Colors.black54,
+                    labelColor: Theme.of(context).colorScheme.onSurface,
+                    unselectedLabelColor:
+                        isDark ? Colors.white54 : Colors.black54,
                     isScrollable: true,
                     tabAlignment: TabAlignment.start,
                     tabs: const [
@@ -212,225 +228,125 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                 ),
                 const SizedBox(height: 16),
 
-                SizedBox(
-                  height: 380,
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildProfitTab(context, invoices, semanticColors, isDark, currency),
+                AnimatedBuilder(
+                  animation: _tabController,
+                  builder: (context, _) => switch (_tabController.index) {
+                    0 => _buildProfitTab(context, profit, expenses.isLoading),
+                    1 =>
                       _buildPipelineTab(context, quotations, isDark, currency),
-                      _buildLtvTab(context, allCustomers, allInvoices, isDark, currency),
-                      _buildTrendsTab(context, allInvoices, semanticColors, isDark, currency),
-                      _buildInsightsTab(context, quotations, invoices, semanticColors, isDark),
-                    ],
-                  ),
+                    2 => _buildLtvTab(
+                        context, allCustomers, allInvoices, isDark, currency),
+                    3 => _buildTrendsTab(
+                        context, allInvoices, semanticColors, isDark, currency),
+                    _ => _buildInsightsTab(
+                        context, quotations, invoices, semanticColors, isDark),
+                  },
                 ),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildMetricCard(
-    BuildContext context, {
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-    required Color iconColor,
-    Color? bgColor,
-    Color? textColor,
-    bool useGradient = false,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final content = Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: textColor ?? (isDark ? Colors.white60 : Colors.black54),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: useGradient ? Colors.white24 : iconColor.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, size: 16, color: useGradient ? Colors.white : iconColor),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: textColor ?? (isDark ? Colors.white : Colors.black87),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 11,
-              color: textColor?.withValues(alpha: 0.8) ?? (isDark ? Colors.white54 : Colors.black45),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    return Container(
-      width: 170,
-      margin: const EdgeInsets.only(right: 12),
-      decoration: BoxDecoration(
-        color: useGradient ? null : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white),
-        gradient: useGradient
-            ? LinearGradient(
-                colors: [bgColor ?? const Color(0xFFF4781F), const Color(0xFFFF8F00)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        borderRadius: BorderRadius.circular(24),
-        border: useGradient
-            ? null
-            : Border.all(color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
-      ),
-      child: content,
     );
   }
 
   // ── Profit Tab ───────────────────────────────────────────────────────────
-  Widget _buildProfitTab(BuildContext context, List<dynamic> invoices, SemanticColors colors, bool isDark, NumberFormat currency) {
-    // Group paid invoices by customer name to get per-service-type revenue
-    final paid = invoices.where((i) => i.status == 'Paid').toList();
-    final total = paid.fold(0.0, (s, i) => s + (i.total as num).toDouble());
-    final cardColor = isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white;
-
-    if (paid.isEmpty) {
-      return _emptyCard('No paid invoices yet in this period.', isDark);
-    }
-
-    // Group by month for trend
-    final now = DateTime.now();
-    final prevMonth = DateTime(now.year, now.month - 1);
-    final prevPaid = paid.where((i) => (DateTime.tryParse(i.date) ?? DateTime(2000)).month == prevMonth.month && (DateTime.tryParse(i.date) ?? DateTime(2000)).year == prevMonth.year).fold(0.0, (s, i) => s + (i.total as num).toDouble());
-    final thisPaid = paid.where((i) => (DateTime.tryParse(i.date) ?? DateTime(2000)).month == now.month && (DateTime.tryParse(i.date) ?? DateTime(2000)).year == now.year).fold(0.0, (s, i) => s + (i.total as num).toDouble());
-    final trend = prevPaid > 0 ? ((thisPaid - prevPaid) / prevPaid * 100) : 0.0;
-
-    return Card(
-      elevation: 0, color: cardColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Revenue Breakdown', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 4),
-            Text('${paid.length} paid invoices • ${currency.format(total)} total',
-                style: TextStyle(fontSize: 12, color: colors.accentPrimary, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 16),
-            _buildProfitItem('Total Revenue', total > 0 ? 1.0 : 0, currency.format(total), 'Paid invoices', colors.accentPrimary),
-            const SizedBox(height: 12),
-            _buildProfitItem('Estimated profit', total > 0 ? 0.3 : 0, currency.format(total * 0.3), 'Assumes 70% costs; not recorded expenses', colors.success),
-            const SizedBox(height: 12),
-            _buildProfitItem('Outstanding', 0.3, currency.format(invoices.where((i) => i.status == 'Sent' || i.status == 'Overdue').fold(0.0, (s, i) => s + (i.total as num).toDouble())), 'Unpaid invoices', Colors.blue),
-            const Spacer(),
-            if (prevPaid > 0)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Last month: ${currency.format(prevPaid)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: (trend >= 0 ? colors.success : colors.error).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${trend >= 0 ? '+' : ''}${trend.toStringAsFixed(1)}% this month',
-                      style: TextStyle(color: trend >= 0 ? colors.success : colors.error, fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProfitItem(String name, double percent, String rev, String profit, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-          Text(rev, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-        ]),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(100),
-          child: LinearProgressIndicator(
-            value: percent.clamp(0.0, 1.0),
-            minHeight: 8,
-            backgroundColor: Colors.black12,
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(profit, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+  Widget _buildProfitTab(
+      BuildContext context, RecordedProfit? profit, bool loading) {
+    final currency = NumberFormat.currency(symbol: '£');
+    return GlassCard(
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text('Revenue and expenses',
+          style: Theme.of(context).textTheme.titleLarge),
+      const SizedBox(height: 16),
+      if (profit == null) ...[
+        Text(loading
+            ? 'Loading recorded expenses…'
+            : 'Could not load expenses. Your margin is unavailable until they can be checked.'),
+        if (!loading)
+          TextButton(
+              onPressed: () => ref.invalidate(expensesStreamProvider),
+              child: const Text('Retry expenses')),
+      ] else ...[
+        AnalyticsMetric(
+            title: 'Paid revenue',
+            value: currency.format(profit.revenue),
+            subtitle: 'Paid invoices dated within this period (UTC)'),
+        const Divider(),
+        AnalyticsMetric(
+            title: 'Recorded expenses',
+            value: currency.format(profit.expenses),
+            subtitle: 'GBP expenses, excluding rejected or cancelled records'),
+        const Divider(),
+        AnalyticsMetric(
+            title: 'Revenue less expenses',
+            value: currency.format(profit.balance),
+            subtitle: 'Includes tax. This is not accounting net profit.'),
+        if (profit.excludedCurrencyCount > 0)
+          Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(
+                  '${profit.excludedCurrencyCount} expenses in other currencies excluded. No exchange-rate conversion applied.')),
       ],
-    );
+    ]));
   }
 
   // ── Pipeline Tab ─────────────────────────────────────────────────────────
-  Widget _buildPipelineTab(BuildContext context, List<dynamic> quotations, bool isDark, NumberFormat currency) {
-    final stages = ['Draft', 'Sent', 'Accepted', 'Declined'];
-    final maxValue = stages.map((s) => quotations.where((q) => q.status == s).fold(0.0, (a, q) => a + (q.total as num).toDouble())).reduce((a, b) => a > b ? a : b);
-    final sentCount = quotations.where((q) => q.status == 'Sent' || q.status == 'Accepted' || q.status == 'Declined').length;
-    final acceptedCount = quotations.where((q) => q.status == 'Accepted').length;
+  Widget _buildPipelineTab(BuildContext context, List<dynamic> quotations,
+      bool isDark, NumberFormat currency) {
+    final stages = ['Draft', 'Sent', 'Amended', 'Accepted', 'Declined'];
+    final maxValue = stages
+        .map((s) => quotations
+            .where((q) => q.status == s)
+            .fold(0.0, (a, q) => a + (q.total as num).toDouble()))
+        .reduce((a, b) => a > b ? a : b);
+    final sentCount = quotations
+        .where((q) =>
+            q.status == 'Sent' ||
+            q.status == 'Accepted' ||
+            q.status == 'Declined' ||
+            q.status == 'Amended')
+        .length;
+    final acceptedCount =
+        quotations.where((q) => q.status == 'Accepted').length;
     final rate = sentCount > 0 ? (acceptedCount / sentCount * 100) : 0.0;
 
     return Card(
       elevation: 0,
-      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Sales Funnel', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            const Text('Sales Funnel',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
             const SizedBox(height: 12),
             ...stages.map((stage) {
               final count = quotations.where((q) => q.status == stage).length;
-              final value = quotations.where((q) => q.status == stage).fold(0.0, (a, q) => a + (q.total as num).toDouble());
+              final value = quotations
+                  .where((q) => q.status == stage)
+                  .fold(0.0, (a, q) => a + (q.total as num).toDouble());
               final pct = maxValue > 0 ? value / maxValue : 0.0;
-              return _buildPipelineItem(stage, '$count quotes', currency.format(value), pct);
+              return _buildPipelineItem(
+                  stage, '$count quotes', currency.format(value), pct);
             }),
-            const Spacer(),
+            const SizedBox(height: 20),
             const Divider(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              spacing: 16,
+              runSpacing: 8,
               children: [
-                const Text('Conversion Rate', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                Text('${rate.toStringAsFixed(1)}%', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: rate > 50 ? Colors.green : Colors.orange)),
+                const Text('Conversion Rate',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                Text('${rate.toStringAsFixed(1)}%',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: rate > 50 ? Colors.green : Colors.orange)),
               ],
             ),
           ],
@@ -439,121 +355,121 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     );
   }
 
-  Widget _buildPipelineItem(String stage, String count, String value, double percent) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
-      child: Row(
-        children: [
-          SizedBox(width: 80, child: Text(stage, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12))),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(100),
-                  child: LinearProgressIndicator(
-                    value: percent.clamp(0.0, 1.0),
-                    minHeight: 10,
-                    backgroundColor: Colors.black12,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF4781F)),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text(count, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                  Text(value, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                ]),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildPipelineItem(
+          String stage, String count, String value, double percent) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          AnalyticsMetric(title: stage, value: value, subtitle: count),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(value: percent.clamp(0.0, 1.0), minHeight: 6),
+        ]),
+      );
 
   // ── LTV Tab ───────────────────────────────────────────────────────────────
-  Widget _buildLtvTab(BuildContext context, List<dynamic> customers, List<dynamic> allInvoices, bool isDark, NumberFormat currency) {
+  Widget _buildLtvTab(BuildContext context, List<dynamic> customers,
+      List<dynamic> allInvoices, bool isDark, NumberFormat currency) {
     // Compute per-customer revenue from all paid invoices
     final revenueByCustomer = <String, double>{};
     for (final inv in allInvoices.where((i) => i.status == 'Paid')) {
       revenueByCustomer[inv.customerId ?? inv.customerName] =
-          (revenueByCustomer[inv.customerId ?? inv.customerName] ?? 0) + (inv.total as num).toDouble();
+          (revenueByCustomer[inv.customerId ?? inv.customerName] ?? 0) +
+              (inv.total as num).toDouble();
     }
-    final values = revenueByCustomer.values.toList()..sort((a, b) => b.compareTo(a));
-    final high   = values.where((v) => v >= 5000).length;
-    final mid    = values.where((v) => v >= 1000 && v < 5000).length;
-    final low    = values.where((v) => v > 0 && v < 1000).length;
-    final zero   = customers.length - revenueByCustomer.length;
+    final values = revenueByCustomer.values.toList()
+      ..sort((a, b) => b.compareTo(a));
+    final high = values.where((v) => v >= 5000).length;
+    final mid = values.where((v) => v >= 1000 && v < 5000).length;
+    final low = values.where((v) => v > 0 && v < 1000).length;
+    final zero = customers.length - revenueByCustomer.length;
 
     return Card(
       elevation: 0,
-      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Client Segments by LTV', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            const Text('Client Segments by LTV',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
             const SizedBox(height: 12),
-            _buildLtvRow('High-Value (£5k+)', '$high clients', currency.format(values.where((v) => v >= 5000).fold(0.0, (a, b) => a + b)), Colors.orange),
-            _buildLtvRow('Mid-Value (£1k–5k)', '$mid clients', currency.format(values.where((v) => v >= 1000 && v < 5000).fold(0.0, (a, b) => a + b)), Colors.blue),
-            _buildLtvRow('Low-Value (<£1k)', '$low clients', currency.format(values.where((v) => v > 0 && v < 1000).fold(0.0, (a, b) => a + b)), Colors.grey),
-            _buildLtvRow('No Revenue Yet', '${zero > 0 ? zero : 0} clients', '£0', Colors.redAccent),
+            _buildLtvRow(
+                'High-Value (£5k+)',
+                '$high clients',
+                currency.format(
+                    values.where((v) => v >= 5000).fold(0.0, (a, b) => a + b)),
+                Colors.orange),
+            _buildLtvRow(
+                'Mid-Value (£1k–5k)',
+                '$mid clients',
+                currency.format(values
+                    .where((v) => v >= 1000 && v < 5000)
+                    .fold(0.0, (a, b) => a + b)),
+                Colors.blue),
+            _buildLtvRow(
+                'Low-Value (<£1k)',
+                '$low clients',
+                currency.format(values
+                    .where((v) => v > 0 && v < 1000)
+                    .fold(0.0, (a, b) => a + b)),
+                Colors.grey),
+            _buildLtvRow('No Revenue Yet', '${zero > 0 ? zero : 0} clients',
+                '£0', Colors.redAccent),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLtvRow(String name, String count, String value, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                Text(count, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-              ],
-            ),
-          ),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-        ],
-      ),
-    );
-  }
+  Widget _buildLtvRow(String name, String count, String value, Color color) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: AnalyticsMetric(title: name, value: value, subtitle: count),
+      );
 
   // ── Insights Tab ──────────────────────────────────────────────────────────
-  Widget _buildInsightsTab(BuildContext context, List<dynamic> quotations, List<dynamic> invoices, SemanticColors colors, bool isDark) {
+  Widget _buildInsightsTab(BuildContext context, List<dynamic> quotations,
+      List<dynamic> invoices, SemanticColors colors, bool isDark) {
     final total = quotations.length;
     final amended = quotations.where((q) => q.status == 'Amended').length;
     final amendRate = total > 0 ? (amended / total * 100) : 0.0;
     final accepted = quotations.where((q) => q.status == 'Accepted').length;
-    final sent = quotations.where((q) => q.status == 'Sent' || q.status == 'Accepted' || q.status == 'Declined').length;
+    final sent = quotations
+        .where((q) =>
+            q.status == 'Sent' ||
+            q.status == 'Accepted' ||
+            q.status == 'Declined' ||
+            q.status == 'Amended')
+        .length;
     final conv = sent > 0 ? (accepted / sent * 100) : 0.0;
     final overdue = invoices.where((i) => i.status == 'Overdue').length;
-    final avgVal = total > 0 ? quotations.fold(0.0, (s, q) => s + (q.total as num).toDouble()) / total : 0.0;
+    final avgVal = total > 0
+        ? quotations.fold(0.0, (s, q) => s + (q.total as num).toDouble()) /
+            total
+        : 0.0;
     final currency = NumberFormat.currency(symbol: '£', decimalDigits: 0);
 
     return Card(
       elevation: 0,
-      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Performance Insights', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            const Text('Performance Insights',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
             const SizedBox(height: 16),
-            _buildInsightListItem('Amendment rate: ${amendRate.toStringAsFixed(1)}% of ${total} quotes'),
-            _buildInsightListItem('Quote conversion: ${conv.toStringAsFixed(1)}% (${accepted} accepted / ${sent} sent)'),
-            _buildInsightListItem('Avg. quotation value: ${currency.format(avgVal)}'),
+            _buildInsightListItem(
+                'Amendment rate: ${amendRate.toStringAsFixed(1)}% of ${total} quotes'),
+            _buildInsightListItem(
+                'Quote conversion: ${conv.toStringAsFixed(1)}% (${accepted} accepted / ${sent} sent)'),
+            _buildInsightListItem(
+                'Avg. quotation value: ${currency.format(avgVal)}'),
             _buildInsightListItem('Overdue invoices right now: $overdue'),
           ],
         ),
@@ -578,17 +494,17 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
   // ── Trends Tab (seasonal + forecast) ──────────────────────────────────────
   List<({DateTime month, double revenue})> _monthlyRevenue(
       List<dynamic> allInvoices, int months) {
-    final now = DateTime.now();
+    final now = RecordedProfit.periodEnd(DateTime.now());
     final series = <({DateTime month, double revenue})>[];
     final paid = allInvoices.where((i) => i.status == 'Paid').toList();
     for (int i = months - 1; i >= 0; i--) {
-      final m = DateTime(now.year, now.month - i);
-      final revenue = paid
-          .where((inv) {
-            final d = inv.createdAt ?? DateTime(2000);
-            return d.year == m.year && d.month == m.month;
-          })
-          .fold(0.0, (s, inv) => s + (inv.total as num).toDouble());
+      final m = DateTime.utc(now.year, now.month - i);
+      final monthEnd = DateTime.utc(m.year, m.month + 1)
+          .subtract(const Duration(milliseconds: 1));
+      final revenue = paid.where((inv) {
+        return RecordedProfit.inRange(
+            inv.date, m, monthEnd.isAfter(now) ? now : monthEnd);
+      }).fold(0.0, (s, inv) => s + (inv.total as num).toDouble());
       series.add((month: m, revenue: revenue));
     }
     return series;
@@ -602,152 +518,49 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
       return _emptyCard('No paid revenue yet to chart trends.', isDark);
     }
 
-    final maxRevenue =
-        series.map((e) => e.revenue).reduce((a, b) => a > b ? a : b);
+    final ranked = [...series]..sort((a, b) => b.revenue.compareTo(a.revenue));
+    final recent = series.sublist(series.length - 3);
+    final preceding = series.sublist(series.length - 6, series.length - 3);
+    final recentAverage =
+        recent.fold(0.0, (sum, month) => sum + month.revenue) / 3;
+    final precedingAverage =
+        preceding.fold(0.0, (sum, month) => sum + month.revenue) / 3;
+    final growth = precedingAverage > 0
+        ? (recentAverage - precedingAverage) / precedingAverage
+        : 0.0;
+    final forecast = (recentAverage * (1 + growth)).clamp(0, double.infinity);
 
-    // Seasonal: best & worst months.
-    final sorted = [...series]..sort((a, b) => b.revenue.compareTo(a.revenue));
-    final best = sorted.first;
-    final worst = sorted.last;
-
-    // Forecast: 3-month moving average, adjusted by recent growth trend.
-    final last3 = series.length >= 3 ? series.sublist(series.length - 3) : series;
-    final prev3 = series.length >= 6
-        ? series.sublist(series.length - 6, series.length - 3)
-        : <({DateTime month, double revenue})>[];
-    final last3Avg =
-        last3.fold(0.0, (s, e) => s + e.revenue) / (last3.isEmpty ? 1 : last3.length);
-    final prev3Avg = prev3.isEmpty
-        ? last3Avg
-        : prev3.fold(0.0, (s, e) => s + e.revenue) / prev3.length;
-    final growth = prev3Avg > 0 ? (last3Avg - prev3Avg) / prev3Avg : 0.0;
-    final forecast = (last3Avg * (1 + growth)).clamp(0, double.infinity);
-    final nextMonth = DateTime(DateTime.now().year, DateTime.now().month + 1);
-
-    final monthLabel = DateFormat('MMM');
-
-    return Card(
-      elevation: 0,
-      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Revenue Trends (12 mo)',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 12),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    ...series.map((e) {
-                      final pct = maxRevenue > 0 ? e.revenue / maxRevenue : 0.0;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 3),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                                width: 36,
-                                child: Text(monthLabel.format(e.month),
-                                    style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600))),
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(100),
-                                child: LinearProgressIndicator(
-                                  value: pct.clamp(0.0, 1.0),
-                                  minHeight: 8,
-                                  backgroundColor: Colors.black12,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      colors.accentPrimary),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            SizedBox(
-                              width: 56,
-                              child: Text(currency.format(e.revenue),
-                                  textAlign: TextAlign.right,
-                                  style: const TextStyle(
-                                      fontSize: 11, color: Colors.grey)),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ),
-            const Divider(),
-            Row(
-              children: [
-                Expanded(
-                  child: _trendStat('Peak month',
-                      '${monthLabel.format(best.month)} · ${currency.format(best.revenue)}',
-                      colors.success),
-                ),
-                Expanded(
-                  child: _trendStat('Slowest month',
-                      '${monthLabel.format(worst.month)} · ${currency.format(worst.revenue)}',
-                      colors.warning),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: colors.accentPrimary.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  Icon(LucideIcons.trendingUp,
-                      size: 18, color: colors.accentPrimary),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Forecast · ${monthLabel.format(nextMonth)}',
-                          style: const TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.w700),
-                        ),
-                        Text(
-                          '${currency.format(forecast)}  (${growth >= 0 ? '+' : ''}${(growth * 100).toStringAsFixed(1)}% trend)',
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: isDark ? Colors.white70 : Colors.black54),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _trendStat(String label, String value, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-        const SizedBox(height: 2),
-        Text(value,
-            style: TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+    return GlassCard(
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text('Revenue trends', style: Theme.of(context).textTheme.titleLarge),
+      const Text(
+          'Paid invoice totals by invoice date, over the last 12 months.'),
+      const SizedBox(height: 16),
+      AnalyticsMetric(
+          title: 'Peak month',
+          value: currency.format(ranked.first.revenue),
+          subtitle: DateFormat('MMM yyyy').format(ranked.first.month)),
+      const Divider(),
+      AnalyticsMetric(
+          title: 'Slowest month',
+          value: currency.format(ranked.last.revenue),
+          subtitle: DateFormat('MMM yyyy').format(ranked.last.month)),
+      const Divider(),
+      AnalyticsMetric(
+          title: 'Next month forecast',
+          value: currency.format(forecast),
+          subtitle:
+              'Estimate from the last three months and their growth over the preceding three. Not guaranteed revenue.'),
+      const SizedBox(height: 24),
+      for (final entry in series) ...[
+        AnalyticsMetric(
+            title: DateFormat('MMM yyyy').format(entry.month),
+            value: currency.format(entry.revenue),
+            subtitle: 'Paid revenue'),
+        const Divider(),
       ],
-    );
+    ]));
   }
 
   // ── Export ────────────────────────────────────────────────────────────────
@@ -757,15 +570,23 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     required List<dynamic> invoices,
     required List<dynamic> customers,
     required List<dynamic> allInvoices,
+    required RecordedProfit? profit,
+    required DateTime start,
+    required DateTime end,
   }) async {
     final paid = invoices.where((i) => i.status == 'Paid').toList();
-    final totalRevenue = paid.fold(0.0, (s, i) => s + (i.total as num).toDouble());
+    final totalRevenue =
+        paid.fold(0.0, (s, i) => s + (i.total as num).toDouble());
     final pipeline = quotations
-        .where((q) => q.status == 'Draft' || q.status == 'Sent')
+        .where((q) =>
+            q.status == 'Draft' || q.status == 'Sent' || q.status == 'Amended')
         .fold(0.0, (s, q) => s + (q.total as num).toDouble());
     final sent = quotations
         .where((q) =>
-            q.status == 'Sent' || q.status == 'Accepted' || q.status == 'Declined')
+            q.status == 'Sent' ||
+            q.status == 'Accepted' ||
+            q.status == 'Declined' ||
+            q.status == 'Amended')
         .length;
     final accepted = quotations.where((q) => q.status == 'Accepted').length;
     final conv = sent > 0 ? accepted / sent * 100 : 0.0;
@@ -773,11 +594,12 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
 
     final buffer = StringBuffer()
       ..writeln('Quote On The Go — Analytics Report')
-      ..writeln('Range: $_selectedDateRange')
-      ..writeln('Generated: ${DateFormat('d MMM yyyy, HH:mm').format(DateTime.now())}')
+      ..writeln('Range,$_selectedDateRange')
+      ..writeln('Generated (UTC),${DateTime.now().toUtc().toIso8601String()}')
       ..writeln('')
       ..writeln('Metric,Value')
-      ..writeln('Total Revenue (paid),${totalRevenue.toStringAsFixed(2)}')
+      ..writeln(profit?.csvRows(start, end) ??
+          'Paid invoices (GBP),${totalRevenue.toStringAsFixed(2)}\nRecorded expenses,Unavailable\nRecorded balance,Unavailable\nRecorded margin,Unavailable\nExpense status,Could not load recorded expenses')
       ..writeln('Pipeline Value,${pipeline.toStringAsFixed(2)}')
       ..writeln('Customers,${customers.length}')
       ..writeln('Quotes Sent,$sent')
@@ -794,20 +616,27 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
       final directory = await getTemporaryDirectory();
       final file = File('${directory.path}/analytics-report.csv');
       await file.writeAsString(buffer.toString());
-      await Share.shareXFiles([XFile(file.path, mimeType: 'text/csv')], subject: 'Analytics Report');
+      await Share.shareXFiles([XFile(file.path, mimeType: 'text/csv')],
+          subject: 'Analytics Report');
     } catch (_) {
-      if (context.mounted) ref.read(feedbackControllerProvider).error(context, 'Could not export the report. Please try again.');
+      if (context.mounted) {
+        ref
+            .read(feedbackControllerProvider)
+            .error(context, 'Could not export the report. Please try again.');
+      }
     }
   }
 
   Widget _emptyCard(String message, bool isDark) {
     return Card(
       elevation: 0,
-      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Center(child: Padding(
+      child: Center(
+          child: Padding(
         padding: const EdgeInsets.all(32),
-        child: Text(message, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+        child: Text(message,
+            style: const TextStyle(color: Colors.grey, fontSize: 14)),
       )),
     );
   }

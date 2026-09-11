@@ -1,10 +1,13 @@
 import '../../services/api_client.dart';
+import '../../services/pdf_service.dart';
+import '../../services/pdf_transport.dart';
 import 'dart:convert';
+import 'dart:async';
+import '../../components/preview_status_panel.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:http/http.dart' as http;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -30,8 +33,11 @@ class PdfPreviewScreen extends ConsumerStatefulWidget {
 
 class _PdfPreviewScreenState extends ConsumerState<PdfPreviewScreen> {
   WebViewController? _webViewController;
-  int _loadingProgress = 0;
+  int _renderAttempt = 0;
+  Timer? _renderTimeout;
   bool _hasError = false;
+  String _errorMessage =
+      'Could not load the PDF. Check your connection and try again.';
   bool _isSending = false;
   bool _isLoadingPdf = false;
 
@@ -43,11 +49,33 @@ class _PdfPreviewScreenState extends ConsumerState<PdfPreviewScreen> {
     if (!kIsWeb) {
       _webViewController = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..addJavaScriptChannel('PdfPreview', onMessageReceived: (message) {
+          if (!mounted || !message.message.startsWith('$_renderAttempt:')) {
+            return;
+          }
+          _renderTimeout?.cancel();
+          setState(() {
+            _isLoadingPdf = false;
+            _hasError = message.message != '$_renderAttempt:ready';
+            if (_hasError) {
+              _errorMessage =
+                  'The PDF could not be displayed. Check your connection and try again.';
+            }
+          });
+        })
         ..setNavigationDelegate(
           NavigationDelegate(
+            onNavigationRequest: (request) => request.url == 'about:blank' ||
+                    request.url.startsWith('data:text/html')
+                ? NavigationDecision.navigate
+                : NavigationDecision.prevent,
             onWebResourceError: (error) {
               if (mounted) {
-                setState(() => _hasError = true);
+                _renderTimeout?.cancel();
+                setState(() {
+                  _hasError = true;
+                  _isLoadingPdf = false;
+                });
               }
             },
           ),
@@ -58,60 +86,64 @@ class _PdfPreviewScreenState extends ConsumerState<PdfPreviewScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _renderTimeout?.cancel();
+    super.dispose();
+  }
+
   Future<void> _loadPdf() async {
-    if (kIsWeb) return;
-    
+    if (kIsWeb || _isLoadingPdf) return;
+
     setState(() {
       _isLoadingPdf = true;
       _hasError = false;
-      _loadingProgress = 10;
+      _errorMessage =
+          'Could not load the PDF. Check your connection and try again.';
     });
 
+    final attempt = ++_renderAttempt;
     try {
-      final response = await http.get(Uri.parse(_pdfUrl), headers: await ApiClient.headers());
-      if (response.statusCode == 200) {
-        final bytes = response.bodyBytes;
-        final base64String = base64Encode(bytes);
-        
-        if (mounted) {
-          setState(() {
-            _loadingProgress = 50;
-          });
-          
-          final isDark = Theme.of(context).brightness == Brightness.dark;
-          final htmlContent = _buildPdfHtml(base64String, isDark);
-          await _webViewController?.loadHtmlString(htmlContent);
-          
-          if (mounted) {
-            setState(() {
-              _isLoadingPdf = false;
-              _loadingProgress = 100;
-            });
-          }
-        }
-      } else {
-        throw Exception('Failed to load PDF (${response.statusCode})');
-      }
+      final bytes = widget.type == 'invoice'
+          ? await PdfService.fetchInvoicePdf(widget.id)
+          : await PdfService.fetchQuotationPdf(widget.id);
+      if (!mounted || attempt != _renderAttempt) return;
+      final html = _buildPdfHtml(base64Encode(bytes),
+          Theme.of(context).brightness == Brightness.dark, attempt);
+      _renderTimeout?.cancel();
+      _renderTimeout = Timer(const Duration(seconds: 30), () {
+        if (!mounted || attempt != _renderAttempt) return;
+        setState(() {
+          _hasError = true;
+          _isLoadingPdf = false;
+          _errorMessage =
+              'The PDF preview is taking too long. Check your connection and try again.';
+        });
+      });
+      await _webViewController?.loadHtmlString(html);
     } catch (e) {
       debugPrint('Error loading PDF: $e');
       if (mounted) {
         setState(() {
           _hasError = true;
+          _errorMessage = e is PdfDownloadException
+              ? e.message
+              : 'Could not load the PDF. Check your connection and try again.';
           _isLoadingPdf = false;
         });
       }
     }
   }
 
-  String _buildPdfHtml(String base64String, bool isDark) {
-    final bgColor = isDark ? '#0C0C0E' : '#FBFBFD';
-    final pageBgColor = isDark ? '#1E1E24' : '#FFFFFF';
+  String _buildPdfHtml(String base64String, bool isDark, int attempt) {
+    final bgColor = isDark ? '#1D1E19' : '#FBF8F2';
+    final pageBgColor = '#FFFFFF';
     return '''
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" onerror="PdfPreview.postMessage('$attempt:error')"></script>
   <style>
     body { 
       margin: 0; 
@@ -141,12 +173,13 @@ class _PdfPreviewScreenState extends ConsumerState<PdfPreviewScreen> {
 <body>
   <div id="pdf-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
   <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
     
     const base64Data = "$base64String";
     
     async function renderPdf() {
       try {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         const binaryString = atob(base64Data);
         const len = binaryString.length;
         const bytes = new Uint8Array(len);
@@ -154,7 +187,7 @@ class _PdfPreviewScreenState extends ConsumerState<PdfPreviewScreen> {
           bytes[i] = binaryString.charCodeAt(i);
         }
         
-        const loadingTask = pdfjsLib.getDocument({ data: bytes.buffer });
+        const loadingTask = pdfjsLib.getDocument({ data: bytes.buffer, isEvalSupported: false });
         const pdf = await loadingTask.promise;
         const container = document.getElementById('pdf-container');
         
@@ -176,9 +209,11 @@ class _PdfPreviewScreenState extends ConsumerState<PdfPreviewScreen> {
           
           await page.render({ canvasContext: context, viewport: viewport }).promise;
         }
+        PdfPreview.postMessage('$attempt:ready');
       } catch (e) {
+        PdfPreview.postMessage('$attempt:error');
         console.error('PDF render error:', e);
-        document.body.innerHTML = '<div style="color: red; padding: 20px; text-align: center; font-weight: bold;">Error rendering PDF preview: ' + e.message + '</div>';
+        document.body.textContent = 'The PDF could not be displayed. Return to the document and try again.';
       }
     }
     
@@ -197,6 +232,7 @@ class _PdfPreviewScreenState extends ConsumerState<PdfPreviewScreen> {
   }
 
   Future<void> _sendByEmail() async {
+    if (_isSending) return;
     setState(() => _isSending = true);
     try {
       final String customerEmail;
@@ -205,11 +241,21 @@ class _PdfPreviewScreenState extends ConsumerState<PdfPreviewScreen> {
       if (widget.type == 'invoice') {
         final invoice = ref.read(invoiceProvider(widget.id));
         if (invoice == null) throw Exception('Invoice not found');
+        if (invoice.requiresApproval == true ||
+            ['pending', 'rejected'].contains(invoice.approvalStatus)) {
+          throw Exception(
+              'This document needs approval before it can be sent.');
+        }
         customerEmail = invoice.customerEmail;
         customerName = invoice.customerName;
       } else {
         final quotation = ref.read(quotationProvider(widget.id));
         if (quotation == null) throw Exception('Quotation not found');
+        if (quotation.requiresApproval == true ||
+            ['pending', 'rejected'].contains(quotation.approvalStatus)) {
+          throw Exception(
+              'This document needs approval before it can be sent.');
+        }
         customerEmail = quotation.customerEmail;
         customerName = quotation.customerName;
       }
@@ -220,28 +266,12 @@ class _PdfPreviewScreenState extends ConsumerState<PdfPreviewScreen> {
         'customerName': customerName,
       };
 
-      final endpoint = widget.type == 'invoice' ? 'send-invoice' : 'send-quotation';
-      final response = await http.post(
-        Uri.parse('$_webAppBaseUrl/api/$endpoint'),
-        headers: await ApiClient.headers(),
-        body: jsonEncode(body),
-      );
-
+      final endpoint =
+          widget.type == 'invoice' ? 'send-invoice' : 'send-quotation';
+      await ApiClient.post('/api/$endpoint', body);
+      // The server owns document status; resending must never reset Paid/Accepted.
       if (mounted) {
-        if (response.statusCode == 200) {
-          // If quotation, update status to Sent locally
-          if (widget.type == 'quotation') {
-            await ref
-                .read(quotationRepositoryProvider)
-                .updateQuotationStatus(widget.id, 'Sent');
-          } else {
-            await ref
-                .read(invoiceRepositoryProvider)
-                .updateInvoiceStatus(widget.id, 'Sent');
-          }
-
-          if (mounted) {
-            await ref.read(feedbackControllerProvider).showCelebration(
+        await ref.read(feedbackControllerProvider).showCelebration(
               context: context,
               type: CelebrationType.send,
               title: 'Document Sent',
@@ -251,14 +281,6 @@ class _PdfPreviewScreenState extends ConsumerState<PdfPreviewScreen> {
                 context.go('/${widget.type}s/${widget.id}');
               },
             );
-          }
-        } else {
-          String err = 'Failed to send email (${response.statusCode})';
-          try {
-            err = jsonDecode(response.body)['error'] ?? err;
-          } catch (_) {}
-          ref.read(feedbackControllerProvider).error(context, err);
-        }
       }
     } catch (e) {
       if (mounted) {
@@ -273,9 +295,6 @@ class _PdfPreviewScreenState extends ConsumerState<PdfPreviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final String title =
         'Preview ${widget.type[0].toUpperCase()}${widget.type.substring(1)}';
 
@@ -296,7 +315,7 @@ class _PdfPreviewScreenState extends ConsumerState<PdfPreviewScreen> {
           if (!kIsWeb)
             IconButton(
               icon: const Icon(LucideIcons.refreshCw),
-              onPressed: _loadPdf,
+              onPressed: _isLoadingPdf ? null : _loadPdf,
             ),
         ],
       ),
@@ -305,7 +324,8 @@ class _PdfPreviewScreenState extends ConsumerState<PdfPreviewScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(LucideIcons.fileText, size: 64, color: Colors.grey),
+                  const Icon(LucideIcons.fileText,
+                      size: 64, color: Colors.grey),
                   const SizedBox(height: 16),
                   const Text(
                     'Preview opened in a new tab',
@@ -322,126 +342,39 @@ class _PdfPreviewScreenState extends ConsumerState<PdfPreviewScreen> {
           : Stack(
               children: [
                 if (_hasError)
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(LucideIcons.alertTriangle,
-                            size: 60, color: Colors.red),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Failed to load document preview',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _loadPdf,
-                          child: const Text('Try Again'),
-                        ),
-                      ],
-                    ),
-                  )
+                  PreviewStatusPanel(message: _errorMessage, onRetry: _loadPdf)
                 else if (_webViewController != null)
                   WebViewWidget(controller: _webViewController!),
-                if ((_loadingProgress < 100 || _isLoadingPdf) && !_hasError)
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(
-                          value: _loadingProgress / 100.0,
-                          color: colorScheme.primary,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Generating PDF Preview... $_loadingProgress%',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                if (_isLoadingPdf && !_hasError)
+                  const PreviewStatusPanel(
+                      message: 'Preparing your PDF…', loading: true),
               ],
             ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.97),
-          border: Border(
-            top: BorderSide(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-              width: 0.5,
-            ),
-          ),
-        ),
-        child: SafeArea(
-          child: _isSending
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(width: 16),
-                      Text('Sending Email...',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                )
-              : Row(
-                  children: [
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 16),
-                        shape: const StadiumBorder(),
-                        side: BorderSide(color: colorScheme.outlineVariant),
-                        backgroundColor: isDark
-                            ? const Color(0xFF1E1E24)
-                            : const Color(0xFFF0F4F9),
-                      ),
-                      onPressed: () {
-                        // Go to the detail screen directly as a draft
-                        context.go('/${widget.type}s/${widget.id}');
-                      },
-                      child: Text(
-                        'Keep as Draft',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: isDark
-                              ? const Color(0xFF004A77)
-                              : const Color(0xFFC2E7FF),
-                          foregroundColor: isDark
-                              ? const Color(0xFFC2E7FF)
-                              : const Color(0xFF001D35),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: const StadiumBorder(),
-                        ),
-                        icon: const Icon(LucideIcons.send, size: 16),
-                        label: const Text(
-                          'Send to Client',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        onPressed: _sendByEmail,
-                      ),
-                    ),
-                  ],
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+          child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                FilledButton.icon(
+                  onPressed: _isSending ? null : _sendByEmail,
+                  icon: _isSending
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(LucideIcons.send, size: 20),
+                  label: Text(_isSending ? 'Sending email…' : 'Send to client'),
                 ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: _isSending
+                      ? null
+                      : () => context.go('/${widget.type}s/${widget.id}'),
+                  child: const Text('Back to document'),
+                ),
+              ]),
         ),
       ),
     );

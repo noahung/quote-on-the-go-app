@@ -1,3 +1,5 @@
+import '../../providers/document_outbox_provider.dart';
+import '../../services/document_copy.dart';
 import '../../services/api_client.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -24,10 +26,19 @@ import '../../components/custom_email_send_bottom_sheet.dart';
 
 String get _webAppBaseUrl => ApiClient.baseUrl;
 
-class InvoiceDetailScreen extends ConsumerWidget {
+class InvoiceDetailScreen extends ConsumerStatefulWidget {
   final String invoiceId;
 
   const InvoiceDetailScreen({super.key, required this.invoiceId});
+
+  @override
+  ConsumerState<InvoiceDetailScreen> createState() =>
+      _InvoiceDetailScreenState();
+}
+
+class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
+  String get invoiceId => widget.invoiceId;
+  bool _copying = false;
 
   Color _getStatusColor(String status, SemanticColors colors) {
     switch (status) {
@@ -55,8 +66,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _sendByEmail(
-      BuildContext context, WidgetRef ref, invoice,
+  Future<void> _sendByEmail(BuildContext context, WidgetRef ref, invoice,
       {DateTime? sendAt, Map<String, dynamic>? emailOptions}) async {
     try {
       final body = <String, dynamic>{
@@ -80,13 +90,13 @@ class InvoiceDetailScreen extends ConsumerWidget {
         if (response.statusCode == 200) {
           final isScheduled = sendAt != null;
           await ref.read(feedbackControllerProvider).showCelebration(
-            context: context,
-            type: CelebrationType.send,
-            title: isScheduled ? 'Email Scheduled' : 'Email Sent',
-            subtitle: isScheduled
-                ? 'Your invoice will be sent at the scheduled time'
-                : 'Your invoice has been sent to the customer',
-          );
+                context: context,
+                type: CelebrationType.send,
+                title: isScheduled ? 'Email Scheduled' : 'Email Sent',
+                subtitle: isScheduled
+                    ? 'Your invoice will be sent at the scheduled time'
+                    : 'Your invoice has been sent to the customer',
+              );
         } else {
           String err = 'Send failed (${response.statusCode})';
           try {
@@ -144,12 +154,16 @@ class InvoiceDetailScreen extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => CustomEmailSendBottomSheet(
+        documentId: invoice.id,
         docType: 'invoice',
         docNumber: invoice.invoiceNumber,
         customerName: invoice.customerName,
         customerEmail: invoice.customerEmail,
         totalAmount: totalFormatted,
         companyId: companyId,
+        companyName: company?.name ?? '',
+        dueDateOrExpiry: formatEmailDocumentDate(invoice.dueDate),
+        portalLink: '$_webAppBaseUrl/portal/invoices/${invoice.id}',
         isPremiumUser: isPremium,
         onSendNow: (payload) {
           Navigator.pop(ctx);
@@ -157,24 +171,26 @@ class InvoiceDetailScreen extends ConsumerWidget {
         },
         onScheduleSend: (sendAt, payload) {
           Navigator.pop(ctx);
-          _sendByEmail(context, ref, invoice, sendAt: sendAt, emailOptions: payload);
+          _sendByEmail(context, ref, invoice,
+              sendAt: sendAt, emailOptions: payload);
         },
       ),
     );
   }
 
-  Future<void> _markPaid(
-      BuildContext context, WidgetRef ref, String id) async {
+  Future<void> _markPaid(BuildContext context, WidgetRef ref, String id) async {
     try {
-      await ref
-          .read(invoiceRepositoryProvider)
-          .updateInvoiceStatus(id, 'Paid');
+      await ref.read(invoiceRepositoryProvider).updateInvoiceStatus(id, 'Paid');
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).success(context, 'Invoice marked as paid.');
+        ref
+            .read(feedbackControllerProvider)
+            .success(context, 'Invoice marked as paid.');
       }
     } catch (e) {
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).error(context, 'Failed to update status: $e');
+        ref
+            .read(feedbackControllerProvider)
+            .error(context, 'Failed to update status: $e');
       }
     }
   }
@@ -183,13 +199,18 @@ class InvoiceDetailScreen extends ConsumerWidget {
       BuildContext context, WidgetRef ref, invoice) async {
     try {
       final reminderRepo = ref.read(reminderRepositoryProvider);
-      await reminderRepo.sendManualReminderEmail(invoice.id, invoice.customerEmail);
+      await reminderRepo.sendManualReminderEmail(
+          invoice.id, invoice.customerEmail);
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).success(context, 'Payment reminder sent!');
+        ref
+            .read(feedbackControllerProvider)
+            .success(context, 'Payment reminder sent!');
       }
     } catch (e) {
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).error(context, 'Failed to send reminder: $e');
+        ref
+            .read(feedbackControllerProvider)
+            .error(context, 'Failed to send reminder: $e');
       }
     }
   }
@@ -197,7 +218,9 @@ class InvoiceDetailScreen extends ConsumerWidget {
   void _copyPortalLink(BuildContext context, WidgetRef ref, invoice) {
     final link = '$_webAppBaseUrl/portal/invoices/${invoice.id}';
     Clipboard.setData(ClipboardData(text: link));
-    ref.read(feedbackControllerProvider).success(context, 'Client portal link copied to clipboard!');
+    ref
+        .read(feedbackControllerProvider)
+        .success(context, 'Client portal link copied to clipboard!');
   }
 
   void _sharePdf(BuildContext context, invoice) {
@@ -210,55 +233,33 @@ class InvoiceDetailScreen extends ConsumerWidget {
 
   Future<void> _duplicateInvoice(
       BuildContext context, WidgetRef ref, Invoice invoice) async {
-    final companyId = ref.read(companyIdProvider);
-    final userProfile = ref.read(userProfileProvider);
-    if (companyId == null || userProfile == null) return;
-
+    if (_copying) return;
+    _copying = true;
     try {
-      final newInvoice = Invoice(
-        id: '',
-        companyId: companyId,
-        createdBy: userProfile.uid,
-        invoiceNumber: 'INV-${DateTime.now().millisecondsSinceEpoch}',
-        customerName: invoice.customerName,
-        customerEmail: invoice.customerEmail,
-        customerPhone: invoice.customerPhone,
-        customerAddress: invoice.customerAddress,
-        date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
-        dueDate: DateFormat('yyyy-MM-dd')
-            .format(DateTime.now().add(const Duration(days: 14))),
-        items: invoice.items,
-        subtotal: invoice.subtotal,
-        taxRate: invoice.taxRate,
-        taxAmount: invoice.taxAmount,
-        total: invoice.total,
-        status: 'Draft',
-        notes: invoice.notes,
-        discount: invoice.discount,
-        discountType: invoice.discountType,
-        discountAmount: invoice.discountAmount,
-        jobId: invoice.jobId,
-      );
-      final newId = await ref.read(invoiceRepositoryProvider).createInvoice(newInvoice);
+      final queue = ref.read(documentOutboxProvider);
+      if (queue == null) throw StateError('Sign in again before saving.');
+      final entry = await DocumentCopy.invoice(invoice).enqueue(queue);
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).success(context, 'Invoice duplicated successfully!');
-        context.push('/invoices/$newId');
+        context.push('/settings/saves?request=${entry['requestId']}&preview=0');
       }
-    } catch (e) {
+    } catch (_) {
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).error(context, 'Failed to duplicate: $e');
+        ref.read(feedbackControllerProvider).error(context,
+            'Could not save this request on your device. Please try again.');
       }
+    } finally {
+      _copying = false;
     }
   }
 
   Future<void> _markAsSent(
       BuildContext context, WidgetRef ref, String id) async {
     try {
-      await ref
-          .read(invoiceRepositoryProvider)
-          .updateInvoiceStatus(id, 'Sent');
+      await ref.read(invoiceRepositoryProvider).updateInvoiceStatus(id, 'Sent');
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).success(context, 'Invoice marked as Sent.');
+        ref
+            .read(feedbackControllerProvider)
+            .success(context, 'Invoice marked as Sent.');
       }
     } catch (e) {
       if (context.mounted) {
@@ -319,52 +320,59 @@ class InvoiceDetailScreen extends ConsumerWidget {
 
     try {
       await ref.read(documentTemplateRepositoryProvider).createTemplate(
-        companyId: companyId,
-        name: nameCtrl.text.trim(),
-        description: descCtrl.text.trim(),
-        type: 'invoice',
-        items: invoice.items,
-        notes: invoice.notes,
-        taxRate: invoice.taxRate,
-        discount: invoice.discount,
-        discountType: invoice.discountType,
-        discountAmount: invoice.discountAmount,
-      );
+            companyId: companyId,
+            name: nameCtrl.text.trim(),
+            description: descCtrl.text.trim(),
+            type: 'invoice',
+            items: invoice.items,
+            notes: invoice.notes,
+            taxRate: invoice.taxRate,
+            discount: invoice.discount,
+            discountType: invoice.discountType,
+            discountAmount: invoice.discountAmount,
+          );
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).success(context, 'Template saved successfully!');
+        ref
+            .read(feedbackControllerProvider)
+            .success(context, 'Template saved successfully!');
       }
     } catch (e) {
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).error(context, 'Failed to save template: $e');
+        ref
+            .read(feedbackControllerProvider)
+            .error(context, 'Failed to save template: $e');
       }
     }
   }
 
-  Future<bool> _showLockWarningDialog(BuildContext context, String lockedBy) async {
+  Future<bool> _showLockWarningDialog(
+      BuildContext context, String lockedBy) async {
     return await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('Document Locked'),
-          ],
-        ),
-        content: Text('This document is currently being edited by another user (ID: $lockedBy). Editing it simultaneously might overwrite changes. Do you want to proceed anyway?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                SizedBox(width: 8),
+                Text('Document Locked'),
+              ],
+            ),
+            content: Text(
+                'This document is currently being edited by another user (ID: $lockedBy). Editing it simultaneously might overwrite changes. Do you want to proceed anyway?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Proceed'),
+              ),
+            ],
           ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.orange),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Proceed'),
-          ),
-        ],
-      ),
-    ) ?? false;
+        ) ??
+        false;
   }
 
   Future<void> _showRenameDialog(
@@ -402,20 +410,25 @@ class InvoiceDetailScreen extends ConsumerWidget {
           .read(invoiceRepositoryProvider)
           .updateInvoice(invoice.id, {'title': newTitle});
       if (context.mounted) {
-        ref.read(feedbackControllerProvider).success(context, 'Invoice renamed.');
+        ref
+            .read(feedbackControllerProvider)
+            .success(context, 'Invoice renamed.');
       }
     }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final invoice = ref.watch(invoiceProvider(invoiceId));
-    final lockAsync = ref.watch(documentLockProvider((documentId: invoiceId, documentType: 'invoice')));
+    final lockAsync = ref.watch(
+        documentLockProvider((documentId: invoiceId, documentType: 'invoice')));
     final lockInfo = lockAsync.valueOrNull;
     final userProfile = ref.watch(userProfileProvider);
     final currentUserId = userProfile?.uid;
-    final canDelete = userProfile?.role == 'owner' || userProfile?.role == 'admin';
-    final isPendingApproval = invoice?.requiresApproval == true && invoice?.approvalStatus == 'pending';
+    final canDelete =
+        userProfile?.role == 'owner' || userProfile?.role == 'admin';
+    final isPendingApproval = invoice?.requiresApproval == true &&
+        invoice?.approvalStatus == 'pending';
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -441,8 +454,9 @@ class InvoiceDetailScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         body: Column(
           children: [
-             CurvedHeader(
-              title: 'Invoice #${invoice.invoiceNumber.replaceFirst('INV-', '')}',
+            CurvedHeader(
+              title:
+                  'Invoice #${invoice.invoiceNumber.replaceFirst('INV-', '')}',
               actions: [
                 IconButton(
                   icon: const Icon(LucideIcons.messageSquare),
@@ -459,9 +473,8 @@ class InvoiceDetailScreen extends ConsumerWidget {
                   onPressed: () async {
                     final companyId = ref.read(companyIdProvider);
                     if (companyId != null) {
-                      await ref
-                          .read(invoiceRepositoryProvider)
-                          .updateInvoice(invoice.id, {'isStarred': !invoice.isStarred});
+                      await ref.read(invoiceRepositoryProvider).updateInvoice(
+                          invoice.id, {'isStarred': !invoice.isStarred});
                     }
                   },
                 ),
@@ -475,9 +488,12 @@ class InvoiceDetailScreen extends ConsumerWidget {
                   icon: const Icon(LucideIcons.moreVertical),
                   onSelected: (value) async {
                     if (value == 'edit') {
-                      final isLocked = lockInfo != null && lockInfo.isLocked && lockInfo.lockedBy != currentUserId;
+                      final isLocked = lockInfo != null &&
+                          lockInfo.isLocked &&
+                          lockInfo.lockedBy != currentUserId;
                       if (isLocked) {
-                        final proceed = await _showLockWarningDialog(context, lockInfo.lockedBy!);
+                        final proceed = await _showLockWarningDialog(
+                            context, lockInfo.lockedBy!);
                         if (!proceed) return;
                       }
                       if (context.mounted) {
@@ -486,25 +502,29 @@ class InvoiceDetailScreen extends ConsumerWidget {
                       }
                     } else if (value == 'send') {
                       if (isPendingApproval) {
-                        ref.read(feedbackControllerProvider).error(context, 'This document must be approved first.');
+                        ref.read(feedbackControllerProvider).error(
+                            context, 'This document must be approved first.');
                         return;
                       }
                       await _showSendOptions(context, ref, invoice);
                     } else if (value == 'mark_paid') {
                       if (isPendingApproval) {
-                        ref.read(feedbackControllerProvider).error(context, 'This document must be approved first.');
+                        ref.read(feedbackControllerProvider).error(
+                            context, 'This document must be approved first.');
                         return;
                       }
                       await _markPaid(context, ref, invoice.id);
                     } else if (value == 'mark_sent') {
                       if (isPendingApproval) {
-                        ref.read(feedbackControllerProvider).error(context, 'This document must be approved first.');
+                        ref.read(feedbackControllerProvider).error(
+                            context, 'This document must be approved first.');
                         return;
                       }
                       await _markAsSent(context, ref, invoice.id);
                     } else if (value == 'send_reminder') {
                       if (isPendingApproval) {
-                        ref.read(feedbackControllerProvider).error(context, 'This document must be approved first.');
+                        ref.read(feedbackControllerProvider).error(
+                            context, 'This document must be approved first.');
                         return;
                       }
                       await _sendReminder(context, ref, invoice);
@@ -513,14 +533,16 @@ class InvoiceDetailScreen extends ConsumerWidget {
                     } else if (value == 'share_pdf') {
                       _sharePdf(context, invoice);
                     } else if (value == 'view_pdf') {
-                      await PdfService.viewInvoicePdfInBrowser(invoice.id);
+                      context.push('/pdf-preview/invoice/${invoice.id}');
                     } else if (value == 'share_pdf_file') {
                       try {
                         await PdfService.shareInvoicePdf(invoice.id,
                             invoiceNumber: invoice.invoiceNumber);
                       } catch (e) {
                         if (context.mounted) {
-                          ref.read(feedbackControllerProvider).error(context, 'Error sharing PDF: $e');
+                          ref
+                              .read(feedbackControllerProvider)
+                              .error(context, 'Error sharing PDF: $e');
                         }
                       }
                     } else if (value == 'duplicate') {
@@ -592,7 +614,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
                         const Text('Copy Portal Link'),
                       ]),
                     ),
-                     PopupMenuItem(
+                    PopupMenuItem(
                       value: 'share_pdf',
                       child: Row(children: [
                         Icon(Icons.share_outlined, color: semanticColors.info),
@@ -603,7 +625,8 @@ class InvoiceDetailScreen extends ConsumerWidget {
                     PopupMenuItem(
                       value: 'view_pdf',
                       child: Row(children: [
-                        Icon(Icons.picture_as_pdf_outlined, color: semanticColors.info),
+                        Icon(Icons.picture_as_pdf_outlined,
+                            color: semanticColors.info),
                         const SizedBox(width: 8),
                         const Text('View PDF Document')
                       ]),
@@ -611,7 +634,8 @@ class InvoiceDetailScreen extends ConsumerWidget {
                     PopupMenuItem(
                       value: 'share_pdf_file',
                       child: Row(children: [
-                        Icon(Icons.file_present_outlined, color: semanticColors.info),
+                        Icon(Icons.file_present_outlined,
+                            color: semanticColors.info),
                         const SizedBox(width: 8),
                         const Text('Share PDF File')
                       ]),
@@ -627,7 +651,8 @@ class InvoiceDetailScreen extends ConsumerWidget {
                     PopupMenuItem(
                       value: 'save_template',
                       child: Row(children: [
-                        Icon(Icons.bookmark_add_outlined, color: colorScheme.primary),
+                        Icon(Icons.bookmark_add_outlined,
+                            color: colorScheme.primary),
                         const SizedBox(width: 8),
                         const Text('Save as Template'),
                       ]),
@@ -636,7 +661,8 @@ class InvoiceDetailScreen extends ConsumerWidget {
                       PopupMenuItem(
                         value: 'delete',
                         child: Row(children: [
-                          Icon(Icons.delete_outline, color: semanticColors.error),
+                          Icon(Icons.delete_outline,
+                              color: semanticColors.error),
                           const SizedBox(width: 8),
                           Text('Delete',
                               style: TextStyle(color: semanticColors.error))
@@ -650,7 +676,8 @@ class InvoiceDetailScreen extends ConsumerWidget {
               Container(
                 width: double.infinity,
                 color: Colors.orange.shade800,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: const Row(
                   children: [
                     Icon(Icons.lock_clock, color: Colors.white),
@@ -658,17 +685,23 @@ class InvoiceDetailScreen extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         'Approval Pending: This document requires approval from an Admin or Owner before it can be sent or paid.',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13),
                       ),
                     ),
                   ],
                 ),
               ),
-            if (lockInfo != null && lockInfo.isLocked && lockInfo.lockedBy != currentUserId)
+            if (lockInfo != null &&
+                lockInfo.isLocked &&
+                lockInfo.lockedBy != currentUserId)
               Container(
                 width: double.infinity,
                 color: Colors.amber.shade900,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: const Row(
                   children: [
                     Icon(Icons.warning_amber_rounded, color: Colors.white),
@@ -676,7 +709,10 @@ class InvoiceDetailScreen extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         'Warning: This document is currently locked/edited by another user.',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13),
                       ),
                     ),
                   ],
@@ -694,13 +730,15 @@ class InvoiceDetailScreen extends ConsumerWidget {
                     Center(
                       child: Column(
                         children: [
-                          if (invoice.title != null && invoice.title!.isNotEmpty) ...[
+                          if (invoice.title != null &&
+                              invoice.title!.isNotEmpty) ...[
                             Text(
                               invoice.title!,
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: colorScheme.onSurface.withValues(alpha: 0.7),
+                                color: colorScheme.onSurface
+                                    .withValues(alpha: 0.7),
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -951,7 +989,8 @@ class InvoiceDetailScreen extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: semanticColors.error.withValues(alpha: 0.1),
+                              color:
+                                  semanticColors.error.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
@@ -976,11 +1015,14 @@ class InvoiceDetailScreen extends ConsumerWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 8),
                               shape: const StadiumBorder(),
-                              side: BorderSide(color: colorScheme.outlineVariant),
-                              backgroundColor: colorScheme.onSurface.withValues(alpha: 0.05),
+                              side:
+                                  BorderSide(color: colorScheme.outlineVariant),
+                              backgroundColor:
+                                  colorScheme.onSurface.withValues(alpha: 0.05),
                             ),
                             onPressed: () {
-                              context.push('/pdf-preview/invoice/${invoice.id}');
+                              context
+                                  .push('/pdf-preview/invoice/${invoice.id}');
                             },
                             child: Text(
                               'View PDF',
@@ -1011,8 +1053,12 @@ class InvoiceDetailScreen extends ConsumerWidget {
                         width: double.infinity,
                         child: FilledButton(
                           style: FilledButton.styleFrom(
-                            backgroundColor: isDark ? const Color(0xFF004A77) : const Color(0xFFC2E7FF),
-                            foregroundColor: isDark ? const Color(0xFFC2E7FF) : const Color(0xFF001D35),
+                            backgroundColor: isDark
+                                ? const Color(0xFF004A77)
+                                : const Color(0xFFC2E7FF),
+                            foregroundColor: isDark
+                                ? const Color(0xFFC2E7FF)
+                                : const Color(0xFF001D35),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: const StadiumBorder(),
                           ),
@@ -1037,10 +1083,11 @@ class InvoiceDetailScreen extends ConsumerWidget {
                               color: colorScheme.outlineVariant,
                               width: 1.2,
                             ),
-                            backgroundColor: isDark ? const Color(0xFF1E1E24) : const Color(0xFFF0F4F9),
+                            backgroundColor: isDark
+                                ? const Color(0xFF1E1E24)
+                                : const Color(0xFFF0F4F9),
                           ),
-                          onPressed: () =>
-                              _sendReminder(context, ref, invoice),
+                          onPressed: () => _sendReminder(context, ref, invoice),
                           child: Text(
                             'Send Reminder',
                             style: TextStyle(
@@ -1070,30 +1117,33 @@ class _ReminderHistorySection extends StatefulWidget {
   const _ReminderHistorySection({required this.invoice});
 
   @override
-  State<_ReminderHistorySection> createState() => _ReminderHistorySectionState();
+  State<_ReminderHistorySection> createState() =>
+      _ReminderHistorySectionState();
 }
 
 class _ReminderHistorySectionState extends State<_ReminderHistorySection> {
   bool _isExpanded = false;
   bool _isSending = false;
 
-  Future<void> _triggerManualReminder(BuildContext context, WidgetRef ref) async {
+  Future<void> _triggerManualReminder(
+      BuildContext context, WidgetRef ref) async {
     setState(() => _isSending = true);
     try {
       final repo = ref.read(reminderRepositoryProvider);
-      await repo.sendManualReminderEmail(widget.invoice.id, widget.invoice.customerEmail);
+      await repo.sendManualReminderEmail(
+          widget.invoice.id, widget.invoice.customerEmail);
       if (context.mounted) {
         ref.read(feedbackControllerProvider).success(
-          context,
-          'Manual payment reminder sent to ${widget.invoice.customerEmail}',
-        );
+              context,
+              'Manual payment reminder sent to ${widget.invoice.customerEmail}',
+            );
       }
     } catch (e) {
       if (context.mounted) {
         ref.read(feedbackControllerProvider).error(
-          context,
-          'Failed to send reminder: $e',
-        );
+              context,
+              'Failed to send reminder: $e',
+            );
       }
     } finally {
       if (mounted) setState(() => _isSending = false);
@@ -1110,7 +1160,8 @@ class _ReminderHistorySectionState extends State<_ReminderHistorySection> {
       child: Column(
         children: [
           ListTile(
-            leading: Icon(LucideIcons.history, color: colorScheme.primary, size: 20),
+            leading:
+                Icon(LucideIcons.history, color: colorScheme.primary, size: 20),
             title: const Text(
               'Reminder History',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
@@ -1125,7 +1176,8 @@ class _ReminderHistorySectionState extends State<_ReminderHistorySection> {
             const Divider(height: 1, thickness: 1),
             Consumer(
               builder: (context, ref, child) {
-                final historyAsync = ref.watch(reminderHistoryStreamProvider(widget.invoice.id));
+                final historyAsync =
+                    ref.watch(reminderHistoryStreamProvider(widget.invoice.id));
                 return historyAsync.when(
                   loading: () => const Padding(
                     padding: EdgeInsets.all(16.0),
@@ -1154,32 +1206,40 @@ class _ReminderHistorySectionState extends State<_ReminderHistorySection> {
                               ),
                               OutlinedButton.icon(
                                 style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
                                   shape: const StadiumBorder(),
                                   minimumSize: const Size(0, 32),
                                 ),
-                                onPressed: _isSending ? null : () => _triggerManualReminder(context, ref),
+                                onPressed: _isSending
+                                    ? null
+                                    : () =>
+                                        _triggerManualReminder(context, ref),
                                 icon: _isSending
                                     ? const SizedBox(
                                         width: 12,
                                         height: 12,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2),
                                       )
                                     : const Icon(LucideIcons.mail, size: 12),
-                                label: const Text('Send Reminder Now', style: TextStyle(fontSize: 11)),
+                                label: const Text('Send Reminder Now',
+                                    style: TextStyle(fontSize: 11)),
                               ),
                             ],
                           ),
                           const SizedBox(height: 16),
                           if (history.isEmpty)
                             Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 12.0),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 12.0),
                               child: Text(
                                 'No reminders sent yet.',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontStyle: FontStyle.italic,
-                                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                                  color: colorScheme.onSurface
+                                      .withValues(alpha: 0.5),
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -1192,11 +1252,14 @@ class _ReminderHistorySectionState extends State<_ReminderHistorySection> {
                               itemBuilder: (context, index) {
                                 final entry = history[index];
                                 final isSent = entry.status == 'Sent';
-                                final formattedDate = DateFormat('d MMM yyyy, HH:mm').format(entry.sentAt);
+                                final formattedDate =
+                                    DateFormat('d MMM yyyy, HH:mm')
+                                        .format(entry.sentAt);
 
                                 return IntrinsicHeight(
                                   child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
                                     children: [
                                       // Timeline column
                                       Column(
@@ -1205,7 +1268,9 @@ class _ReminderHistorySectionState extends State<_ReminderHistorySection> {
                                             width: 10,
                                             height: 10,
                                             decoration: BoxDecoration(
-                                              color: isSent ? semanticColors.success : semanticColors.error,
+                                              color: isSent
+                                                  ? semanticColors.success
+                                                  : semanticColors.error,
                                               shape: BoxShape.circle,
                                             ),
                                           ),
@@ -1213,7 +1278,8 @@ class _ReminderHistorySectionState extends State<_ReminderHistorySection> {
                                             Expanded(
                                               child: Container(
                                                 width: 2,
-                                                color: colorScheme.outline.withValues(alpha: 0.2),
+                                                color: colorScheme.outline
+                                                    .withValues(alpha: 0.2),
                                               ),
                                             ),
                                         ],
@@ -1222,32 +1288,52 @@ class _ReminderHistorySectionState extends State<_ReminderHistorySection> {
                                       // Log Details column
                                       Expanded(
                                         child: Padding(
-                                          padding: const EdgeInsets.only(bottom: 16.0),
+                                          padding: const EdgeInsets.only(
+                                              bottom: 16.0),
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
                                                 children: [
                                                   Text(
                                                     '${entry.triggerType} Reminder',
                                                     style: const TextStyle(
-                                                      fontWeight: FontWeight.bold,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                       fontSize: 13,
                                                     ),
                                                   ),
                                                   Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 2),
                                                     decoration: BoxDecoration(
-                                                      color: (isSent ? semanticColors.success : semanticColors.error)
-                                                          .withValues(alpha: 0.1),
-                                                      borderRadius: BorderRadius.circular(4),
+                                                      color: (isSent
+                                                              ? semanticColors
+                                                                  .success
+                                                              : semanticColors
+                                                                  .error)
+                                                          .withValues(
+                                                              alpha: 0.1),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              4),
                                                     ),
                                                     child: Text(
                                                       entry.status,
                                                       style: TextStyle(
-                                                        color: isSent ? semanticColors.success : semanticColors.error,
-                                                        fontWeight: FontWeight.w700,
+                                                        color: isSent
+                                                            ? semanticColors
+                                                                .success
+                                                            : semanticColors
+                                                                .error,
+                                                        fontWeight:
+                                                            FontWeight.w700,
                                                         fontSize: 10,
                                                       ),
                                                     ),
@@ -1259,7 +1345,8 @@ class _ReminderHistorySectionState extends State<_ReminderHistorySection> {
                                                 'To: ${entry.recipientEmail}',
                                                 style: TextStyle(
                                                   fontSize: 12,
-                                                  color: colorScheme.onSurface.withValues(alpha: 0.7),
+                                                  color: colorScheme.onSurface
+                                                      .withValues(alpha: 0.7),
                                                 ),
                                               ),
                                               const SizedBox(height: 2),
@@ -1267,7 +1354,8 @@ class _ReminderHistorySectionState extends State<_ReminderHistorySection> {
                                                 formattedDate,
                                                 style: TextStyle(
                                                   fontSize: 11,
-                                                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                                                  color: colorScheme.onSurface
+                                                      .withValues(alpha: 0.5),
                                                 ),
                                               ),
                                               if (entry.error != null) ...[
