@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'workflow_payload.dart';
 
 part 'workflow.freezed.dart';
 part 'workflow.g.dart';
@@ -94,32 +95,12 @@ class WorkflowTemplate with _$WorkflowTemplate {
   }) = _WorkflowTemplate;
 
   factory WorkflowTemplate.fromJson(Map<String, dynamic> json) =>
-      _$WorkflowTemplateFromJson(json);
+      _$WorkflowTemplateFromJson(normalizeWorkflowPayload(json));
 
   factory WorkflowTemplate.fromFirestore(DocumentSnapshot doc) {
     final data = Map<String, dynamic>.from(doc.data() as Map<String, dynamic>);
     _convertTimestamps(data);
     
-    if (data['steps'] is List) {
-      data['steps'] = (data['steps'] as List)
-          .map((s) {
-            final stepMap = Map<String, dynamic>.from(s as Map);
-            if (stepMap['delay'] is Map) {
-              stepMap['delay'] = Map<String, dynamic>.from(stepMap['delay'] as Map);
-            }
-            return stepMap;
-          })
-          .toList();
-    } else {
-      data['steps'] = <Map<String, dynamic>>[];
-    }
-
-    if (data['conditions'] is List) {
-      data['conditions'] = (data['conditions'] as List)
-          .map((c) => {...Map<String, dynamic>.from(c as Map), 'value': c['value']?.toString() ?? ''})
-          .toList();
-    }
-
     return WorkflowTemplate.fromJson({
       'name': '',
       'type': '',

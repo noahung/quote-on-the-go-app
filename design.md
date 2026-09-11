@@ -250,3 +250,10 @@ The implementation/verification ledger is UI_ALIGNMENT_PROGRESS.md. These rules 
 - Every request retains its document/request identity across retries and restarts. A server receipt, the document and any required approval/notifications are committed together. A repeated request must never reset a later payment or approval. An older approval must not approve a newer document revision.
 - Editing retains the server version that the draft originally came from. If another device changes it, keep the saved copy and ask the user to review the current document. Do not silently overwrite newer work. The current conflict UI supports reviewing/copying saved changes; guided merging remains a follow-up.
 - Primary save controls use the theme's dark ink on orange and grow with text. Stack Save & preview and Save draft on phones. Preview opens after server confirmation; it does not send email.
+
+
+### Document copies and conversions
+
+- Duplicate invoice, duplicate quotation and quotation-to-invoice actions use the same Saved requests destination as editor saves. Do not announce server success until the queue has a server acknowledgement.
+- While an action is pending or failed, repeating it reopens the same immutable request, including after an app restart. A new deliberate action after a confirmed save may create another draft. Copies retain customer/job links, discounts, notes, title and template choices; payment, approval and external integration state is not copied.
+- Starring, archiving through metadata, and lock metadata do not restart approval. Content changes by a member still request review.

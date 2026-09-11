@@ -15,6 +15,8 @@ class RecordingFirestore implements FirebaseFirestore {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+// Test doubles record repository effects without initializing Firebase.
+// ignore: subtype_of_sealed_class
 class RecordingCollection implements CollectionReference<Map<String, dynamic>> {
   RecordingCollection(this.db, this.path);
   final RecordingFirestore db;
@@ -27,6 +29,7 @@ class RecordingCollection implements CollectionReference<Map<String, dynamic>> {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+// ignore: subtype_of_sealed_class
 class RecordingDocument implements DocumentReference<Map<String, dynamic>> {
   RecordingDocument(this.db);
   final RecordingFirestore db;
@@ -44,6 +47,7 @@ class RecordingDocument implements DocumentReference<Map<String, dynamic>> {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+// ignore: subtype_of_sealed_class
 class CompanySnapshot implements DocumentSnapshot<Map<String, dynamic>> {
   @override
   Map<String, dynamic> data() => {'companyId': 'company'};

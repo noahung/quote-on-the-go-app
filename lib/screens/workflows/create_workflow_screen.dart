@@ -80,6 +80,7 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
   List<_WorkflowStep> _steps = [];
   bool _isActive = true;
   bool _isSaving = false;
+  String? _templateError;
 
   int? _maxRetries;
   int? _retryDelaySeconds;
@@ -89,49 +90,34 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
   @override
   void initState() {
     super.initState();
-    final t = widget.prefillTemplate;
-    if (t != null) {
-      _nameController.text = t['title'] as String? ?? t['name'] as String? ?? '';
-      _descriptionController.text = t['desc'] as String? ?? t['description'] as String? ?? '';
-      final type = (t['trigger']?['type'] ?? t['trigger']?['event'] ?? t['type']) as String?;
-      if (type != null) {
-        _selectedTrigger = type;
-      }
-      _maxRetries = t['maxRetries'] as int?;
-      _retryDelaySeconds = t['retryDelaySeconds'] as int?;
-      _onFailureAction = t['onFailureAction'] as String?;
-
-      final rawConditions = (t['trigger']?['conditions'] ?? t['conditions']) as List?;
-      if (rawConditions != null) {
-        for (final rc in rawConditions) {
-          if (rc is Map) {
-            _conditions.add(TriggerCondition(
-              field: rc['field'] as String? ?? '',
-              operator: rc['operator'] as String? ?? 'equals',
-              value: rc['value']?.toString() ?? '',
-            ));
-          }
+    if (widget.prefillTemplate != null) {
+      try {
+        final template = WorkflowTemplate.fromJson(widget.prefillTemplate!);
+        _nameController.text = template.name;
+        _descriptionController.text = template.description ?? '';
+        _selectedTrigger = template.triggerEvent ?? '';
+        _isActive = template.isActive;
+        _maxRetries = template.maxRetries;
+        _retryDelaySeconds = template.retryDelaySeconds;
+        _onFailureAction = template.onFailureAction;
+        if (_onFailureAction != null && !['none', 'notify_owner', 'stop'].contains(_onFailureAction)) {
+          throw const FormatException('Unsupported failure action.');
         }
-      }
-
-      final rawSteps = t['steps'] as List?;
-      if (rawSteps != null && rawSteps.isNotEmpty) {
-        _steps = rawSteps.map((s) {
-          final m = s as Map;
-          final step = _WorkflowStep(actionType: m['type'] == 'email' ? 'send_email' : m['type'] as String? ?? 'send_email');
-          step.original = Map<String, dynamic>.from(m);
-          step.subject = (m['emailTemplate']?['subject'] ?? m['subject']) as String? ?? '';
-          step.body = (m['emailTemplate']?['textContent'] ?? m['body']) as String? ?? '';
-          if (m['delay'] is Map) {
-            final delayMap = m['delay'] as Map;
-            step.waitValue = delayMap['value'] as int? ?? 1;
-            step.waitUnit = delayMap['type'] as String? ?? 'days';
-          } else {
-            step.waitValue = m['waitDays'] as int? ?? 1;
-            step.waitUnit = 'days';
+        _conditions.addAll(template.conditions ?? []);
+        _steps = template.steps.map((source) {
+          final action = source.type == 'email' ? 'send_email' : source.type;
+          if (!_kActions.contains(action)) {
+            throw FormatException('Unsupported workflow step: ${source.type}. Choose another template or edit this template on the web.');
           }
-          return step;
+          return _WorkflowStep(actionType: action)
+            ..original = source.toJson()
+            ..subject = source.subject ?? ''
+            ..body = source.body ?? ''
+            ..waitValue = source.delay?.value ?? source.waitDays ?? 1
+            ..waitUnit = source.delay?.type ?? 'days';
         }).toList();
+      } on FormatException catch (error) {
+        _templateError = error.message;
       }
     }
     if (_steps.isEmpty) _steps = [_WorkflowStep()];
@@ -155,7 +141,7 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
   }
 
   Future<void> _save() async {
-    if (_isSaving) return;
+    if (_isSaving || _templateError != null) return;
     if (!_kTriggers.contains(_selectedTrigger)) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Choose a supported document trigger before saving.')));
       return;
@@ -192,12 +178,18 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
               'htmlContent': const HtmlEscape().convert(step.body).replaceAll('\n', '<br>'),
               'includeOriginalDocument': step.original['emailTemplate']?['includeOriginalDocument'] ?? false,
             },
-            if (step.actionType == 'notification') ...{'title': step.subject, 'message': step.body},
+            if (step.actionType == 'notification') ...{
+              'title': step.subject, 'message': step.body,
+              'notificationConfig': {
+                ...Map<String, dynamic>.from(step.original['notificationConfig'] as Map? ?? {}),
+                'title': step.subject, 'message': step.body,
+              },
+            },
           },
         };
       }).toList();
 
-      await FirebaseFirestore.instance.collection('workflow_templates').add({
+      await ref.read(firestoreProvider).collection('workflow_templates').add({
         'companyId': companyId,
         'createdBy': userProfile.uid,
         'name': _nameController.text.trim(),
@@ -274,7 +266,16 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
             const SizedBox(width: 8),
           ],
         ),
-        body: Form(
+        body: _templateError != null ? SafeArea(child: ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            Text('This template needs attention', style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 16),
+            Text(_templateError!),
+            const SizedBox(height: 24),
+            OutlinedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Back to templates')),
+          ],
+        )) : Form(
           key: _formKey,
           child: ListView(
             padding: const EdgeInsets.all(16),
@@ -312,6 +313,7 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
 
               // Trigger
               DropdownButtonFormField<String>(
+                itemHeight: null,
                 value: _selectedTrigger,
                 decoration: InputDecoration(
                   labelText: 'Trigger Event',
@@ -358,8 +360,9 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
               const SizedBox(height: 24),
 
               // Trigger Conditions Section
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                spacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   const Text(
                     'Trigger Conditions',
@@ -411,7 +414,7 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
                       padding: const EdgeInsets.all(12),
                       child: Column(
                         children: [
-                          Row(
+                          _WorkflowFields(
                             children: [
                               Expanded(
                                 child: TextFormField(
@@ -441,21 +444,24 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
                             ],
                           ),
                           const SizedBox(height: 8),
-                          Row(
+                          _WorkflowFields(
                             children: [
                               Expanded(
                                 child: DropdownButtonFormField<String>(
+                itemHeight: null,
                                   value: cond.operator,
+                                  isExpanded: true,
                                   decoration: InputDecoration(
                                     labelText: 'Operator',
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                                     isDense: true,
                                   ),
                                   items: const [
-                                    DropdownMenuItem(value: 'equals', child: Text('Equals (==)')),
-                                    DropdownMenuItem(value: 'not_equals', child: Text('Not Equals (!=)')),
-                                    DropdownMenuItem(value: 'greater_than', child: Text('Greater Than (>)')),
-                                    DropdownMenuItem(value: 'less_than', child: Text('Less Than (<)')),
+                                    DropdownMenuItem(value: 'equals', child: Text('Equals')),
+                                    DropdownMenuItem(value: 'not_equals', child: Text('Not equal')),
+                                    DropdownMenuItem(value: 'greater_than', child: Text('Greater than')),
+                                    DropdownMenuItem(value: 'less_than', child: Text('Less than')),
+                                    DropdownMenuItem(value: 'contains', child: Text('Contains')),
                                   ],
                                   onChanged: (v) {
                                     if (v != null) {
@@ -534,6 +540,8 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String?>(
+                itemHeight: null,
+                isExpanded: true,
                       value: _onFailureAction,
                       decoration: InputDecoration(
                         labelText: 'On Failure Action',
@@ -554,8 +562,9 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
               const SizedBox(height: 24),
 
               // Steps
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                spacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   const Text(
                     'Automation Steps',
@@ -657,7 +666,9 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
+                itemHeight: null,
               value: step.actionType,
+              isExpanded: true,
               decoration: InputDecoration(
                 labelText: 'Action Type',
                 border: OutlineInputBorder(
@@ -676,7 +687,7 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
             ),
             const SizedBox(height: 10),
             if (step.actionType == 'wait') ...[
-              Row(
+              _WorkflowFields(
                 children: [
                   Expanded(
                     child: TextFormField(
@@ -692,8 +703,8 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
                           step.waitValue = int.tryParse(v) ?? 1,
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) return 'Required';
-                        if (int.tryParse(v.trim()) == null || int.parse(v.trim()) < 1) {
-                          return 'Must be at least 1';
+                        if (int.tryParse(v.trim()) == null || int.parse(v.trim()) < 0 || int.parse(v.trim()) > 365) {
+                          return 'Use 0 to 365';
                         }
                         return null;
                       },
@@ -702,7 +713,9 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: DropdownButtonFormField<String>(
+                itemHeight: null,
                       value: step.waitUnit,
+                      isExpanded: true,
                       decoration: InputDecoration(
                         labelText: 'Unit',
                         border: OutlineInputBorder(
@@ -711,7 +724,7 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
                       ),
                       items: const [
                         DropdownMenuItem(value: 'hours', child: Text('Hours')),
-                        DropdownMenuItem(value: 'days', child: Text('Calendar Days')),
+                        DropdownMenuItem(value: 'days', child: Text('Days')),
                         DropdownMenuItem(value: 'business_days', child: Text('Business Days')),
                       ],
                       onChanged: (v) => setState(() => step.waitUnit = v ?? 'days'),
@@ -725,9 +738,7 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
                 initialValue: step.subject.isEmpty ? null : step.subject,
                 textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
-                  labelText: step.actionType == 'send_sms'
-                      ? 'SMS Message'
-                      : 'Email Subject',
+                  labelText: step.actionType == 'notification' ? 'Notification title' : 'Email Subject',
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10)),
                   isDense: true,
@@ -736,14 +747,14 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
                 validator: (v) =>
                     v == null || v.trim().isEmpty ? 'Required' : null,
               ),
-              if (step.actionType == 'send_email') ...[
+              if (step.actionType != 'wait') ...[
                 const SizedBox(height: 10),
                 TextFormField(
                   initialValue: step.body,
                   maxLines: 3,
                   textCapitalization: TextCapitalization.sentences,
                   decoration: InputDecoration(
-                    labelText: 'Email Body',
+                    labelText: step.actionType == 'notification' ? 'Notification message' : 'Email Body',
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10)),
                     isDense: true,
@@ -760,4 +771,22 @@ class _CreateWorkflowScreenState extends ConsumerState<CreateWorkflowScreen> {
       ),
     );
   }
+}
+
+class _WorkflowFields extends StatelessWidget {
+  const _WorkflowFields({required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, constraints) {
+    if (constraints.maxWidth >= 600 && MediaQuery.textScalerOf(context).scale(16) <= 20) {
+      return Row(children: children);
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      for (final child in children)
+        if (child is Expanded) child.child
+        else if (child is SizedBox) const SizedBox(height: 12)
+        else child,
+    ]);
+  });
 }

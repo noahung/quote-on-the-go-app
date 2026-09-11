@@ -826,14 +826,15 @@ class _QuotationDetailScreenState extends ConsumerState<QuotationDetailScreen> {
                                 Icon(LucideIcons.checkCircle2,
                                     color: Color(0xFF10B981), size: 18),
                                 SizedBox(width: 8),
-                                Text(
+                                Expanded(
+                                    child: Text(
                                   'Quotation Accepted! Next Step:',
                                   style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     fontSize: 13,
                                     color: Color(0xFF10B981),
                                   ),
-                                ),
+                                )),
                               ],
                             ),
                             const SizedBox(height: 4),

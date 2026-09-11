@@ -101,7 +101,7 @@ Generated from the current router and every Dart source under screens, component
 | lib/screens/auth/register_screen.dart | — | Representative light/dark renders inspected; see ledger for state coverage |
 | lib/screens/auth/reset_password_screen.dart | — | Representative light/dark renders inspected; see ledger for state coverage |
 | lib/screens/auth/splash_screen.dart | — | Pending complete rendered/state review |
-| lib/screens/client_responses/client_activity_card.dart | showModalBottomSheet:123 | Pending complete rendered/state review |
+| lib/screens/client_responses/client_activity_card.dart | showModalBottomSheet:122 | Pending complete rendered/state review |
 | lib/screens/client_responses/client_responses_screen.dart | showModalBottomSheet:360 | Pending complete rendered/state review |
 | lib/screens/collaboration/collaboration_screen.dart | showDialog:106, showModalBottomSheet:438, showDialog:760, showDialog:847 | Pending complete rendered/state review |
 | lib/screens/customers/add_edit_customer_screen.dart | — | Pending complete rendered/state review |
@@ -113,7 +113,7 @@ Generated from the current router and every Dart source under screens, component
 | lib/screens/expenses/log_expense_screen.dart | showDatePicker:92, showModalBottomSheet:102 | Pending complete rendered/state review |
 | lib/screens/invoices/add_edit_recurring_invoice_screen.dart | showDatePicker:193, PopupMenuButton:759, showModalBottomSheet:810, showModalBottomSheet:829, showDialog:1588 | Pending complete rendered/state review |
 | lib/screens/invoices/create_invoice_screen.dart | showDialog:614, showDatePicker:850, PopupMenuButton:974, showModalBottomSheet:1036, showModalBottomSheet:1052, showDialog:1821 | Pending complete rendered/state review |
-| lib/screens/invoices/invoice_detail_screen.dart | showDialog:106, showModalBottomSheet:141, showDialog:294, showDialog:366, showDialog:397, PopupMenuButton:503 | Pending complete rendered/state review |
+| lib/screens/invoices/invoice_detail_screen.dart | showDialog:117, showModalBottomSheet:152, showDialog:278, showDialog:350, showDialog:381, PopupMenuButton:487 | Pending complete rendered/state review |
 | lib/screens/invoices/invoice_portal_screen.dart | — | Pending complete rendered/state review |
 | lib/screens/invoices/invoices_screen.dart | showDialog:130, PopupMenuButton:928, showDialog:959, showDialog:975, showDialog:1004 | Pending complete rendered/state review |
 | lib/screens/notifications/notifications_screen.dart | PopupMenuButton:99 | Pending complete rendered/state review |
@@ -122,7 +122,7 @@ Generated from the current router and every Dart source under screens, component
 | lib/screens/profile/profile_menu_screen.dart | showDialog:25, showDialog:158 | Representative light/dark renders inspected; see ledger for state coverage |
 | lib/screens/quotations/create_quotation_screen.dart | showDialog:466, showDatePicker:702, PopupMenuButton:826, showModalBottomSheet:887, showModalBottomSheet:910, showDialog:1657 | Pending complete rendered/state review |
 | lib/screens/quotations/kanban_board_screen.dart | PopupMenuButton:416 | Pending complete rendered/state review |
-| lib/screens/quotations/quotation_detail_screen.dart | showModalBottomSheet:113, showDialog:144, showDialog:336, showDialog:425, showDialog:456, PopupMenuButton:565 | Pending complete rendered/state review |
+| lib/screens/quotations/quotation_detail_screen.dart | showModalBottomSheet:124, showDialog:155, showDialog:287, showDialog:376, showDialog:407, PopupMenuButton:516 | Pending complete rendered/state review |
 | lib/screens/quotations/quotation_portal_screen.dart | — | Pending complete rendered/state review |
 | lib/screens/quotations/quotations_screen.dart | showDialog:116 | Pending complete rendered/state review |
 | lib/screens/schedule/create_event_screen.dart | showModalBottomSheet:82 | Pending complete rendered/state review |

@@ -39,17 +39,17 @@ class ClientActivityCard extends ConsumerWidget {
               Icon(LucideIcons.messageCircle,
                   size: 18, color: colors.accentPrimary),
               const SizedBox(width: 8),
-              const Text('Client Activity',
-                  style:
-                      TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              const Spacer(),
+              const Expanded(
+                  child: Text('Client activity',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w700))),
+              const SizedBox(width: 8),
               TextButton(
-                onPressed: () => context
-                    .push('/collaboration/$documentType/$documentId'),
+                onPressed: () =>
+                    context.push('/collaboration/$documentType/$documentId'),
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  minimumSize: const Size(48, 48),
                 ),
                 child: const Text('View all'),
               ),
@@ -104,8 +104,7 @@ class ClientActivityCard extends ConsumerWidget {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: colors.accentPrimary,
                         side: BorderSide(
-                            color:
-                                colors.accentPrimary.withValues(alpha: 0.4)),
+                            color: colors.accentPrimary.withValues(alpha: 0.4)),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
@@ -147,7 +146,8 @@ class _ActivityRow extends StatelessWidget {
   ({IconData icon, Color color}) get _visuals {
     final type = item.activityType;
     final desc = item.description.toLowerCase();
-    if (type == 'commented') return (icon: LucideIcons.messageCircle, color: Colors.blue);
+    if (type == 'commented')
+      return (icon: LucideIcons.messageCircle, color: Colors.blue);
     if (type == 'approved' || desc.contains('accept')) {
       return (icon: LucideIcons.checkCircle, color: colors.success);
     }
