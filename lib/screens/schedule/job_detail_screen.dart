@@ -10,7 +10,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../../models/models.dart';
@@ -406,25 +405,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
           .doc(widget.job.id)
           .update(updates);
 
-      // Send email notification to customer when status changes to 'En Route'
-      if (newStatus == 'En Route') {
-        try {
-          final companyId = widget.job.companyId.isNotEmpty
-              ? widget.job.companyId
-              : (ref.read(companyIdProvider) ?? '');
-          if (companyId.isNotEmpty) {
-            final callable = FirebaseFunctions.instance.httpsCallable('sendJobStatusEmail');
-            await callable.call({
-              'jobId': widget.job.id,
-              'status': newStatus,
-              'companyId': companyId,
-            });
-          }
-        } catch (emailErr) {
-          // Log but don't fail the status update if email fails
-          debugPrint('Failed to send status email: $emailErr');
-        }
-      }
+      // Shared backend job trigger sends customer and team notifications.
 
       if (mounted) {
         ref.read(feedbackControllerProvider).success(context, 'Job status updated to $newStatus');

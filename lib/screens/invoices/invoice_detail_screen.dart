@@ -1252,6 +1252,11 @@ class _ReminderHistorySectionState extends State<_ReminderHistorySection> {
                               itemBuilder: (context, index) {
                                 final entry = history[index];
                                 final isSent = entry.status == 'Sent';
+                                final entryStatusColor = entry.status == 'Skipped'
+                                    ? colorScheme.onSurfaceVariant
+                                    : isSent
+                                        ? semanticColors.success
+                                        : semanticColors.error;
                                 final formattedDate =
                                     DateFormat('d MMM yyyy, HH:mm')
                                         .format(entry.sentAt);
@@ -1268,9 +1273,7 @@ class _ReminderHistorySectionState extends State<_ReminderHistorySection> {
                                             width: 10,
                                             height: 10,
                                             decoration: BoxDecoration(
-                                              color: isSent
-                                                  ? semanticColors.success
-                                                  : semanticColors.error,
+                                              color: entryStatusColor,
                                               shape: BoxShape.circle,
                                             ),
                                           ),
@@ -1313,11 +1316,7 @@ class _ReminderHistorySectionState extends State<_ReminderHistorySection> {
                                                         horizontal: 8,
                                                         vertical: 2),
                                                     decoration: BoxDecoration(
-                                                      color: (isSent
-                                                              ? semanticColors
-                                                                  .success
-                                                              : semanticColors
-                                                                  .error)
+                                                      color: entryStatusColor
                                                           .withValues(
                                                               alpha: 0.1),
                                                       borderRadius:
@@ -1327,11 +1326,7 @@ class _ReminderHistorySectionState extends State<_ReminderHistorySection> {
                                                     child: Text(
                                                       entry.status,
                                                       style: TextStyle(
-                                                        color: isSent
-                                                            ? semanticColors
-                                                                .success
-                                                            : semanticColors
-                                                                .error,
+                                                        color: entryStatusColor,
                                                         fontWeight:
                                                             FontWeight.w700,
                                                         fontSize: 10,
@@ -1342,7 +1337,7 @@ class _ReminderHistorySectionState extends State<_ReminderHistorySection> {
                                               ),
                                               const SizedBox(height: 4),
                                               Text(
-                                                'To: ${entry.recipientEmail}',
+                                                '${entry.status == 'Skipped' ? 'Not sent to' : 'To'}: ${entry.recipientEmail}',
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   color: colorScheme.onSurface
