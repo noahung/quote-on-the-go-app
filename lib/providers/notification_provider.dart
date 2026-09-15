@@ -16,6 +16,7 @@ class UserNotification {
   final bool isArchived;
   final DateTime createdAt;
   final String? relatedDocumentId;
+  final bool deliveryFailed;
 
   UserNotification({
     required this.id,
@@ -29,6 +30,7 @@ class UserNotification {
     this.isArchived = false,
     required this.createdAt,
     this.relatedDocumentId,
+    this.deliveryFailed = false,
   });
 
   factory UserNotification.fromFirestore(DocumentSnapshot doc) {
@@ -55,6 +57,7 @@ class UserNotification {
       isArchived: data['isArchived'] as bool? ?? false,
       createdAt: createdAt,
       relatedDocumentId: data['relatedDocumentId'] as String?,
+      deliveryFailed: (data['delivery'] as Map?)?.values.any((channel) => channel is Map && channel.values.contains('failed')) ?? false,
     );
   }
 }
@@ -98,19 +101,25 @@ class NotificationRepository {
         .update({'isRead': true});
   }
 
-  Future<void> markAllAsRead(String userId) async {
-    final batch = _firestore.batch();
-    final snapshot = await _firestore
-        .collection('user_notifications')
-        .where('userId', isEqualTo: userId)
-        .where('isRead', isEqualTo: false)
-        .get();
-
-    for (final doc in snapshot.docs) {
-      batch.update(doc.reference, {'isRead': true});
+  Future<void> _changeAll(String userId, {Map<String, dynamic>? update, bool archivedOnly = false}) async {
+    final query = _firestore.collection('user_notifications')
+        .where('userId', isEqualTo: userId).orderBy(FieldPath.documentId).limit(400);
+    DocumentSnapshot? cursor;
+    while (true) {
+      final snapshot = await (cursor == null ? query : query.startAfterDocument(cursor)).get();
+      if (snapshot.docs.isEmpty) break;
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        if (archivedOnly && doc.data()['isArchived'] != true) continue;
+        if (update == null) { batch.delete(doc.reference); }
+        else { batch.update(doc.reference, update); }
+      }
+      await batch.commit();
+      cursor = snapshot.docs.last;
     }
-    await batch.commit();
   }
+
+  Future<void> markAllAsRead(String userId) => _changeAll(userId, update: {'isRead': true});
 
   Future<void> archive(String notificationId) async {
     await _firestore
@@ -126,19 +135,7 @@ class NotificationRepository {
         .update({'isArchived': false});
   }
 
-  Future<void> archiveAll(String userId) async {
-    final batch = _firestore.batch();
-    final snapshot = await _firestore
-        .collection('user_notifications')
-        .where('userId', isEqualTo: userId)
-        .where('isArchived', isNotEqualTo: true)
-        .get();
-
-    for (final doc in snapshot.docs) {
-      batch.update(doc.reference, {'isArchived': true, 'isRead': true});
-    }
-    await batch.commit();
-  }
+  Future<void> archiveAll(String userId) => _changeAll(userId, update: {'isArchived': true, 'isRead': true});
 
   Future<void> deleteNotification(String notificationId) async {
     await _firestore
@@ -147,19 +144,8 @@ class NotificationRepository {
         .delete();
   }
 
-  Future<void> deleteAllArchived(String userId) async {
-    final batch = _firestore.batch();
-    final snapshot = await _firestore
-        .collection('user_notifications')
-        .where('userId', isEqualTo: userId)
-        .where('isArchived', isEqualTo: true)
-        .get();
+  Future<void> deleteAllArchived(String userId) => _changeAll(userId, archivedOnly: true);
 
-    for (final doc in snapshot.docs) {
-      batch.delete(doc.reference);
-    }
-    await batch.commit();
-  }
 }
 
 @riverpod

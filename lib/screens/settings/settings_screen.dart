@@ -72,6 +72,8 @@ class SettingsScreen extends ConsumerWidget {
                       'Customer comments and approvals', '/client-responses'),
                   row(LucideIcons.bell, 'Notifications',
                       'Updates and reminders', '/notifications'),
+                  row(LucideIcons.bell, 'Notification preferences',
+                      'Push and email choices', '/settings/notifications'),
                   heading('Appearance'),
                   SettingsActionRow(
                       icon: LucideIcons.palette,

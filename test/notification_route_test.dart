@@ -8,5 +8,7 @@ void main() {
     expect(notificationRoute('qotg:///schedule/job'), '/schedule/job');
     expect(notificationRoute('javascript:alert(1)'), isNull);
     expect(notificationRoute('/auth/signup'), isNull);
+    expect(notificationRoute('/expenses'), '/expenses');
+    expect(notificationRoute('https://evil.test/invoices/I123'), isNull);
   });
 }

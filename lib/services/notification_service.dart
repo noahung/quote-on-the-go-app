@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Top-level background message handler — must be a top-level function.
@@ -14,7 +15,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('[FCM] Background message: ${message.messageId}');
 }
 
-class NotificationService extends ChangeNotifier {
+class NotificationService extends ChangeNotifier with WidgetsBindingObserver {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
@@ -29,7 +30,13 @@ class NotificationService extends ChangeNotifier {
     importance: Importance.high,
   );
 
-  Future<void> initialize() async {
+  bool _suppressRegistration = false;
+  Future<void>? _initialization;
+
+  Future<void> initialize() => _initialization ??= _initialize();
+
+  Future<void> _initialize() async {
+    WidgetsBinding.instance.addObserver(this);
     try {
       // 1. Request permission
       final settings = await _fcm.requestPermission(
@@ -46,6 +53,11 @@ class NotificationService extends ChangeNotifier {
         const InitializationSettings(android: androidInit, iOS: iosInit),
         onDidReceiveNotificationResponse: _onNotificationTap,
       );
+
+      final launch = await _localNotifications.getNotificationAppLaunchDetails();
+      if (launch?.didNotificationLaunchApp == true && launch?.notificationResponse != null) {
+        _onNotificationTap(launch!.notificationResponse!);
+      }
 
       // 3. Create the Android high-importance channel
       await _localNotifications
@@ -73,12 +85,8 @@ class NotificationService extends ChangeNotifier {
       // where persistent auth restores the user asynchronously after initialize().
       FirebaseAuth.instance.authStateChanges().listen((user) async {
         if (user == null) return;
-        try {
-          final token = await _fcm.getToken();
-          if (token != null) await _saveToken(token);
-        } catch (e) {
-          debugPrint('[FCM] Error getting token: $e');
-        }
+        _suppressRegistration = false;
+        await refreshTokenForCurrentUser();
       });
       _fcm.onTokenRefresh.listen(_saveToken);
     } catch (e, stack) {
@@ -94,6 +102,7 @@ class NotificationService extends ChangeNotifier {
   }
 
   Future<void> _saveToken(String token) async {
+    if (_suppressRegistration) return;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     debugPrint('[FCM] Saving token for ${user.uid}');
@@ -166,14 +175,36 @@ class NotificationService extends ChangeNotifier {
     return route;
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) refreshTokenForCurrentUser();
+  }
+
   /// Call after sign-in to ensure the token is always current.
   Future<void> refreshTokenForCurrentUser() async {
-    final token = await _fcm.getToken();
-    if (token != null) await _saveToken(token);
+    // Notification permission or APNs readiness must never fail a successful login.
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+        String? apnsToken;
+        for (var attempt = 0; attempt < 5; attempt++) {
+          apnsToken = await _fcm.getAPNSToken();
+          if (apnsToken != null) break;
+          await Future<void>.delayed(const Duration(milliseconds: 500));
+        }
+        if (apnsToken == null) return; // A later refresh/resume can retry.
+      }
+      final token = await _fcm.getToken();
+      if (token != null && FirebaseAuth.instance.currentUser?.uid == uid) await _saveToken(token);
+    } catch (error) {
+      debugPrint('[FCM] Token unavailable: $error');
+    }
   }
 
   /// Call on sign-out to clear the token from Firestore.
   Future<void> clearToken() async {
+    _suppressRegistration = true;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     try {
@@ -186,14 +217,20 @@ class NotificationService extends ChangeNotifier {
         final profile = await transaction.get(userRef);
         if (token != null && profile.data()?['fcmToken'] == token) { transaction.update(userRef, {'fcmToken': FieldValue.delete()}); }
       });
-    } catch (_) {}
+    } catch (error) {
+      debugPrint('[FCM] Token cleanup failed: $error');
+    } finally {
+      // Invalidate the installation subscription even when the database is offline.
+      try { await _fcm.deleteToken(); } catch (error) { debugPrint('[FCM] Token invalidation failed: $error'); }
+    }
   }
 }
 
 String? notificationRoute(String link) {
   final uri = Uri.tryParse(link);
   if (uri == null || (uri.hasScheme && !['http', 'https', 'qotg'].contains(uri.scheme))) return null;
-  final allowed = ['quotations', 'invoices', 'schedule', 'customers', 'collaboration', 'notifications', 'client-responses'];
+  if (['http', 'https'].contains(uri.scheme) && uri.host != 'app.quoteonthego.co.uk') return null;
+  final allowed = ['quotations', 'invoices', 'schedule', 'customers', 'collaboration', 'notifications', 'client-responses', 'expenses'];
   if (uri.pathSegments.isEmpty || !allowed.contains(uri.pathSegments.first)) return null;
   return '/${uri.pathSegments.map(Uri.encodeComponent).join('/')}${uri.hasQuery ? '?${uri.query}' : ''}';
 }

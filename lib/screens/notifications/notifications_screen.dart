@@ -816,6 +816,11 @@ class _NotificationTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
 
+                    if (item.deliveryFailed) Text(
+                      'An email or push alert could not be delivered. This update is saved in your inbox.',
+                      style: textTheme.bodySmall?.copyWith(color: colorScheme.error),
+                    ),
+
                     // Bottom Tag and Link Hints
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

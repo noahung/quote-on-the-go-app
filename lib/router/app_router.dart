@@ -32,6 +32,7 @@ import '../screens/quotations/create_quotation_screen.dart';
 import '../screens/quotations/kanban_board_screen.dart';
 import '../screens/invoices/create_invoice_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import '../screens/settings/notification_preferences_screen.dart';
 import '../screens/settings/company_branding_screen.dart';
 import '../screens/settings/integrations_screen.dart';
 import '../screens/settings/collaboration_overview_screen.dart';
@@ -454,6 +455,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/sign-in-methods',
         builder: (context, state) => const SignInMethodsScreen(),
       ),
+      GoRoute(path: '/settings/notifications', builder: (context, state) => const NotificationPreferencesScreen()),
       GoRoute(
         path: '/expenses',
         builder: (context, state) => const ExpensesScreen(),
