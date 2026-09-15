@@ -220,20 +220,5 @@ export const healthCheck = functions.https.onCall(async (_request) => {
   };
 });
 
-// Compatibility for released mobile clients. The shared events trigger owns delivery.
-export const sendJobStatusEmail = functions.https.onCall(async (data, context) => {
-  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
-  const {jobId, companyId, status} = data || {};
-  if (typeof jobId !== 'string' || jobId.includes('/') || !companyId) {
-    throw new functions.https.HttpsError('invalid-argument', 'Invalid job');
-  }
-  const [profile, job] = await Promise.all([
-    admin.firestore().collection('users').doc(context.auth.uid).get(),
-    admin.firestore().collection('events').doc(jobId).get(),
-  ]);
-  if (profile.data()?.companyId !== companyId || profile.data()?.isActive === false || job.data()?.companyId !== companyId) {
-    throw new functions.https.HttpsError('permission-denied', 'Access denied');
-  }
-  if (job.data()?.status !== status) throw new functions.https.HttpsError('failed-precondition', 'Update the job status first');
-  return {success: true, message: 'The shared job-status trigger manages notification delivery.'};
-});
+// sendJobStatusEmail is owned by the web repository's notifications codebase.
+// Keeping it out of this default codebase prevents competing deployments.
