@@ -76,7 +76,7 @@ class ReminderHistoryEntry {
   final String companyId;
   final DateTime sentAt;
   final String recipientEmail;
-  final String status; // 'Sent' or 'Failed'
+  final String status; // 'Sent', 'Failed' or 'Skipped'
   final String triggerType; // 'Auto' or 'Manual'
   final int? daysOverdue;
   final String? error;
@@ -96,7 +96,7 @@ class ReminderHistoryEntry {
   factory ReminderHistoryEntry.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     DateTime sentAt;
-    final raw = data['sentAt'];
+    final raw = data['skippedAt'] ?? data['sentAt'];
     if (raw is Timestamp) {
       sentAt = raw.toDate();
     } else if (raw is String) {
@@ -113,9 +113,11 @@ class ReminderHistoryEntry {
       recipientEmail: data['customerEmail'] as String? ??
           data['recipientEmail'] as String? ??
           '',
-      status: (data['status'] as String? ?? 'sent').toLowerCase() == 'sent'
-          ? 'Sent'
-          : 'Failed',
+      status: switch ((data['status'] as String? ?? 'sent').toLowerCase()) {
+        'sent' => 'Sent',
+        'skipped' => 'Skipped',
+        _ => 'Failed',
+      },
       triggerType: data['triggerType'] as String? ?? 'Manual',
       daysOverdue: data['daysOverdue'] as int?,
       error: data['error'] as String?,
